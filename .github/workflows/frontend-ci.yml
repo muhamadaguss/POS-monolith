@@ -31,7 +31,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          # Versi Node satu sumber kebenaran: root .nvmrc (22.22 — syarat Vitest 3.2).
+          # Versi Node satu sumber kebenaran: root .nvmrc ('22' = 22.x terbaru;
+          # syarat efektif Vite/jsdom adalah >=22.12, terpenuhi oleh 22.x mana pun).
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/frontend/package-lock.json

@@ -64,7 +64,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          # Versi Node satu sumber kebenaran: root .nvmrc (diseragamkan dgn frontend).
+          # Versi Node satu sumber kebenaran: root .nvmrc ('22'; seragam dgn frontend).
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/backend/package-lock.json
