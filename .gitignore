@@ -1,0 +1,46 @@
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.*
+
+# ── Env / secrets (JANGAN commit; gunakan .env.example) ────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Builds & cache ────────────────────────────────────────────
+# Next.js
+.next/
+out/
+# NestJS
+dist/
+# misc build
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Prisma ────────────────────────────────────────────────────
+# Client ter-generate (di-generate ulang via prisma generate)
+**/.prisma/
+packages/database/node_modules/
+
+# ── Tooling / debug artefak ───────────────────────────────────
+.playwright-mcp/
+*.png
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Editor / OS ───────────────────────────────────────────────
+.DS_Store
+.vercel
+.idea/
+.vscode/
+
+# ── Claude Code (settings lokal) ──────────────────────────────
+.claude/

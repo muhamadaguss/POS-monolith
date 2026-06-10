@@ -1,0 +1,616 @@
+// Kasirku - Multi-Tenant POS Platform
+// Database Schema v1.0 (MVP)
+// Stack: NestJS + Prisma + PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  CANCELLED
+}
+
+enum Role {
+  SUPER_ADMIN    // Platform-level, tidak terikat tenant
+  TENANT_OWNER
+  STORE_MANAGER
+  CASHIER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+enum StockMutationType {
+  PURCHASE       // Pembelian / stok masuk dari supplier
+  SALE           // Terjual (otomatis dari transaksi)
+  ADJUSTMENT     // Stock opname / penyesuaian manual
+  TRANSFER_OUT   // Keluar karena mutasi antar-cabang
+  TRANSFER_IN    // Masuk karena mutasi antar-cabang
+  RETURN         // Retur dari pembeli
+  DAMAGE         // Barang rusak / susut
+}
+
+enum TransferStatus {
+  PENDING        // Sudah diajukan, belum diterima
+  APPROVED       // Diterima oleh outlet tujuan
+  REJECTED       // Ditolak oleh outlet tujuan
+  CANCELLED      // Dibatalkan oleh pengaju
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT_CARD
+  CREDIT_CARD
+  QRIS
+  TRANSFER
+  OTHER
+}
+
+enum TransactionStatus {
+  COMPLETED
+  VOIDED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// ============================================================
+// PLATFORM LAYER
+// ============================================================
+
+// Semua tenant yang terdaftar di platform Kasirku
+model Tenant {
+  id             String           @id @default(cuid())
+  name           String
+  slug           String           @unique // digunakan sebagai subdomain: slug.kasirku.com
+  phone          String?
+  email          String           @unique
+  logoUrl        String?
+  plan           SubscriptionPlan @default(FREE)
+  status         TenantStatus     @default(TRIAL)
+  trialEndsAt    DateTime?
+  billingEmail   String?
+  maxOutlets     Int              @default(1) // batas jumlah outlet sesuai plan
+  maxStaff       Int              @default(5) // batas jumlah staf sesuai plan
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  outlets        Outlet[]
+  users          User[]
+  products       Product[]
+  categories     Category[]
+  subscriptions  Subscription[]
+  discounts      Discount[]
+
+  @@map("tenants")
+}
+
+// Riwayat langganan / billing per tenant
+model Subscription {
+  id          String           @id @default(cuid())
+  tenantId    String
+  plan        SubscriptionPlan
+  startDate   DateTime
+  endDate     DateTime?
+  amount      Decimal          @db.Decimal(12, 2)
+  isPaid      Boolean          @default(false)
+  paidAt      DateTime?
+  invoiceRef  String?
+  createdAt   DateTime         @default(now())
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("subscriptions")
+}
+
+// ============================================================
+// USER & AUTHENTICATION
+// ============================================================
+
+// Akun pengguna; satu user bisa punya role berbeda di banyak outlet
+model User {
+  id           String     @id @default(cuid())
+  tenantId     String?    // null = Super Admin platform
+  name         String
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  pin          String?    // 6-digit PIN untuk otorisasi aksi kasir (refund/void)
+  role         Role       @default(CASHIER) // role default, bisa di-override per outlet
+  status       UserStatus @default(ACTIVE)
+  avatarUrl    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Relations
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outletRoles      UserOutletRole[]
+  shiftsOpened     Shift[]           @relation("ShiftOpenedBy")
+  shiftsClosed     Shift[]           @relation("ShiftClosedBy")
+  transactions     Transaction[]     @relation("TransactionCashier")
+  voidAuthorized   Transaction[]     @relation("VoidAuthorizedBy")
+  refundAuthorized Transaction[]     @relation("RefundAuthorizedBy")
+  stockAdjustments StockAdjustment[]
+  transferRequests StockTransfer[]   @relation("TransferRequestedBy")
+  transferApprovals StockTransfer[]  @relation("TransferApprovedBy")
+  refreshTokens    RefreshToken[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+// Mapping role spesifik user per outlet (override role global)
+// Memungkinkan 1 user jadi CASHIER di outlet A dan STORE_MANAGER di outlet B
+model UserOutletRole {
+  id        String   @id @default(cuid())
+  userId    String
+  outletId  String
+  tenantId  String   // denormalized untuk query filter efisien
+  role      Role
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outlet    Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, outletId]) // satu user hanya boleh punya 1 role per outlet
+  @@index([tenantId])
+  @@index([outletId])
+  @@map("user_outlet_roles")
+}
+
+// Refresh token untuk rotasi JWT yang aman
+model RefreshToken {
+  id                String   @id @default(cuid())
+  userId            String
+  tokenHash         String   @unique // simpan hash, bukan raw token
+  deviceInfo        String?
+  ipAddress         String?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  // ID token pengganti saat rotasi. Dipakai untuk grace-window: bila token lama
+  // (yang sudah dirotasi) dikirim ulang karena race jaringan yang sah, backend
+  // menerbitkan ulang dari token anak ini alih-alih me-revoke seluruh sesi.
+  replacedByTokenId String?
+  createdAt         DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// OUTLET (CABANG)
+// ============================================================
+
+model Outlet {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  address     String?
+  city        String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  timezone    String   @default("Asia/Jakarta")
+  taxRate     Decimal  @default(0) @db.Decimal(5, 4) // e.g., 0.1100 = 11%
+  receiptNote String?  // catatan footer struk
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles        UserOutletRole[]
+  inventories      Inventory[]
+  shifts           Shift[]
+  transactions     Transaction[]
+  transfersOut     StockTransfer[]  @relation("TransferFromOutlet")
+  transfersIn      StockTransfer[]  @relation("TransferToOutlet")
+  stockAdjustments StockAdjustment[]
+  outletPrices     OutletPrice[]
+
+  @@index([tenantId])
+  @@map("outlets")
+}
+
+// ============================================================
+// PRODUCT CATALOG
+// ============================================================
+
+// Kategori produk (master per tenant)
+model Category {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  color     String?   // hex color untuk UI
+  iconUrl   String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@index([tenantId])
+  @@map("categories")
+}
+
+// Katalog produk master (global per tenant, harga diatur per outlet)
+model Product {
+  id          String        @id @default(cuid())
+  tenantId    String
+  categoryId  String?
+  name        String
+  sku         String        // SKU unik dalam satu tenant
+  barcode     String?
+  description String?
+  imageUrl    String?
+  unit        String        @default("pcs") // satuan: pcs, kg, liter, dll
+  status      ProductStatus @default(ACTIVE)
+  hasVariants Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants      ProductVariant[]
+  inventories   Inventory[]
+  outletPrices  OutletPrice[]
+  transactionItems TransactionItem[]
+
+  @@unique([tenantId, sku]) // SKU unik per tenant
+  @@index([tenantId])
+  @@index([categoryId])
+  @@map("products")
+}
+
+// Varian produk (misal: ukuran S/M/L, rasa Coklat/Vanilla)
+model ProductVariant {
+  id         String        @id @default(cuid())
+  productId  String
+  tenantId   String        // denormalized
+  name       String        // e.g., "Ukuran: L", "Rasa: Coklat"
+  sku        String        // SKU varian spesifik
+  barcode    String?
+  status     ProductStatus @default(ACTIVE)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventories     Inventory[]
+  outletPrices    OutletPrice[]
+  transactionItems TransactionItem[]
+
+  @@unique([tenantId, sku])
+  @@index([productId])
+  @@index([tenantId])
+  @@map("product_variants")
+}
+
+// Harga jual dan HPP (cost) per produk/varian per outlet
+// Tenant Owner yang bisa set ini (sesuai RBAC)
+model OutletPrice {
+  id          String   @id @default(cuid())
+  tenantId    String
+  outletId    String
+  productId   String
+  variantId   String?
+  costPrice   Decimal  @db.Decimal(12, 2) // Harga Modal (HPP)
+  sellPrice   Decimal  @db.Decimal(12, 2) // Harga Jual
+  updatedAt   DateTime @updatedAt
+
+  outlet      Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([outletId, productId, variantId])
+  @@index([tenantId])
+  @@index([outletId])
+  @@map("outlet_prices")
+}
+
+// ============================================================
+// INVENTORY (STOK)
+// ============================================================
+
+// Stok aktual per produk/varian per outlet
+model Inventory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  outletId    String
+  productId   String
+  variantId   String?
+  quantity    Decimal  @default(0) @db.Decimal(12, 3) // mendukung satuan desimal (kg, liter)
+  minStock    Decimal  @default(0) @db.Decimal(12, 3) // alert jika di bawah ini
+  updatedAt   DateTime @updatedAt
+
+  outlet      Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([outletId, productId, variantId])
+  @@index([tenantId])
+  @@index([outletId])
+  @@map("inventories")
+}
+
+// Audit trail setiap perubahan stok (immutable log)
+model StockMutation {
+  id              String            @id @default(cuid())
+  tenantId        String
+  outletId        String
+  productId       String
+  variantId       String?
+  type            StockMutationType
+  quantityBefore  Decimal           @db.Decimal(12, 3)
+  quantityChange  Decimal           @db.Decimal(12, 3) // positif = masuk, negatif = keluar
+  quantityAfter   Decimal           @db.Decimal(12, 3)
+  referenceId     String?           // ID transaksi / transfer / adjustment terkait
+  referenceType   String?           // "TRANSACTION" | "TRANSFER" | "ADJUSTMENT"
+  note            String?
+  createdAt       DateTime          @default(now())
+
+  @@index([tenantId])
+  @@index([outletId, productId])
+  @@index([referenceId])
+  @@map("stock_mutations")
+}
+
+// Stock Opname / Penyesuaian Manual oleh Manager
+model StockAdjustment {
+  id          String   @id @default(cuid())
+  tenantId    String
+  outletId    String
+  userId      String   // siapa yang melakukan
+  note        String?
+  createdAt   DateTime @default(now())
+
+  outlet      Outlet              @relation(fields: [outletId], references: [id])
+  user        User                @relation(fields: [userId], references: [id])
+  items       StockAdjustmentItem[]
+
+  @@index([tenantId])
+  @@index([outletId])
+  @@map("stock_adjustments")
+}
+
+model StockAdjustmentItem {
+  id              String          @id @default(cuid())
+  adjustmentId    String
+  productId       String
+  variantId       String?
+  systemQuantity  Decimal         @db.Decimal(12, 3) // stok sistem sebelum opname
+  actualQuantity  Decimal         @db.Decimal(12, 3) // hasil hitung fisik
+  difference      Decimal         @db.Decimal(12, 3) // actualQuantity - systemQuantity
+
+  adjustment      StockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+
+  @@index([adjustmentId])
+  @@map("stock_adjustment_items")
+}
+
+// Mutasi / Transfer Stok Antar-Cabang
+model StockTransfer {
+  id              String         @id @default(cuid())
+  tenantId        String
+  fromOutletId    String
+  toOutletId      String
+  requestedById   String
+  approvedById    String?
+  status          TransferStatus @default(PENDING)
+  note            String?
+  requestedAt     DateTime       @default(now())
+  processedAt     DateTime?      // saat diterima/ditolak
+
+  fromOutlet      Outlet         @relation("TransferFromOutlet", fields: [fromOutletId], references: [id])
+  toOutlet        Outlet         @relation("TransferToOutlet", fields: [toOutletId], references: [id])
+  requestedBy     User           @relation("TransferRequestedBy", fields: [requestedById], references: [id])
+  approvedBy      User?          @relation("TransferApprovedBy", fields: [approvedById], references: [id])
+  items           StockTransferItem[]
+
+  @@index([tenantId])
+  @@index([fromOutletId])
+  @@index([toOutletId])
+  @@map("stock_transfers")
+}
+
+model StockTransferItem {
+  id         String        @id @default(cuid())
+  transferId String
+  productId  String
+  variantId  String?
+  quantity   Decimal       @db.Decimal(12, 3)
+
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+  @@map("stock_transfer_items")
+}
+
+// ============================================================
+// SHIFT MANAGEMENT
+// ============================================================
+
+model Shift {
+  id               String      @id @default(cuid())
+  tenantId         String
+  outletId         String
+  openedById       String
+  closedById       String?
+  status           ShiftStatus @default(OPEN)
+  openingCash      Decimal     @db.Decimal(12, 2) // saldo kas awal shift
+  closingCash      Decimal?    @db.Decimal(12, 2) // saldo kas akhir (hasil hitung fisik)
+  expectedCash     Decimal?    @db.Decimal(12, 2) // saldo kas yang seharusnya (kalkulasi sistem)
+  cashDifference   Decimal?    @db.Decimal(12, 2) // selisih (closingCash - expectedCash)
+  openedAt         DateTime    @default(now())
+  closedAt         DateTime?
+  notes            String?
+
+  outlet           Outlet        @relation(fields: [outletId], references: [id])
+  openedBy         User          @relation("ShiftOpenedBy", fields: [openedById], references: [id])
+  closedBy         User?         @relation("ShiftClosedBy", fields: [closedById], references: [id])
+  transactions     Transaction[]
+
+  @@index([tenantId])
+  @@index([outletId])
+  @@map("shifts")
+}
+
+// ============================================================
+// DISKON
+// ============================================================
+
+model Discount {
+  id           String       @id @default(cuid())
+  tenantId     String
+  name         String
+  type         DiscountType
+  value        Decimal      @db.Decimal(10, 2) // persentase (0-100) atau nominal
+  minPurchase  Decimal?     @db.Decimal(12, 2) // minimum pembelian
+  maxDiscount  Decimal?     @db.Decimal(12, 2) // batas maksimum (untuk tipe %)
+  isActive     Boolean      @default(true)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+
+  @@index([tenantId])
+  @@map("discounts")
+}
+
+// ============================================================
+// TRANSACTION (POS)
+// ============================================================
+
+model Transaction {
+  id               String            @id @default(cuid())
+  tenantId         String
+  outletId         String
+  shiftId          String
+  cashierId        String
+  receiptNumber    String            // nomor struk yang tampil ke pelanggan
+  status           TransactionStatus @default(COMPLETED)
+  subtotal         Decimal           @db.Decimal(12, 2)
+  discountId       String?
+  discountAmount   Decimal           @default(0) @db.Decimal(12, 2)
+  taxAmount        Decimal           @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal           @db.Decimal(12, 2)
+  paymentMethod    PaymentMethod
+  amountPaid       Decimal           @db.Decimal(12, 2) // uang yang diberikan customer
+  changeAmount     Decimal           @default(0) @db.Decimal(12, 2) // kembalian
+  notes            String?
+  voidedAt         DateTime?
+  voidReason       String?
+  voidAuthorizedById String?
+  refundedAt         DateTime?
+  refundReason       String?
+  refundAuthorizedById String?
+  originalTransactionId String?      // untuk transaksi refund, menunjuk ke transaksi asal
+  createdAt        DateTime          @default(now())
+
+  outlet           Outlet            @relation(fields: [outletId], references: [id])
+  shift            Shift             @relation(fields: [shiftId], references: [id])
+  cashier          User              @relation("TransactionCashier", fields: [cashierId], references: [id])
+  discount         Discount?         @relation(fields: [discountId], references: [id])
+  voidAuthorizedBy User?             @relation("VoidAuthorizedBy", fields: [voidAuthorizedById], references: [id])
+  refundAuthorizedBy User?           @relation("RefundAuthorizedBy", fields: [refundAuthorizedById], references: [id])
+  items            TransactionItem[]
+
+  @@unique([outletId, receiptNumber])
+  @@index([tenantId])
+  @@index([outletId])
+  @@index([shiftId])
+  @@index([cashierId])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            String   @id @default(cuid())
+  transactionId String
+  productId     String
+  variantId     String?
+  productName   String   // snapshot nama saat transaksi (produk bisa berubah)
+  variantName   String?  // snapshot nama varian
+  sku           String   // snapshot SKU
+  quantity      Decimal  @db.Decimal(12, 3)
+  unitPrice     Decimal  @db.Decimal(12, 2) // harga jual saat transaksi
+  costPrice     Decimal  @db.Decimal(12, 2) // HPP saat transaksi (untuk kalkulasi laba)
+  discountAmount Decimal @default(0) @db.Decimal(12, 2)
+  subtotal      Decimal  @db.Decimal(12, 2)
+
+  transaction   Transaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product       Product         @relation(fields: [productId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([transactionId])
+  @@index([productId])
+  @@map("transaction_items")
+}
+
+// ============================================================
+// AUDIT LOG (Immutable)
+// ============================================================
+
+// Log setiap aksi sensitif di sistem untuk audit keamanan
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String?
+  userId     String?
+  action     String   // e.g., "USER_LOGIN", "PRICE_UPDATED", "VOID_TRANSACTION"
+  resource   String?  // e.g., "Transaction", "OutletPrice"
+  resourceId String?
+  oldValue   Json?    // snapshot sebelum perubahan
+  newValue   Json?    // snapshot sesudah perubahan
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

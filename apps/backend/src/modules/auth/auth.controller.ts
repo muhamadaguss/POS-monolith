@@ -1,0 +1,74 @@
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Req,
+  Headers,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { SelectOutletDto } from './dto/select-outlet.dto';
+import { Public, CurrentUser } from '../../common/decorators';
+import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login dan dapatkan access + refresh token' })
+  login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Headers('user-agent') userAgent: string,
+  ) {
+    const ip = req.ip ?? req.socket.remoteAddress;
+    return this.authService.login(dto, ip, userAgent);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Perbarui access token menggunakan refresh token' })
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto);
+  }
+
+  @Post('select-outlet')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Pilih outlet aktif — generate token baru dengan currentOutletId' })
+  selectOutlet(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SelectOutletDto,
+  ) {
+    return this.authService.selectOutlet(user, dto);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout — revoke refresh token saat ini' })
+  logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { refreshToken?: string },
+  ) {
+    return this.authService.logout(user.userId, body.refreshToken);
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout dari semua perangkat' })
+  logoutAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.logout(user.userId);
+  }
+}

@@ -1,0 +1,148 @@
+import { Test } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Role, UserStatus } from '@prisma/client';
+import { AuthService } from './auth.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { createMockPrisma, MockPrisma } from '../../../test/prisma-mock';
+
+/**
+ * Fokus: refresh-token rotation + reuse-detection + grace-window.
+ * Ini akar bug "selalu 401 setelah desktop sleep" yang berulang, jadi area
+ * paling berharga untuk dijaga regresinya.
+ */
+describe('AuthService — refreshTokens (rotation & reuse)', () => {
+  let service: AuthService;
+  let prisma: MockPrisma;
+  let jwt: { verify: jest.Mock; sign: jest.Mock; signAsync: jest.Mock };
+
+  const activeUser = {
+    id: 'user-1',
+    email: 'u@toko.com',
+    tenantId: 'tenant-1',
+    role: Role.CASHIER,
+    status: UserStatus.ACTIVE,
+    tenant: { id: 'tenant-1', status: 'ACTIVE' },
+  };
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    jwt = {
+      verify: jest.fn().mockReturnValue({ sub: 'user-1', tokenId: 'tok-1', currentOutletId: 'outlet-1' }),
+      sign: jest.fn().mockReturnValue('signed.jwt.token'),
+      signAsync: jest.fn().mockResolvedValue('signed.access.token'),
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: jwt },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(AuthService);
+
+    // generateTokens akan memanggil signAccessToken (jwt.sign) + refreshToken.create
+    prisma.refreshToken.create.mockResolvedValue({ id: 'new-tok' });
+    prisma.refreshToken.update.mockResolvedValue({});
+    prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+  });
+
+  it('rotasi token valid: revoke parent + terbitkan token baru', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({
+      id: 'tok-1',
+      userId: 'user-1',
+      tokenHash: 'hash',
+      expiresAt: new Date(Date.now() + 86_400_000),
+      revokedAt: null,
+      replacedByTokenId: null,
+      user: activeUser,
+    });
+
+    const result = await service.refreshTokens({ refreshToken: 'valid.token' });
+
+    expect(result).toHaveProperty('accessToken');
+    expect(result).toHaveProperty('refreshToken');
+    // parent di-revoke + ditautkan ke anak
+    expect(prisma.refreshToken.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'tok-1' },
+        data: expect.objectContaining({ revokedAt: expect.any(Date) }),
+      }),
+    );
+  });
+
+  it('menolak token yang tidak ditemukan', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue(null);
+    await expect(service.refreshTokens({ refreshToken: 'x' })).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('menolak token kedaluwarsa', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({
+      id: 'tok-1',
+      userId: 'user-1',
+      tokenHash: 'hash',
+      expiresAt: new Date(Date.now() - 1000),
+      revokedAt: null,
+      user: activeUser,
+    });
+    await expect(service.refreshTokens({ refreshToken: 'x' })).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('menolak user nonaktif', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({
+      id: 'tok-1',
+      userId: 'user-1',
+      tokenHash: 'hash',
+      expiresAt: new Date(Date.now() + 86_400_000),
+      revokedAt: null,
+      user: { ...activeUser, status: UserStatus.INACTIVE },
+    });
+    await expect(service.refreshTokens({ refreshToken: 'x' })).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('reuse di luar grace-window → cabut SEMUA token user', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({
+      id: 'tok-1',
+      userId: 'user-1',
+      tokenHash: 'hash',
+      expiresAt: new Date(Date.now() + 86_400_000),
+      revokedAt: new Date(Date.now() - 60_000), // 60s lalu (di luar grace 30s)
+      replacedByTokenId: 'child-1',
+      user: activeUser,
+    });
+
+    await expect(service.refreshTokens({ refreshToken: 'x' })).rejects.toThrow(UnauthorizedException);
+    // seluruh sesi user dicabut
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: 'user-1' } }),
+    );
+  });
+
+  it('grace-window: token baru saja dirotasi & anak masih hidup → rotasi dari anak (tidak revoke-all)', async () => {
+    prisma.refreshToken.findFirst
+      // panggilan 1: token parent (sudah revoked, dalam grace)
+      .mockResolvedValueOnce({
+        id: 'tok-1',
+        userId: 'user-1',
+        tokenHash: 'hash',
+        expiresAt: new Date(Date.now() + 86_400_000),
+        revokedAt: new Date(Date.now() - 5_000), // 5s lalu (dalam grace 30s)
+        replacedByTokenId: 'child-1',
+        user: activeUser,
+      })
+      // panggilan 2: cari anak yang masih aktif
+      .mockResolvedValueOnce({ id: 'child-1', revokedAt: null });
+
+    const result = await service.refreshTokens({ refreshToken: 'x' });
+
+    expect(result).toHaveProperty('accessToken');
+    // TIDAK boleh revoke seluruh sesi pada race yang sah
+    expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+});

@@ -1,0 +1,59 @@
+name: Frontend CI
+
+# CI untuk paket apps/frontend dalam monorepo ini.
+# Menjalankan lint, typecheck, unit/komponen test (Vitest), dan build produksi.
+# Hanya terpicu bila ada perubahan di apps/frontend (atau workflow ini sendiri).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/frontend
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # Vitest 3.2 mensyaratkan Node >=22.22; pin agar tidak ada EBADENGINE.
+          node-version: '22.22'
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint bersifat ADVISORY (non-blocking): repo punya noise pre-existing
+      # project-wide (react-hooks/set-state-in-effect dll) yang TIDAK menggagalkan
+      # build. Gate keras kebenaran adalah typecheck + test + build di bawah.
+      - name: Lint (advisory)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test (Vitest)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build Next butuh URL API; nilai dummy cukup untuk static build.
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
