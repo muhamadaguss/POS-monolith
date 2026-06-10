@@ -1,0 +1,94 @@
+name: Backend CI
+
+# CI untuk paket apps/backend (NestJS + Prisma) dalam monorepo.
+# Unit test memakai MOCK Prisma (tanpa DB); e2e mem-boot AppModule penuh
+# sehingga PrismaService.$connect() butuh PostgreSQL nyata → disediakan via
+# service container + `prisma migrate deploy`.
+# Hanya terpicu bila ada perubahan di backend, schema database, atau workflow ini.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/database/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/database/**'
+      - '.github/workflows/backend-ci.yml'
+
+defaults:
+  run:
+    working-directory: apps/backend
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kasirku
+          POSTGRES_PASSWORD: kasirku
+          POSTGRES_DB: kasirku_test
+        ports:
+          - 5432:5432
+        # Tunggu Postgres siap sebelum step jalan.
+        options: >-
+          --health-cmd "pg_isready -U kasirku"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # DB test — dipakai prisma migrate deploy + e2e (AppModule.$connect()).
+      DATABASE_URL: postgresql://kasirku:kasirku@localhost:5432/kasirku_test?schema=public
+      # JWT dummy; nilai tak penting untuk test (tak ada login nyata di e2e smoke).
+      JWT_ACCESS_SECRET: ci-access-secret-ci-access-secret
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci-refresh-secret-ci-refresh-secret
+      JWT_REFRESH_EXPIRES_IN: 7d
+      NODE_ENV: test
+      PORT: 3001
+      APP_URL: http://localhost:3001
+      FRONTEND_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        # Schema hidup di packages/database; client ter-generate ke node_modules backend.
+        run: npx prisma generate --schema ../../packages/database/prisma/schema.prisma
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy --schema ../../packages/database/prisma/schema.prisma
+
+      # Lint ADVISORY (non-blocking): banyak rule type-checked menyala di test
+      # mock Prisma (any). Gate keras = unit test + e2e + build.
+      - name: Lint (advisory)
+        run: npx eslint "{src,test}/**/*.ts"
+        continue-on-error: true
+
+      - name: Unit tests (mock Prisma)
+        run: npm test
+
+      - name: E2E tests (butuh Postgres)
+        run: npm run test:e2e
+
+      - name: Build
+        run: npm run build
