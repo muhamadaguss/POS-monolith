@@ -108,3 +108,50 @@ export interface TransactionQuery {
   limit: number;
   status?: TransactionStatus;
 }
+
+// ── Struk (receipt) ───────────────────────────────────────────────────────────
+// Tipe nilai uang memakai `number | string` karena Prisma Decimal ter-serialize
+// sebagai string; komponen struk mengoersikannya via toNum() dari lib/format.
+
+/** Nilai uang dari backend: number (in-memory) atau string (Decimal serialize). */
+type Money = number | string;
+
+/** Header outlet pada struk — sumber: RECEIPT_OUTLET_SELECT di backend. */
+export interface ReceiptOutlet {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  phone?: string | null;
+  taxRate?: Money | null;
+  receiptNote?: string | null;
+}
+
+export interface ReceiptItem {
+  productName: string;
+  variantName?: string | null;
+  quantity: Money;
+  unitPrice: Money;
+  subtotal: Money;
+}
+
+/**
+ * Data lengkap untuk mencetak satu struk. Kompatibel dengan respons
+ * createTransaction (checkout) maupun fetchTransactionDetail (riwayat).
+ */
+export interface ReceiptData {
+  id: string;
+  receiptNumber: string;
+  createdAt: string;
+  status: TransactionStatus;
+  paymentMethod: PaymentMethod;
+  subtotal: Money;
+  discountAmount: Money;
+  taxAmount: Money;
+  totalAmount: Money;
+  amountPaid: Money;
+  changeAmount: Money;
+  items: ReceiptItem[];
+  outlet: ReceiptOutlet;
+  cashier?: { id: string; name: string } | null;
+}

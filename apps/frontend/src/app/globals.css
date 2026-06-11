@@ -128,3 +128,34 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Cetak struk: saat window.print() dipanggil, hanya #receipt-print-area yang
+ * tampil. Semua elemen lain disembunyikan agar struk tidak bercampur dengan UI
+ * aplikasi. Dipakai oleh ReceiptDialog (lihat features/pos/components).
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  /* Tombol aksi di dalam dialog tidak ikut tercetak. */
+  .receipt-actions {
+    display: none !important;
+  }
+  @page {
+    margin: 0;
+  }
+}

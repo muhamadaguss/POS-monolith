@@ -16,19 +16,23 @@ import {
   Eye,
   Ban,
   Undo2,
+  Printer,
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store';
 import { PosSidebar } from '@/features/pos/components/PosSidebar';
+import { ReceiptDialog } from '@/features/pos/components/ReceiptDialog';
 import {
   fetchTransactions,
   voidTransaction,
   refundTransaction,
+  fetchTransactionDetail,
 } from '@/features/pos/api';
 import type {
   Transaction,
   PaymentMethod,
   TransactionStatus,
   PaginationMeta,
+  ReceiptData,
 } from '@/features/pos/types';
 import { IDR, formatDateTime } from '@/lib/format';
 import {
@@ -88,6 +92,8 @@ export default function PosTransactionsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -162,6 +168,23 @@ export default function PosTransactionsPage() {
       errorAlert(message);
     } finally {
       setRefundingId(null);
+    }
+  }
+
+  // Cetak ulang struk: ambil detail lengkap (outlet, item, kasir) lalu buka dialog.
+  // List riwayat hanya memuat sebagian field, jadi fetch detail dulu.
+  async function handlePrintReceipt(trx: Transaction) {
+    setPrintingId(trx.id);
+    try {
+      const data = await fetchTransactionDetail(trx.id);
+      setReceipt(data);
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Gagal memuat struk';
+      errorAlert(message);
+    } finally {
+      setPrintingId(null);
     }
   }
 
@@ -425,6 +448,19 @@ export default function PosTransactionsPage() {
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePrintReceipt(trx)}
+                                    disabled={printingId === trx.id}
+                                    title="Cetak struk"
+                                    className="p-2 rounded-lg text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {printingId === trx.id ? (
+                                      <RefreshCw className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Printer className="w-4 h-4" />
+                                    )}
+                                  </button>
                                   {trx.status === 'COMPLETED' && (
                                     <>
                                       <button
@@ -551,6 +587,14 @@ export default function PosTransactionsPage() {
           </div>
         </div>
       </main>
+
+      <ReceiptDialog
+        open={receipt !== null}
+        onOpenChange={(open) => {
+          if (!open) setReceipt(null);
+        }}
+        data={receipt}
+      />
     </div>
   );
 }
