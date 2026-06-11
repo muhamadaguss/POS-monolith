@@ -424,6 +424,31 @@ export default function PosShiftPage() {
     );
   }
 
+  // ── Rekap setelah tutup shift ──
+  // PENTING: cek ini SEBELUM `!shift`. Setelah tutup, setShift(null) membuat
+  // cabang "Tidak Ada Shift" di bawah early-return lebih dulu, sehingga
+  // CloseRekapModal yang dirender di akhir komponen TAK PERNAH tercapai →
+  // "langsung ke form buka shift, rekap (dan tombol Cetak) tak muncul".
+  if (showRekapModal && closedShift) {
+    return (
+      <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+        {Sidebar}
+        <div className="flex-1 flex flex-col min-w-0">
+          {MobileHeader}
+          <main className="flex-1 overflow-y-auto" />
+        </div>
+        <CloseRekapModal
+          shift={closedShift as Shift & { summary?: ShiftCloseSummary }}
+          onClose={() => {
+            setShowRekapModal(false);
+            setClosedShift(null);
+            router.push('/pos');
+          }}
+        />
+      </div>
+    );
+  }
+
   // ── Tidak Ada Shift (form buka shift) ──
   if (!shift) {
     return (
@@ -703,16 +728,8 @@ export default function PosShiftPage() {
           onClose={() => setShowPrintModal(false)}
         />
       )}
-
-      {showRekapModal && closedShift && (
-        <CloseRekapModal
-          shift={closedShift as Shift & { summary?: ShiftCloseSummary }}
-          onClose={() => {
-            setShowRekapModal(false);
-            router.push('/pos');
-          }}
-        />
-      )}
+      {/* CloseRekapModal dirender via early-return di atas (sebelum cek !shift),
+       * karena setelah tutup shift `shift` menjadi null. */}
     </div>
   );
 }
