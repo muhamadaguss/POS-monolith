@@ -2,7 +2,7 @@
 
 > Pengujian end-to-end via Playwright untuk **semua role** × **semua flow bisnis**.
 > **Status: SUDAH DIJALANKAN + BUG DIPERBAIKI + RE-VERIFIKASI LULUS** — 2026-06-11.
-> **Hasil final: 92 lulus · 0 gagal · 2 dilewati (F4/F9)** dari 94 skenario.
+> **Hasil final: 94 lulus · 0 gagal · 0 dilewati** dari 94 skenario (F4/F9 kini diuji & lulus).
 >
 > - **Lingkungan:** FE `localhost:3000`, BE `localhost:3001/api/v1`, DB PostgreSQL (seed).
 > - **Metode:** Playwright UI (browser) untuk seluruh flow. RBAC negatif diuji via
@@ -42,6 +42,16 @@ perbaikan benar-benar berlaku. **Semua kini lulus:**
 
 Re-verifikasi tidak menambah data baseline (set-harga = update baris seed
 2000/5000 in-place; tak ada transaksi/shift dibuat). Tidak ada artefak tertinggal.
+
+**F4 & F9 (semula dilewati) kini diuji & lulus:**
+- **F4 — isolasi tenant:** dibuat **tenant kedua penuh** (tenant B + owner + outlet +
+  kategori + produk). Owner A tak bisa melihat resource B (absen di list, **404** by-id)
+  dan sebaliknya — isolasi **dua-arah** terbukti nyata. Tenant B lalu **dihapus
+  (cascade)**; baseline DB diverifikasi pulih (tenants 1, users 6, outlets 2, products 1,
+  categories 1, subscriptions 6; 0 sisa F4TEST).
+- **F9 — rate limit:** 130× `POST /auth/login` dalam <60 detik → ~100 lolos lalu **429
+  Too Many Requests** (33× 429). `ThrottlerGuard` menegakkan batas 100/60s. Tak ada data
+  ditulis (login flood pakai kredensial invalid).
 
 ---
 
@@ -194,12 +204,12 @@ Re-verifikasi tidak menambah data baseline (set-harga = update baris seed
 | F1 | Loading tak stuck setelah idle | POS reload + auto-reload | Katalog termuat, tak stuck (fix a768a83 + usePosData usePageFocus) | ✅ |
 | F2 | Refresh token saat fokus | reload `/pos` | Tetap login, tak logout paksa (A14) | ✅ |
 | F3 | Isolasi outlet (manager) | manager Jakarta | Data outlet aktif saja (inventory Total Produk 1) | ✅ |
-| F4 | Isolasi tenant (cross) | — | Tak ada tenant kedua di seed; tenantId selalu di-scope di query | ⏭️ |
+| F4 | Isolasi tenant (cross) | Buat tenant B penuh → A & B saling akses | A tak lihat produk/outlet B (404 by-id, absen di list) & sebaliknya — **isolasi 2-arah terbukti**. Tenant B dihapus (cascade), baseline pulih | ✅ |
 | F5 | API langsung tanpa token | GET /products tanpa Bearer | **401** Unauthorized | ✅ |
 | F6 | API role-mismatch | kasir → users/outlets/products | **403** Forbidden semua | ✅ |
 | F7 | Envelope response | login sukses | `{ success, data, timestamp }` ✅ | ✅ |
 | F8 | Validasi 422 | POST body invalid | **422** (bukan 400), pesan field detail | ✅ |
-| F9 | Rate limit | — | Tak diuji intensif (hindari ganggu sesi) | ⏭️ |
+| F9 | Rate limit | 130× POST /auth/login dalam <60s (limit 100/60s) | ~100 lolos lalu **429 Too Many Requests** (33× 429) — ThrottlerGuard menegakkan batas dgn benar | ✅ |
 
 ---
 
@@ -231,7 +241,8 @@ Re-verifikasi tidak menambah data baseline (set-harga = update baris seed
 
 > **Catatan:** kolom "Gagal" di bawah adalah temuan **run pertama** (sebelum fix).
 > Keempat bug (BUG-1..4) sudah diperbaiki & **diverifikasi ulang lulus** — lihat
-> "Re-verifikasi perbaikan" di atas. Status final: **92 lulus, 0 gagal, 2 dilewati**.
+> "Re-verifikasi perbaikan" di atas. F4/F9 yang semula dilewati kini **diuji & lulus**.
+> Status final: **94 lulus, 0 gagal, 0 dilewati**.
 
 | Bagian | Total | Lulus (final) | Gagal (final) | Catatan |
 |---|---|---|---|---|
@@ -240,8 +251,8 @@ Re-verifikasi tidak menambah data baseline (set-harga = update baris seed
 | C — TENANT_OWNER | 27 | 27 | 0 | set-harga 201 (BUG-3 fixed) |
 | D — STORE_MANAGER | 13 | 13 | 0 | guard products/reports/outlets → Akses Ditolak (BUG-1 fixed) |
 | E — CASHIER & Transaksi | 26 | 26 | 0 | empty-cart API 422 (BUG-2 fixed) |
-| F — Ketahanan/Keamanan | 9 | 7 | 0 (2⏭️) | F4/F9 dilewati (tak relevan/aman) |
-| **TOTAL** | **94** | **92** | **0** | + 2 ⏭️ (F4/F9 sengaja dilewati) |
+| F — Ketahanan/Keamanan | 9 | 9 | 0 | F4 isolasi tenant 2-arah + F9 rate-limit 429 — keduanya lulus |
+| **TOTAL** | **94** | **94** | **0** | seluruh skenario lulus |
 
 **Kesimpulan:** Inti aplikasi (auth, RBAC API, transaksi, void/refund, shift+rekap,
 cetak struk) **solid**. 4 bug yang ditemukan di run pertama — semua di **lapisan
