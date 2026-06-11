@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Clock, DollarSign, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Clock, DollarSign, CheckCircle, AlertTriangle, RefreshCw, Printer } from 'lucide-react';
 import { usePageFocus } from '@/hooks/usePageFocus';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,14 +117,22 @@ export default function ShiftPage() {
     const diff = toNum(closedShift.cashDifference);
     return (
       <div className="max-w-lg mx-auto mt-12 space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3">
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3 print:hidden">
           <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
           <h2 className="text-xl font-bold text-gray-900">Shift Ditutup</h2>
           <p className="text-sm text-gray-500">Berikut rekap shift Anda hari ini</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+        {/* print-root + print-area: blok rekap ini yang tercetak (globals.css). */}
+        <div className="print-root print-area bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+          {/* Header hanya tampil saat cetak — beri konteks outlet & kasir di kertas. */}
+          <div className="hidden print:block px-6 pt-5 pb-3 text-center">
+            <p className="font-bold text-base">{closedShift.outlet?.name ?? 'Outlet'}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Rekap Tutup Shift</p>
+          </div>
           {[
+            ['Kasir', closedShift.openedBy?.name ?? '-'],
+            ['Waktu Tutup', closedShift.closedAt ? formatTimeOnly(closedShift.closedAt) : '-'],
             ['Kas Awal', IDR.format(toNum(closedShift.openingCash))],
             ['Total Penjualan Tunai', IDR.format(toNum(closeSummary?.totalCashIn))],
             ['Kas Diharapkan', IDR.format(toNum(closedShift.expectedCash))],
@@ -143,9 +151,18 @@ export default function ShiftPage() {
           </div>
         </div>
 
-        <Button onClick={() => { setClosedShift(null); loadShift(); }} className="w-full h-12 rounded-xl">
-          Buka Shift Baru
-        </Button>
+        <div className="flex gap-3 print:hidden">
+          <Button
+            variant="outline"
+            onClick={() => window.print()}
+            className="flex-1 h-12 rounded-xl gap-2"
+          >
+            <Printer className="w-4 h-4" /> Cetak Rekap
+          </Button>
+          <Button onClick={() => { setClosedShift(null); loadShift(); }} className="flex-1 h-12 rounded-xl">
+            Buka Shift Baru
+          </Button>
+        </div>
       </div>
     );
   }
