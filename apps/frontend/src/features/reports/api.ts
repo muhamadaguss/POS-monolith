@@ -1,5 +1,71 @@
 import { api } from '@/lib/api';
 
+/**
+ * Bentuk respons mentah dari endpoint /reports/*. Backend memakai penamaan field
+ * yang sedikit bervariasi (mis. `total` vs `revenue`, `count` vs `transactions`),
+ * jadi tipe ini sengaja longgar (semua opsional) dan dinormalkan oleh mapper di
+ * bawah. Mengganti `any` agar tetap type-safe tanpa memaksa kontrak kaku.
+ */
+type Num = number | string | null | undefined;
+
+interface RawPaymentBreakdown {
+  paymentMethod?: string;
+  method?: string;
+  count?: Num;
+  total?: Num;
+}
+
+interface RawDailyBreakdown {
+  date?: string;
+  total?: Num;
+  revenue?: Num;
+  count?: Num;
+  transactions?: Num;
+}
+
+interface RawSalesSummary {
+  summary?: Record<string, Num>;
+  totalTransactions?: Num;
+  totalRevenue?: Num;
+  totalDiscount?: Num;
+  totalTax?: Num;
+  totalSubtotal?: Num;
+  voidedTransactions?: Num;
+  voidedCount?: Num;
+  paymentBreakdown?: RawPaymentBreakdown[];
+  dailyBreakdown?: RawDailyBreakdown[];
+}
+
+interface RawTopProduct {
+  productId?: string;
+  productName?: string;
+  variantName?: string | null;
+  totalQuantity?: Num;
+  quantitySold?: Num;
+  totalRevenue?: Num;
+  revenue?: Num;
+  totalCost?: Num;
+  hpp?: Num;
+  marginPercent?: Num;
+  margin?: Num;
+  imageUrl?: string | null;
+}
+
+interface RawShiftItem {
+  id: string;
+  outlet?: { name?: string };
+  openedBy?: { name?: string };
+  closedBy?: { name?: string };
+  status: string;
+  openedAt: string;
+  closedAt?: string | null;
+  openingCash?: Num;
+  closingCash?: Num;
+  cashDifference?: Num;
+  salesTotal?: Num;
+  salesCount?: Num;
+}
+
 /** Ekstrak pesan error API yang ramah. */
 export function apiErrorMessage(err: unknown, fallback = 'Terjadi kesalahan. Coba lagi.'): string {
   const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -88,9 +154,9 @@ export async function getSalesSummary(
   const { startDate, endDate } = resolveRange(period);
   const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
   if (outletId) params.set('outletId', outletId);
-  const { data } = await api.get<any>(`/reports/sales?${params}`);
+  const { data } = await api.get<RawSalesSummary>(`/reports/sales?${params}`);
 
-  const s = data.summary ?? data;
+  const s = (data.summary ?? data) as Record<string, Num>;
   return {
     totalTransactions: Number(s.totalTransactions ?? 0),
     totalRevenue: Number(s.totalRevenue ?? 0),
@@ -99,13 +165,13 @@ export async function getSalesSummary(
     totalSubtotal: Number(s.totalSubtotal ?? 0),
     netRevenue: Number(s.totalRevenue ?? 0) - Number(s.totalDiscount ?? 0),
     voidedCount: Number(s.voidedTransactions ?? s.voidedCount ?? 0),
-    paymentBreakdown: (data.paymentBreakdown ?? []).map((p: any) => ({
-      method: p.paymentMethod ?? p.method,
-      count: Number(p.count),
-      total: Number(p.total),
+    paymentBreakdown: (data.paymentBreakdown ?? []).map((p) => ({
+      method: p.paymentMethod ?? p.method ?? '',
+      count: Number(p.count ?? 0),
+      total: Number(p.total ?? 0),
     })),
-    dailyBreakdown: (data.dailyBreakdown ?? []).map((d: any) => ({
-      date: d.date,
+    dailyBreakdown: (data.dailyBreakdown ?? []).map((d) => ({
+      date: d.date ?? '',
       revenue: Number(d.total ?? d.revenue ?? 0),
       transactions: Number(d.count ?? d.transactions ?? 0),
     })),
@@ -167,12 +233,14 @@ export async function getTopProducts(
   const { startDate, endDate } = resolveRange(period);
   const params = new URLSearchParams({ startDate, endDate, limit: String(limit) });
   if (outletId) params.set('outletId', outletId);
-  const { data } = await api.get<any>(`/reports/top-products?${params}`);
+  const { data } = await api.get<RawTopProduct[] | { topProducts: RawTopProduct[] }>(
+    `/reports/top-products?${params}`,
+  );
 
-  const list = data.topProducts ?? data;
-  return list.map((p: any) => ({
-    productId: p.productId,
-    productName: p.variantName ? `${p.productName} (${p.variantName})` : p.productName,
+  const list: RawTopProduct[] = Array.isArray(data) ? data : (data.topProducts ?? []);
+  return list.map((p) => ({
+    productId: p.productId ?? '',
+    productName: p.variantName ? `${p.productName} (${p.variantName})` : (p.productName ?? ''),
     quantitySold: Number(p.totalQuantity ?? p.quantitySold ?? 0),
     revenue: Number(p.totalRevenue ?? p.revenue ?? 0),
     hpp: Number(p.totalCost ?? p.hpp ?? 0),
@@ -190,10 +258,12 @@ export async function getShiftSummary(
   const { startDate, endDate } = resolveRange(period);
   const params = new URLSearchParams({ startDate, endDate, page: String(page), limit: String(limit) });
   if (outletId) params.set('outletId', outletId);
-  const { data } = await api.get<any>(`/reports/shifts?${params}`);
+  const { data } = await api.get<{ items?: RawShiftItem[]; meta?: ShiftReportResult['meta'] }>(
+    `/reports/shifts?${params}`,
+  );
 
   return {
-    items: (data.items ?? []).map((s: any) => ({
+    items: (data.items ?? []).map((s) => ({
       id: s.id,
       outletName: s.outlet?.name ?? '—',
       cashierName: s.openedBy?.name ?? s.closedBy?.name ?? '—',

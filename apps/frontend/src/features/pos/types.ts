@@ -49,3 +49,62 @@ export interface ActiveShift {
   outletId: string;
   openedAt: string;
 }
+
+/** Metode pembayaran — dipakai POS, struk, dan riwayat transaksi. */
+export type PaymentMethod =
+  | 'CASH'
+  | 'DEBIT_CARD'
+  | 'CREDIT_CARD'
+  | 'QRIS'
+  | 'TRANSFER'
+  | 'OTHER';
+
+/** Status siklus hidup transaksi. */
+export type TransactionStatus =
+  | 'COMPLETED'
+  | 'VOIDED'
+  | 'PENDING'
+  | 'REFUNDED'
+  | 'PARTIAL_REFUND';
+
+export interface TransactionItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Transaction {
+  id: string;
+  receiptNumber: string;
+  totalAmount: number;
+  amountPaid: number;
+  changeAmount: number;
+  paymentMethod: PaymentMethod;
+  status: TransactionStatus;
+  createdAt: string;
+  voidReason?: string | null;
+  refundReason?: string | null;
+  items: TransactionItem[];
+}
+
+/** Metadata paginasi standar dari endpoint list backend. */
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface TransactionListResult {
+  items: Transaction[];
+  meta: PaginationMeta;
+}
+
+export interface TransactionQuery {
+  outletId: string;
+  startDate: string;
+  endDate: string;
+  page: number;
+  limit: number;
+  status?: TransactionStatus;
+}

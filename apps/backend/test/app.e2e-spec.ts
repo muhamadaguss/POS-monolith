@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
-import { createValidationPipe } from './../src/common/pipes/zod-validation.pipe';
+import { createValidationPipe } from './../src/common/pipes/validation.pipe';
 
 /**
  * Smoke e2e: memastikan aplikasi boot + pipeline global aktif.
@@ -45,7 +45,7 @@ describe('App pipeline (e2e)', () => {
   });
 
   it('validation pipe menolak body login yang tidak valid → 422', () => {
-    // Pipe global dikonfigurasi errorHttpStatusCode: 422 (lihat zod-validation.pipe).
+    // Pipe global dikonfigurasi errorHttpStatusCode: 422 (lihat validation.pipe).
     return request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: 'bukan-email', password: 123, fieldEkstra: 'x' })

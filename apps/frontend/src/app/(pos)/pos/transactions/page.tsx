@@ -19,7 +19,17 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store';
 import { PosSidebar } from '@/features/pos/components/PosSidebar';
-import { api } from '@/lib/api';
+import {
+  fetchTransactions,
+  voidTransaction,
+  refundTransaction,
+} from '@/features/pos/api';
+import type {
+  Transaction,
+  PaymentMethod,
+  TransactionStatus,
+  PaginationMeta,
+} from '@/features/pos/types';
 import { IDR, formatDateTime } from '@/lib/format';
 import {
   voidTransactionPrompt,
@@ -27,36 +37,6 @@ import {
   toastSuccess,
   errorAlert,
 } from '@/lib/swal';
-
-type PaymentMethod = 'CASH' | 'DEBIT_CARD' | 'CREDIT_CARD' | 'QRIS' | 'TRANSFER' | 'OTHER';
-type TransactionStatus = 'COMPLETED' | 'VOIDED' | 'PENDING' | 'REFUNDED' | 'PARTIAL_REFUND';
-
-interface TransactionItem {
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-interface Transaction {
-  id: string;
-  receiptNumber: string;
-  totalAmount: number;
-  amountPaid: number;
-  changeAmount: number;
-  paymentMethod: PaymentMethod;
-  status: TransactionStatus;
-  createdAt: string;
-  voidReason?: string | null;
-  refundReason?: string | null;
-  items: TransactionItem[];
-}
-
-interface Meta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
 
 const LIMIT = 20;
 
@@ -99,7 +79,7 @@ export default function PosTransactionsPage() {
   const outletId = user?.currentOutletId ?? '';
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, limit: LIMIT, totalPages: 1 });
+  const [meta, setMeta] = useState<PaginationMeta>({ total: 0, page: 1, limit: LIMIT, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'ALL'>('ALL');
@@ -115,16 +95,14 @@ export default function PosTransactionsPage() {
     if (!outletId) return;
     setIsLoading(true);
     try {
-      const params = new URLSearchParams({
+      const data = await fetchTransactions({
         outletId,
         startDate: today,
         endDate: today,
-        limit: String(LIMIT),
-        page: String(targetPage),
+        page: targetPage,
+        limit: LIMIT,
+        ...(status !== 'ALL' && { status }),
       });
-      if (status !== 'ALL') params.set('status', status);
-
-      const { data } = await api.get<{ items: Transaction[]; meta: Meta }>(`/transactions?${params}`);
       setTransactions(data.items);
       setMeta(data.meta);
     } finally {
@@ -154,7 +132,7 @@ export default function PosTransactionsPage() {
     if (!input) return;
     setVoidingId(trx.id);
     try {
-      await api.post(`/transactions/${trx.id}/void`, input);
+      await voidTransaction(trx.id, input);
       toastSuccess('Transaksi dibatalkan');
       await load(page, statusFilter);
     } catch (err: unknown) {
@@ -174,7 +152,7 @@ export default function PosTransactionsPage() {
     if (!input) return;
     setRefundingId(trx.id);
     try {
-      await api.post(`/transactions/${trx.id}/refund`, input);
+      await refundTransaction(trx.id, input);
       toastSuccess('Transaksi di-refund');
       await load(page, statusFilter);
     } catch (err: unknown) {

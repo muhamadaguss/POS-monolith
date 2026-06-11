@@ -55,7 +55,7 @@ NestJS with a global pipeline wired in `apps/backend/src/app.module.ts`. Underst
 - **Errors.** `GlobalExceptionFilter` normalizes all thrown errors.
 - **Audit logging is automatic.** `AuditLogInterceptor` records every mutating request (POST/PATCH/PUT/DELETE) into the `AuditLog` table. Opt a route out with `@SkipAuditLog()`.
 - **Rate limiting** via `ThrottlerGuard` (default 100 req / 60s per IP, env-overridable).
-- **Validation** is global via `createValidationPipe()` (`common/pipes/zod-validation.pipe.ts`).
+- **Validation** is global via `createValidationPipe()` (`common/pipes/validation.pipe.ts`). It uses **class-validator + class-transformer** (decorated DTOs), not zod, and returns **422** on failure.
 - **Prisma** exposed through `PrismaModule` / `PrismaService` (connect/disconnect on lifecycle hooks). Inject `PrismaService`, don't `new PrismaClient()`.
 
 Feature modules under `src/modules/`: `auth, users, outlets, products, inventory, shifts, transactions, reports, audit-logs`. Each follows controller / service / `dto/` convention.

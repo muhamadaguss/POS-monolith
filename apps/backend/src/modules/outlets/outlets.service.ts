@@ -1,27 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { Role } from '@prisma/client';
-
-export class CreateOutletDto {
-  @IsString() @IsNotEmpty() name: string;
-  @IsOptional() @IsString() address?: string;
-  @IsOptional() @IsString() city?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsNumber() @Min(0) @Max(1) taxRate?: number;
-  @IsOptional() @IsString() receiptNote?: string;
-}
-
-export class UpdateOutletDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() address?: string;
-  @IsOptional() @IsString() city?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsNumber() @Min(0) @Max(1) taxRate?: number;
-  @IsOptional() @IsString() receiptNote?: string;
-  @IsOptional() @IsBoolean() isActive?: boolean;
-}
+import { CreateOutletDto } from './dto/create-outlet.dto';
+import { UpdateOutletDto } from './dto/update-outlet.dto';
 
 const OUTLET_SELECT = {
   id: true,
