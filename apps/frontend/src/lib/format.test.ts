@@ -5,6 +5,9 @@ import {
   getInitials,
   formatDate,
   formatShiftDuration,
+  formatDurationBetween,
+  formatShiftRange,
+  formatMinutes,
 } from './format';
 
 describe('toNum', () => {
@@ -71,5 +74,39 @@ describe('formatShiftDuration', () => {
 
   it('shift baru dibuka → 0j 0m', () => {
     expect(formatShiftDuration(new Date().toISOString())).toBe('0j 0m');
+  });
+});
+
+describe('formatDurationBetween', () => {
+  it('menghitung durasi antara dua waktu', () => {
+    expect(
+      formatDurationBetween('2026-06-11T03:00:00.000Z', '2026-06-11T05:30:00.000Z'),
+    ).toBe('2j 30m');
+  });
+
+  it('closedAt kosong → hitung sampai sekarang (≈0 untuk waktu sekarang)', () => {
+    expect(formatDurationBetween(new Date().toISOString(), null)).toBe('0j 0m');
+  });
+});
+
+describe('formatShiftRange', () => {
+  it('shift ditutup → "buka – tutup (durasi)"', () => {
+    const out = formatShiftRange('2026-06-11T03:00:00.000Z', '2026-06-11T03:00:00.000Z');
+    expect(out).toContain('–');
+    expect(out).toContain('(0j 0m)');
+  });
+
+  it('shift belum ditutup → menandai "berjalan"', () => {
+    const out = formatShiftRange(new Date().toISOString(), null);
+    expect(out).toContain('berjalan');
+  });
+});
+
+describe('formatMinutes', () => {
+  it('495 menit → 8j 15m', () => {
+    expect(formatMinutes(495)).toBe('8j 15m');
+  });
+  it('0 menit → 0j 0m', () => {
+    expect(formatMinutes(0)).toBe('0j 0m');
   });
 });

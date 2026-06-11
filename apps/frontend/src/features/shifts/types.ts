@@ -61,8 +61,16 @@ export interface ShiftQuery {
   status?: ShiftStatus;
   startDate?: string;
   endDate?: string;
+  search?: string;
   page?: number;
   limit?: number;
+}
+
+/** Statistik ringkas untuk kartu di halaman Riwayat Shift (`GET /shifts/stats`). */
+export interface ShiftStats {
+  totalShifts: number;
+  totalCashDifference: number | string;
+  avgDurationMinutes: number;
 }
 
 export interface PaginationMeta {

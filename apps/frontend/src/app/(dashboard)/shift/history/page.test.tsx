@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { useAuthStore } from '@/features/auth/store';
-import type { ShiftListResponse } from '@/features/shifts/types';
+import type { ShiftListResponse, ShiftStats } from '@/features/shifts/types';
 
-// next/link → anchor biasa; next/navigation di-stub.
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
@@ -13,13 +12,20 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/shift/history',
   useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock('@/lib/swal', () => ({ toastSuccess: vi.fn(), errorAlert: vi.fn() }));
 
-vi.mock('@/features/shifts/api', () => ({ getShifts: vi.fn() }));
+vi.mock('@/features/shifts/api', () => ({
+  getShifts: vi.fn(),
+  getShiftStats: vi.fn(),
+  exportShifts: vi.fn(),
+}));
 
-import { getShifts } from '@/features/shifts/api';
+import { getShifts, getShiftStats, exportShifts } from '@/features/shifts/api';
 import ShiftHistoryPage from './page';
 
 const mockedGetShifts = getShifts as unknown as ReturnType<typeof vi.fn>;
+const mockedGetStats = getShiftStats as unknown as ReturnType<typeof vi.fn>;
+const mockedExport = exportShifts as unknown as ReturnType<typeof vi.fn>;
 
 function listResponse(overrides?: Partial<ShiftListResponse>): ShiftListResponse {
   return {
@@ -40,10 +46,16 @@ function listResponse(overrides?: Partial<ShiftListResponse>): ShiftListResponse
         _count: { transactions: 5 },
       },
     ],
-    meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
+    meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
     ...overrides,
   };
 }
+
+const STATS: ShiftStats = {
+  totalShifts: 124,
+  totalCashDifference: '-50550',
+  avgDurationMinutes: 495,
+};
 
 function setUser(permissions: string[], role = 'TENANT_OWNER') {
   useAuthStore.setState({
@@ -66,47 +78,97 @@ describe('ShiftHistoryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedGetShifts.mockResolvedValue(listResponse());
+    mockedGetStats.mockResolvedValue(STATS);
+    mockedExport.mockResolvedValue(undefined);
   });
   afterEach(() => cleanup());
 
-  it('menampilkan daftar shift (outlet, kasir, selisih)', async () => {
+  it('menampilkan kartu statistik (total shift, selisih kas, durasi)', async () => {
+    setUser(['shift.manage']);
+    render(<ShiftHistoryPage />);
+
+    expect(await screen.findByText('124')).toBeInTheDocument(); // total shift
+    expect(screen.getByText('-Rp 50.550')).toBeInTheDocument(); // total selisih
+    expect(screen.getByText('8j 15m')).toBeInTheDocument(); // 495 menit = 8j 15m
+  });
+
+  it('menampilkan baris shift (outlet, kasir, transaksi, rentang waktu)', async () => {
     setUser(['shift.manage']);
     render(<ShiftHistoryPage />);
 
     expect(await screen.findByText('Cabang Jakarta Pusat')).toBeInTheDocument();
-    expect(screen.getByText(/Andi Prasetyo/)).toBeInTheDocument();
+    expect(screen.getByText('Andi Prasetyo')).toBeInTheDocument();
     expect(screen.getByText(/5 transaksi/)).toBeInTheDocument();
   });
 
-  it('ganti filter status memanggil getShifts dengan param status', async () => {
+  it('default periode 7 Hari aktif & mengirim startDate/endDate ke API', async () => {
     setUser(['shift.manage']);
     render(<ShiftHistoryPage />);
     await screen.findByText('Cabang Jakarta Pusat');
 
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'OPEN' } });
+    const call = mockedGetShifts.mock.calls[0][0];
+    expect(call.startDate).toBeTruthy();
+    expect(call.endDate).toBeTruthy();
+  });
 
-    await waitFor(() =>
-      expect(mockedGetShifts).toHaveBeenLastCalledWith(
-        expect.objectContaining({ status: 'OPEN', page: 1 }),
-      ),
+  it('ganti preset 30 Hari memanggil ulang API dengan rentang berbeda', async () => {
+    setUser(['shift.manage']);
+    render(<ShiftHistoryPage />);
+    await screen.findByText('Cabang Jakarta Pusat');
+    const firstStart = mockedGetShifts.mock.calls[0][0].startDate;
+
+    fireEvent.click(screen.getByRole('button', { name: '30 Hari' }));
+
+    await waitFor(() => {
+      const lastStart = mockedGetShifts.mock.calls.at(-1)![0].startDate;
+      expect(lastStart).not.toBe(firstStart);
+    });
+  });
+
+  it('pencarian (debounce) memanggil getShifts dengan param search', async () => {
+    setUser(['shift.manage']);
+    render(<ShiftHistoryPage />);
+    await screen.findByText('Cabang Jakarta Pusat');
+
+    fireEvent.change(screen.getByLabelText('Cari shift atau kasir'), {
+      target: { value: 'Andi' },
+    });
+
+    await waitFor(
+      () =>
+        expect(mockedGetShifts).toHaveBeenLastCalledWith(
+          expect.objectContaining({ search: 'Andi', page: 1 }),
+        ),
+      { timeout: 1000 },
     );
   });
 
-  it('menampilkan empty-state bila tak ada shift', async () => {
+  it('tombol Export memanggil exportShifts', async () => {
+    setUser(['shift.manage']);
+    render(<ShiftHistoryPage />);
+    await screen.findByText('Cabang Jakarta Pusat');
+
+    fireEvent.click(screen.getByRole('button', { name: /export/i }));
+
+    await waitFor(() => expect(mockedExport).toHaveBeenCalledTimes(1));
+  });
+
+  it('empty-state bila tak ada shift', async () => {
     setUser(['shift.manage']);
     mockedGetShifts.mockResolvedValue(
-      listResponse({ items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }),
+      listResponse({ items: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } }),
     );
     render(<ShiftHistoryPage />);
 
     expect(await screen.findByText(/belum ada riwayat shift/i)).toBeInTheDocument();
   });
 
-  it('memblokir user tanpa shift.manage (RBAC) — Akses Ditolak, tak panggil API', async () => {
+  it('memblokir user tanpa shift.manage (RBAC) — tak panggil API', async () => {
     setUser(['shift.own'], 'CASHIER');
     render(<ShiftHistoryPage />);
 
     expect(screen.getByRole('heading', { name: /akses ditolak/i })).toBeInTheDocument();
     expect(mockedGetShifts).not.toHaveBeenCalled();
+    expect(mockedGetStats).not.toHaveBeenCalled();
   });
 });

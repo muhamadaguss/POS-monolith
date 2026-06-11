@@ -18,6 +18,11 @@ export class ShiftQueryDto {
   @IsString()
   endDate?: string;
 
+  /** Pencarian bebas: nama kasir (pembuka) atau nama outlet. */
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -13,6 +13,7 @@ import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { Decimal } from '@prisma/client/runtime/library';
 import { Role, ShiftStatus } from '@prisma/client';
 import { PERMISSIONS } from '../../common/rbac/permissions';
+import * as ExcelJS from 'exceljs';
 
 @Injectable()
 export class ShiftsService {
@@ -202,24 +203,10 @@ export class ShiftsService {
   // ---- Riwayat Shift ----
 
   async findAll(currentUser: AuthenticatedUser, query: ShiftQueryDto) {
-    const { outletId, status, startDate, endDate, page = 1, limit = 20 } = query;
+    const { page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, outletId);
-
-    const where: any = {
-      tenantId: currentUser.tenantId!,
-      outletId: { in: allowedOutletIds },
-      ...(status && { status: status as ShiftStatus }),
-      ...(startDate || endDate
-        ? {
-            openedAt: {
-              ...(startDate && { gte: new Date(startDate) }),
-              ...(endDate && { lte: new Date(endDate + 'T23:59:59.999Z') }),
-            },
-          }
-        : {}),
-    };
+    const where = await this.buildShiftWhere(currentUser, query);
 
     const [items, total] = await Promise.all([
       this.prisma.shift.findMany({
@@ -273,6 +260,121 @@ export class ShiftsService {
     return shift;
   }
 
+  // ---- Statistik Ringkas (kartu di halaman Riwayat Shift) ----
+
+  /**
+   * Agregat untuk periode/filter terpilih:
+   * - totalShifts: jumlah shift pada filter
+   * - totalCashDifference: jumlah selisih kas shift CLOSED (Decimal → string)
+   * - avgDurationMinutes: rata-rata durasi shift CLOSED (closedAt − openedAt), menit
+   *
+   * Dihitung di seluruh data terfilter (bukan hanya satu halaman), agar angka
+   * jujur terhadap label periode.
+   */
+  async getStats(currentUser: AuthenticatedUser, query: ShiftQueryDto) {
+    const where = await this.buildShiftWhere(currentUser, query);
+
+    const [totalShifts, closed] = await Promise.all([
+      this.prisma.shift.count({ where }),
+      this.prisma.shift.findMany({
+        where: { ...where, status: ShiftStatus.CLOSED },
+        select: { openingCash: true, closingCash: true, cashDifference: true, openedAt: true, closedAt: true },
+      }),
+    ]);
+
+    let cashDiff = new Decimal(0);
+    let durationMsTotal = 0;
+    let durationCount = 0;
+    for (const s of closed) {
+      if (s.cashDifference) cashDiff = cashDiff.plus(s.cashDifference);
+      if (s.closedAt) {
+        durationMsTotal += s.closedAt.getTime() - s.openedAt.getTime();
+        durationCount += 1;
+      }
+    }
+    const avgDurationMinutes =
+      durationCount > 0 ? Math.round(durationMsTotal / durationCount / 60_000) : 0;
+
+    return {
+      totalShifts,
+      totalCashDifference: cashDiff.toString(),
+      avgDurationMinutes,
+    };
+  }
+
+  // ---- Export Excel (Riwayat Shift) ----
+
+  /** Generate workbook .xlsx dari shift terfilter (tanpa pagination). */
+  async exportXlsx(currentUser: AuthenticatedUser, query: ShiftQueryDto): Promise<Buffer> {
+    const where = await this.buildShiftWhere(currentUser, query);
+    const shifts = await this.prisma.shift.findMany({
+      where,
+      include: {
+        outlet: { select: { name: true } },
+        openedBy: { select: { name: true } },
+        _count: { select: { transactions: true } },
+      },
+      orderBy: { openedAt: 'desc' },
+      take: 10_000,
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Kasirku';
+    workbook.created = new Date();
+    const sheet = workbook.addWorksheet('Riwayat Shift');
+
+    sheet.columns = [
+      { header: 'Outlet', key: 'outlet', width: 22 },
+      { header: 'Kasir', key: 'cashier', width: 20 },
+      { header: 'Status', key: 'status', width: 12 },
+      { header: 'Waktu Buka', key: 'openedAt', width: 20 },
+      { header: 'Waktu Tutup', key: 'closedAt', width: 20 },
+      { header: 'Durasi (menit)', key: 'duration', width: 16 },
+      { header: 'Jumlah Transaksi', key: 'txnCount', width: 18 },
+      { header: 'Kas Awal', key: 'openingCash', width: 16 },
+      { header: 'Kas Fisik', key: 'closingCash', width: 16 },
+      { header: 'Selisih Kas', key: 'cashDifference', width: 16 },
+    ];
+
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+    headerRow.alignment = { vertical: 'middle' };
+    headerRow.height = 20;
+
+    const MONEY_FMT = '#,##0';
+
+    for (const s of shifts) {
+      const duration =
+        s.closedAt != null
+          ? Math.round((s.closedAt.getTime() - s.openedAt.getTime()) / 60_000)
+          : '';
+      sheet.addRow({
+        outlet: s.outlet.name,
+        cashier: s.openedBy.name,
+        status: s.status === ShiftStatus.CLOSED ? 'Ditutup' : 'Berjalan',
+        openedAt: s.openedAt,
+        closedAt: s.closedAt ?? '',
+        duration,
+        txnCount: s._count.transactions,
+        openingCash: Number(s.openingCash),
+        closingCash: s.closingCash != null ? Number(s.closingCash) : '',
+        cashDifference: s.cashDifference != null ? Number(s.cashDifference) : '',
+      });
+    }
+
+    ['openingCash', 'closingCash', 'cashDifference'].forEach((key) => {
+      sheet.getColumn(key).numFmt = MONEY_FMT;
+    });
+    ['openedAt', 'closedAt'].forEach((key) => {
+      sheet.getColumn(key).numFmt = 'yyyy-mm-dd hh:mm';
+    });
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
   // ---- Validasi Shift Aktif (digunakan oleh POS module) ----
 
   async requireActiveShift(outletId: string, currentUser: AuthenticatedUser): Promise<string> {
@@ -289,6 +391,40 @@ export class ShiftsService {
   }
 
   // ---- Helpers ----
+
+  /**
+   * Bangun klausa `where` Prisma untuk daftar/statistik/export shift, dengan
+   * scoping outlet sesuai role + filter status/tanggal/search. Dipakai bersama
+   * oleh findAll, getStats, dan getExportRows agar konsisten.
+   */
+  private async buildShiftWhere(currentUser: AuthenticatedUser, query: ShiftQueryDto) {
+    const { outletId, status, startDate, endDate, search } = query;
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, outletId);
+
+    const where: any = {
+      tenantId: currentUser.tenantId!,
+      outletId: { in: allowedOutletIds },
+      ...(status && { status: status as ShiftStatus }),
+      ...(startDate || endDate
+        ? {
+            openedAt: {
+              ...(startDate && { gte: new Date(startDate) }),
+              ...(endDate && { lte: new Date(endDate + 'T23:59:59.999Z') }),
+            },
+          }
+        : {}),
+      ...(search?.trim()
+        ? {
+            OR: [
+              { openedBy: { name: { contains: search.trim(), mode: 'insensitive' } } },
+              { outlet: { name: { contains: search.trim(), mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    return where;
+  }
 
   private async resolveAllowedOutlets(
     currentUser: AuthenticatedUser,

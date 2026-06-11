@@ -87,3 +87,32 @@ export function formatShiftDuration(openedAt: string): string {
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return `${h}j ${m}m`;
 }
+
+/**
+ * Durasi antara dua waktu dalam format "Xj Ym". Bila `closedAt` kosong (shift
+ * masih berjalan), hitung sampai sekarang.
+ */
+export function formatDurationBetween(openedAt: string, closedAt?: string | null): string {
+  const end = closedAt ? new Date(closedAt).getTime() : Date.now();
+  const ms = Math.max(0, end - new Date(openedAt).getTime());
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return `${h}j ${m}m`;
+}
+
+/**
+ * Rentang waktu shift untuk tabel riwayat, mis. "14.16 – 14.16 (0j 0m)".
+ * Bila belum ditutup → "14.16 – berjalan (Xj Ym)".
+ */
+export function formatShiftRange(openedAt: string, closedAt?: string | null): string {
+  const open = formatTimeOnly(openedAt);
+  const close = closedAt ? formatTimeOnly(closedAt) : 'berjalan';
+  return `${open} – ${close} (${formatDurationBetween(openedAt, closedAt)})`;
+}
+
+/** Durasi dari menit (mis. dari API stats) → "Xj Ym". */
+export function formatMinutes(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  return `${h}j ${m}m`;
+}

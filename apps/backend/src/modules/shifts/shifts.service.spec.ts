@@ -20,6 +20,14 @@ const cashier: AuthenticatedUser = {
   permissions: ['shift.own'],
 } as AuthenticatedUser;
 
+const owner: AuthenticatedUser = {
+  userId: 'owner-1',
+  tenantId: 'tenant-1',
+  role: Role.TENANT_OWNER,
+  currentOutletId: null,
+  permissions: ['shift.manage'],
+} as AuthenticatedUser;
+
 describe('ShiftsService', () => {
   let service: ShiftsService;
   let prisma: MockPrisma;
@@ -141,6 +149,79 @@ describe('ShiftsService', () => {
       await expect(
         service.closeShift('nope', { closingCash: 100000 }, cashier),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getStats', () => {
+    beforeEach(() => {
+      // Owner: resolveAllowedOutlets → outlet.findMany
+      prisma.outlet.findMany.mockResolvedValue([{ id: 'outlet-1' }, { id: 'outlet-2' }]);
+    });
+
+    it('mengagregasi total shift, total selisih kas, dan rata-rata durasi (CLOSED)', async () => {
+      prisma.shift.count.mockResolvedValue(3);
+      // dua shift CLOSED: durasi 60m & 120m → avg 90m; selisih -5000 + 2000 = -3000
+      prisma.shift.findMany.mockResolvedValue([
+        {
+          openingCash: new Decimal(100000),
+          closingCash: new Decimal(95000),
+          cashDifference: new Decimal(-5000),
+          openedAt: new Date('2026-06-11T00:00:00.000Z'),
+          closedAt: new Date('2026-06-11T01:00:00.000Z'),
+        },
+        {
+          openingCash: new Decimal(100000),
+          closingCash: new Decimal(102000),
+          cashDifference: new Decimal(2000),
+          openedAt: new Date('2026-06-11T03:00:00.000Z'),
+          closedAt: new Date('2026-06-11T05:00:00.000Z'),
+        },
+      ]);
+
+      const stats = await service.getStats(owner, {});
+
+      expect(stats.totalShifts).toBe(3);
+      expect(stats.totalCashDifference).toBe('-3000');
+      expect(stats.avgDurationMinutes).toBe(90);
+    });
+
+    it('avgDurationMinutes = 0 bila tak ada shift CLOSED', async () => {
+      prisma.shift.count.mockResolvedValue(1);
+      prisma.shift.findMany.mockResolvedValue([]); // tak ada CLOSED
+      const stats = await service.getStats(owner, {});
+      expect(stats.avgDurationMinutes).toBe(0);
+      expect(stats.totalCashDifference).toBe('0');
+    });
+
+    it('hanya menghitung shift CLOSED untuk selisih (query filter status CLOSED)', async () => {
+      prisma.shift.count.mockResolvedValue(5);
+      prisma.shift.findMany.mockResolvedValue([]);
+      await service.getStats(owner, {});
+      const findManyArg = prisma.shift.findMany.mock.calls[0][0];
+      expect(findManyArg.where.status).toBe(ShiftStatus.CLOSED);
+    });
+  });
+
+  describe('findAll — search', () => {
+    beforeEach(() => {
+      prisma.outlet.findMany.mockResolvedValue([{ id: 'outlet-1' }]);
+      prisma.shift.findMany.mockResolvedValue([]);
+      prisma.shift.count.mockResolvedValue(0);
+    });
+
+    it('search membangun klausa OR pada nama kasir & outlet', async () => {
+      await service.findAll(owner, { search: 'Andi' });
+      const arg = prisma.shift.findMany.mock.calls[0][0];
+      expect(arg.where.OR).toEqual([
+        { openedBy: { name: { contains: 'Andi', mode: 'insensitive' } } },
+        { outlet: { name: { contains: 'Andi', mode: 'insensitive' } } },
+      ]);
+    });
+
+    it('tanpa search: tak ada klausa OR', async () => {
+      await service.findAll(owner, {});
+      const arg = prisma.shift.findMany.mock.calls[0][0];
+      expect(arg.where.OR).toBeUndefined();
     });
   });
 

@@ -6,7 +6,21 @@ import type {
   ShiftQuery,
   ShiftListResponse,
   ShiftDetail,
+  ShiftStats,
 } from './types';
+
+/** Susun query-string dari ShiftQuery (abaikan field kosong). */
+function buildShiftParams(query: ShiftQuery): URLSearchParams {
+  const params = new URLSearchParams();
+  if (query.outletId) params.set('outletId', query.outletId);
+  if (query.status) params.set('status', query.status);
+  if (query.startDate) params.set('startDate', query.startDate);
+  if (query.endDate) params.set('endDate', query.endDate);
+  if (query.search) params.set('search', query.search);
+  if (query.page) params.set('page', String(query.page));
+  if (query.limit) params.set('limit', String(query.limit));
+  return params;
+}
 
 export async function getActiveShift(outletId: string): Promise<Shift | null> {
   try {
@@ -32,16 +46,15 @@ export async function closeShift(shiftId: string, payload: CloseShiftPayload): P
 
 /** Riwayat shift dengan filter & pagination (`GET /shifts`). */
 export async function getShifts(query: ShiftQuery = {}): Promise<ShiftListResponse> {
-  const params = new URLSearchParams();
-  if (query.outletId) params.set('outletId', query.outletId);
-  if (query.status) params.set('status', query.status);
-  if (query.startDate) params.set('startDate', query.startDate);
-  if (query.endDate) params.set('endDate', query.endDate);
-  if (query.page) params.set('page', String(query.page));
-  if (query.limit) params.set('limit', String(query.limit));
-
-  const qs = params.toString();
+  const qs = buildShiftParams(query).toString();
   const { data } = await api.get<ShiftListResponse>(`/shifts${qs ? `?${qs}` : ''}`);
+  return data;
+}
+
+/** Statistik ringkas untuk kartu (`GET /shifts/stats`). */
+export async function getShiftStats(query: ShiftQuery = {}): Promise<ShiftStats> {
+  const qs = buildShiftParams(query).toString();
+  const { data } = await api.get<ShiftStats>(`/shifts/stats${qs ? `?${qs}` : ''}`);
   return data;
 }
 
@@ -49,4 +62,20 @@ export async function getShifts(query: ShiftQuery = {}): Promise<ShiftListRespon
 export async function getShiftDetail(shiftId: string): Promise<ShiftDetail> {
   const { data } = await api.get<ShiftDetail>(`/shifts/${shiftId}`);
   return data;
+}
+
+/** Unduh riwayat shift terfilter sebagai Excel (`GET /shifts/export`). */
+export async function exportShifts(query: ShiftQuery = {}): Promise<void> {
+  const qs = buildShiftParams(query).toString();
+  const { data } = await api.get(`/shifts/export${qs ? `?${qs}` : ''}`, {
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(data as Blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kasirku-riwayat-shift-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

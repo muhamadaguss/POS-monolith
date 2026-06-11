@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Body, Param, Query, Res } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiProduces } from '@nestjs/swagger';
+import { Response } from 'express';
 import { ShiftsService } from './shifts.service';
 import { OpenShiftDto } from './dto/open-shift.dto';
 import { CloseShiftDto } from './dto/close-shift.dto';
@@ -44,6 +45,34 @@ export class ShiftsController {
   @ApiOperation({ summary: 'Riwayat shift — Manager/Owner' })
   findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: ShiftQueryDto) {
     return this.shiftsService.findAll(user, query);
+  }
+
+  // Rute statis didahulukan sebelum ':id' agar tak tertangkap sebagai shiftId.
+  @Get('stats')
+  @RequirePermissions(PERMISSIONS.SHIFT_MANAGE)
+  @ApiOperation({ summary: 'Statistik ringkas riwayat shift (kartu)' })
+  getStats(@CurrentUser() user: AuthenticatedUser, @Query() query: ShiftQueryDto) {
+    return this.shiftsService.getStats(user, query);
+  }
+
+  @Get('export')
+  @RequirePermissions(PERMISSIONS.SHIFT_MANAGE)
+  @ApiOperation({ summary: 'Download riwayat shift dalam format Excel (.xlsx)' })
+  @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async exportXlsx(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ShiftQueryDto,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.shiftsService.exportXlsx(user, query);
+    const filename = `kasirku-riwayat-shift-${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   }
 
   @Get(':id')
