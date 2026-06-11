@@ -18,7 +18,8 @@ import { usePageFocus } from '@/hooks/usePageFocus';
 import { getSalesSummaryWithGrowth, getTopProducts } from '@/features/reports/api';
 import { resolveImageUrl } from '@/features/products/api';
 import { getActiveShift } from '@/features/shifts/api';
-import { api, proactiveRefresh } from '@/lib/api';
+import { fetchCashierDailyStats } from '@/features/pos/api';
+import { proactiveRefresh } from '@/lib/api';
 import { SalesTrendChart, PaymentBreakdown } from '@/features/reports/components/charts';
 import type { SalesSummaryWithGrowth, TopProduct, ReportPeriod } from '@/features/reports/api';
 import type { Shift } from '@/features/shifts/types';
@@ -170,31 +171,12 @@ function CashierDashboard({ outletId }: { outletId: string }) {
     await proactiveRefresh().catch(() => {});
     setIsLoading(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const base = `/transactions?outletId=${outletId}&startDate=${today}&endDate=${today}&limit=100`;
-
-      const [activeShift, firstPage] = await Promise.all([
+      const [activeShift, dailyStats] = await Promise.all([
         getActiveShift(outletId),
-        api.get<{ items: { totalAmount: number; status: string }[]; meta: { total: number; page: number; totalPages: number } }>(base + '&page=1'),
+        fetchCashierDailyStats(outletId),
       ]);
       setShift(activeShift);
-
-      let allItems = [...firstPage.data.items];
-      const { totalPages } = firstPage.data.meta;
-      if (totalPages > 1) {
-        const pages = await Promise.all(
-          Array.from({ length: totalPages - 1 }, (_, i) =>
-            api.get<{ items: { totalAmount: number; status: string }[] }>(base + `&page=${i + 2}`),
-          ),
-        );
-        pages.forEach((p) => allItems = allItems.concat(p.data.items));
-      }
-
-      const completed = allItems.filter((t) => t.status === 'COMPLETED');
-      setStats({
-        totalTransactions: completed.length,
-        totalRevenue: completed.reduce((sum, t) => sum + Number(t.totalAmount), 0),
-      });
+      setStats(dailyStats);
     } catch {
       // 401/refresh gagal sudah ditangani interceptor (redirect ke login).
     } finally {

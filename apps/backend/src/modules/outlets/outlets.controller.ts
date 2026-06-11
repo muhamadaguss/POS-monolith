@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { OutletsService, CreateOutletDto, UpdateOutletDto } from './outlets.service';
+import { OutletsService } from './outlets.service';
+import { CreateOutletDto } from './dto/create-outlet.dto';
+import { UpdateOutletDto } from './dto/update-outlet.dto';
 import { CurrentUser, Roles, RequirePermissions } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { PERMISSIONS } from '../../common/rbac/permissions';
