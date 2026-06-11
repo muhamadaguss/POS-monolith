@@ -12,16 +12,20 @@ const PAYMENT_LABEL: Record<PaymentMethod, string> = {
 
 /**
  * Struk transaksi — presentasional murni. Lebar ala kertas thermal (~58mm),
- * font monospace. Diberi id `receipt-print-area` sebagai target CSS @media print
- * (lihat globals.css) agar hanya area ini yang tercetak via window.print().
+ * font monospace.
+ *
+ * `forPrint`: bila true, elemen diberi id `receipt-print-area` — target CSS
+ * @media print (lihat globals.css) agar hanya struk ini yang tercetak. Hanya
+ * SATU instance (yang di-portal ke body oleh ReceiptDialog) boleh memakai id ini;
+ * pratinjau di dalam dialog memakai `forPrint={false}` agar id tetap unik.
  */
-export function Receipt({ data }: { data: ReceiptData }) {
+export function Receipt({ data, forPrint = false }: { data: ReceiptData; forPrint?: boolean }) {
   const discount = toNum(data.discountAmount);
   const tax = toNum(data.taxAmount);
 
   return (
     <div
-      id="receipt-print-area"
+      id={forPrint ? 'receipt-print-area' : undefined}
       className="mx-auto w-[280px] bg-white px-4 py-3 font-mono text-[11px] leading-snug text-black"
     >
       {/* Header outlet */}

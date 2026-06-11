@@ -133,29 +133,56 @@
  * Cetak struk: saat window.print() dipanggil, hanya #receipt-print-area yang
  * tampil. Semua elemen lain disembunyikan agar struk tidak bercampur dengan UI
  * aplikasi. Dipakai oleh ReceiptDialog (lihat features/pos/components).
+ *
+ * Kertas diset 80mm × 200mm (gulungan thermal). PENTING: Chromium MENGABAIKAN
+ * `size: 80mm auto` (keyword auto untuk tinggi) dan fallback ke Letter/A4 — itu
+ * penyebab "PDF terlalu besar". Tinggi harus eksplisit agar Chromium menghormati
+ * lebar 80mm. 200mm cukup untuk struk umum; struk sangat panjang lanjut ke
+ * halaman berikutnya. Hasil: kertas pas 80mm tanpa area kosong A4, tanpa
+ * header/footer browser.
  */
+@page {
+  size: 80mm 200mm;
+  margin: 0;
+}
+
+/* Area cetak (di-portal ke body oleh ReceiptDialog) hanya tampil saat mencetak. */
+.receipt-print-root {
+  display: none;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  /* Batasi html & body ke 80mm: sebagian browser memakai lebar body untuk
+   * menentukan ukuran halaman cetak, jadi ini memperkuat `@page size` agar
+   * kertas benar-benar pas 80mm (tanpa area kosong A4). */
+  html,
+  body {
+    width: 80mm !important;
+    min-width: 0 !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
-  #receipt-print-area,
-  #receipt-print-area * {
-    visibility: visible;
-  }
-  #receipt-print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-  }
-  /* Tombol aksi di dalam dialog tidak ikut tercetak. */
-  .receipt-actions {
+  /* Sembunyikan SELURUH UI aplikasi; hanya area cetak portal yang ditampilkan.
+   * Karena .receipt-print-root adalah anak langsung <body> (bukan di dalam
+   * dialog), tidak ada containing block yang menggeser posisinya. */
+  body > *:not(.receipt-print-root) {
     display: none !important;
   }
-  @page {
-    margin: 0;
+  /* Tetap di aliran normal (BUKAN absolute): elemen absolute tidak menyumbang
+   * tinggi halaman, sehingga `size: 80mm auto` salah hitung & memunculkan
+   * halaman kedua kosong. Dengan body margin 0, struk tetap di kiri-atas. */
+  .receipt-print-root {
+    display: block !important;
+    width: 80mm !important;
+  }
+  /* Struk mengisi penuh lebar kertas 80mm; override w-[280px] dari komponen. */
+  #receipt-print-area {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 3mm 3mm !important;
+    box-shadow: none !important;
   }
 }
