@@ -21,6 +21,7 @@ import { CartPanel } from "@/features/pos/components/CartPanel";
 import { MobileCart } from "@/features/pos/components/MobileCart";
 import { PosSidebar } from "@/features/pos/components/PosSidebar";
 import { CheckoutDialog } from "@/features/pos/components/CheckoutDialog";
+import { ReceiptDialog } from "@/features/pos/components/ReceiptDialog";
 import { confirmDialog } from "@/lib/swal";
 import type { Product } from "@/features/pos/types";
 
@@ -59,6 +60,8 @@ export default function PosPage() {
     taxRate,
     grandTotal,
     processPayment,
+    lastReceipt,
+    clearReceipt,
   } = useCheckout();
 
   useEffect(() => {
@@ -321,6 +324,15 @@ export default function PosPage() {
         isPending={isPending}
         error={error}
         onConfirm={handleConfirmPayment}
+      />
+
+      {/* Struk muncul otomatis setelah transaksi berhasil */}
+      <ReceiptDialog
+        open={lastReceipt !== null}
+        onOpenChange={(open) => {
+          if (!open) clearReceipt();
+        }}
+        data={lastReceipt}
       />
     </div>
   );

@@ -17,6 +17,21 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { Role, StockMutationType, TransactionStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+/**
+ * Field outlet yang dibutuhkan untuk mencetak struk (header lengkap + pajak +
+ * catatan kaki). Dipakai seragam saat membuat transaksi maupun mengambil
+ * detailnya, agar payload struk konsisten di semua jalur.
+ */
+const RECEIPT_OUTLET_SELECT = {
+  id: true,
+  name: true,
+  address: true,
+  city: true,
+  phone: true,
+  taxRate: true,
+  receiptNote: true,
+} as const;
+
 @Injectable()
 export class TransactionsService {
   constructor(
@@ -240,7 +255,7 @@ export class TransactionsService {
         },
         include: {
           items: true,
-          outlet: { select: { id: true, name: true, taxRate: true, receiptNote: true } },
+          outlet: { select: RECEIPT_OUTLET_SELECT },
           cashier: { select: { id: true, name: true } },
           discount: { select: { id: true, name: true, type: true, value: true } },
         },
@@ -535,7 +550,7 @@ export class TransactionsService {
             variant: { select: { id: true, name: true } },
           },
         },
-        outlet: { select: { id: true, name: true, address: true, phone: true, receiptNote: true } },
+        outlet: { select: RECEIPT_OUTLET_SELECT },
         cashier: { select: { id: true, name: true } },
         shift: { select: { id: true, openedAt: true } },
         discount: { select: { id: true, name: true, type: true, value: true } },

@@ -11,7 +11,7 @@ import {
   checkout,
 } from './api';
 import { toastSuccess, errorAlert } from '@/lib/swal';
-import type { Category, Product, ActiveShift } from './types';
+import type { Category, Product, ActiveShift, ReceiptData, PaymentMethod } from './types';
 
 export function usePosData() {
   const outletId = useAuthStore((s) => s.user?.currentOutletId ?? '');
@@ -83,6 +83,9 @@ export function useCheckout() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Struk transaksi terakhir yang berhasil — dipakai membuka ReceiptDialog.
+  // Disimpan terpisah dari keranjang (yang sudah di-clear) agar tetap bisa dicetak.
+  const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
   const user = useAuthStore((s) => s.user);
   const outletId = user?.currentOutletId ?? '';
   const { items, discountId, clear } = useCartStore();
@@ -102,7 +105,7 @@ export function useCheckout() {
   const grandTotal = subtotal + tax;
 
   async function processPayment(
-    paymentMethod: 'CASH' | 'DEBIT_CARD' | 'CREDIT_CARD' | 'QRIS' | 'TRANSFER' | 'OTHER',
+    paymentMethod: PaymentMethod,
     cashReceived: number | undefined,
     _shiftId: string,
   ): Promise<boolean> {
@@ -110,7 +113,7 @@ export function useCheckout() {
     setIsPending(true);
     setError(null);
     try {
-      await checkout({
+      const receipt = await checkout({
         outletId: user?.currentOutletId ?? '',
         items: items.map((i) => ({
           productId: i.productId,
@@ -123,6 +126,7 @@ export function useCheckout() {
       });
       clear();
       setIsOpen(false);
+      setLastReceipt(receipt); // simpan untuk membuka ReceiptDialog
       toastSuccess('Transaksi berhasil');
       return true;
     } catch (err: unknown) {
@@ -137,5 +141,17 @@ export function useCheckout() {
     }
   }
 
-  return { isOpen, setIsOpen, isPending, error, subtotal, tax, taxRate, grandTotal, processPayment };
+  return {
+    isOpen,
+    setIsOpen,
+    isPending,
+    error,
+    subtotal,
+    tax,
+    taxRate,
+    grandTotal,
+    processPayment,
+    lastReceipt,
+    clearReceipt: () => setLastReceipt(null),
+  };
 }

@@ -7,6 +7,7 @@ import type {
   ActiveShift,
   TransactionListResult,
   TransactionQuery,
+  ReceiptData,
 } from './types';
 
 export async function fetchCategories(outletId: string): Promise<Category[]> {
@@ -41,8 +42,15 @@ export async function fetchActiveShift(outletId: string): Promise<ActiveShift | 
   }
 }
 
-export async function checkout(payload: CheckoutPayload) {
-  const { data } = await api.post('/transactions', payload);
+/** Buat transaksi (checkout). Respons berisi data lengkap untuk mencetak struk. */
+export async function checkout(payload: CheckoutPayload): Promise<ReceiptData> {
+  const { data } = await api.post<ReceiptData>('/transactions', payload);
+  return data;
+}
+
+/** Ambil detail satu transaksi (lengkap dgn outlet, item, kasir) untuk cetak struk dari riwayat. */
+export async function fetchTransactionDetail(id: string): Promise<ReceiptData> {
+  const { data } = await api.get<ReceiptData>(`/transactions/${id}`);
   return data;
 }
 
