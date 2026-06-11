@@ -150,5 +150,45 @@ describe('lib/api', () => {
       expect(state.accessToken).toBe(goodAccess);
       expect(state.refreshToken).toBe(goodRefresh);
     });
+
+    it('backend MENOLAK refresh (401) → sesi dihapus & redirect ke /login', async () => {
+      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600));
+      // Backend bilang refresh token invalid/di-revoke.
+      mockedPost.mockRejectedValue({ response: { status: 401 } });
+
+      // jsdom tak benar-benar bernavigasi saat set location.href ("Not
+      // implemented"); intip lewat stub agar bisa assert tujuan redirect.
+      const hrefSetter = vi.fn();
+      const original = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { pathname: '/dashboard', set href(v: string) { hrefSetter(v); } },
+      });
+
+      await api.proactiveRefresh();
+
+      // Storage auth dibersihkan (kredensial sudah tak sah).
+      expect(localStorage.getItem(AUTH_KEY)).toBeNull();
+      // Diarahkan ke login.
+      expect(hrefSetter).toHaveBeenCalledWith('/login');
+
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    });
+
+    it('error JARINGAN (server mati / offline) → JANGAN hapus sesi, JANGAN redirect', async () => {
+      const goodAccess = makeJwt(10);
+      const goodRefresh = makeJwt(7 * 24 * 3600);
+      setAuth(goodAccess, goodRefresh);
+      // Tanpa `response` → ini error jaringan, bukan penolakan backend.
+      mockedPost.mockRejectedValue(new Error('Network Error'));
+
+      await api.proactiveRefresh();
+
+      // Sesi TETAP utuh — request berikutnya akan retry. Ini mencegah
+      // "balik ke login" padahal refresh token masih valid 7 hari.
+      const state = readAuthState();
+      expect(state.accessToken).toBe(goodAccess);
+      expect(state.refreshToken).toBe(goodRefresh);
+    });
   });
 });
