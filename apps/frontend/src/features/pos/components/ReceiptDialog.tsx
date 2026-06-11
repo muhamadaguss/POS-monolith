@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer, FileText, Bluetooth } from 'lucide-react';
@@ -17,9 +18,15 @@ interface ReceiptDialogProps {
 
 /**
  * Modal pratinjau struk + aksi cetak. Dua jalur cetak:
- * - "Cetak / PDF" via window.print() — universal, jalan offline (CSS @media print
- *   mengisolasi #receipt-print-area; lihat globals.css).
+ * - "Cetak / PDF" via window.print() — universal, jalan offline.
  * - "Printer Thermal" via Web Bluetooth — hanya tampil bila didukung.
+ *
+ * Area cetak (#receipt-print-area) DI-PORTAL ke document.body, BUKAN di dalam
+ * dialog. Sebabnya: DialogContent base-ui memusatkan diri dengan
+ * position:fixed + top/left 50% sehingga menjadi containing block yang
+ * menggeser elemen cetak. Dengan mem-portal struk-cetak langsung ke body, CSS
+ * @media print bisa menempatkannya tepat di sudut kertas tanpa melawan styling
+ * dialog. Pratinjau di dalam dialog memakai <Receipt> terpisah (tanpa id cetak).
  */
 export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) {
   const [isPrinting, setIsPrinting] = useState(false);
@@ -43,55 +50,65 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden rounded-2xl">
-        <DialogHeader className="px-6 pt-6 pb-3">
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <Printer className="h-5 w-5 text-emerald-600" />
-            Struk Transaksi
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-sm p-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="px-6 pt-6 pb-3">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <Printer className="h-5 w-5 text-emerald-600" />
+              Struk Transaksi
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Pratinjau struk (area yang dicetak window.print) */}
-        <div className="max-h-[55vh] overflow-y-auto bg-gray-100 px-4 py-4">
-          <div className="shadow-sm">
-            <Receipt data={data} />
+          {/* Pratinjau struk di layar (tanpa id cetak; hanya tampilan). */}
+          <div className="max-h-[55vh] overflow-y-auto bg-gray-100 px-4 py-4 print:hidden">
+            <div className="shadow-sm">
+              <Receipt data={data} />
+            </div>
           </div>
-        </div>
 
-        {/* Aksi — disembunyikan saat mencetak (agar tak ikut tertangkap print) */}
-        <div className="receipt-actions flex flex-col gap-2 px-6 py-4">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={() => window.print()}
-              className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-semibold"
-            >
-              <FileText className="mr-1 h-4 w-4" /> Cetak / PDF
-            </Button>
-            {thermalSupported && (
+          {/* Aksi — tak ikut tercetak (print:hidden). */}
+          <div className="flex flex-col gap-2 px-6 py-4 print:hidden">
+            <div className="flex gap-2">
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleThermal}
-                disabled={isPrinting}
-                className="flex-1 h-11 rounded-xl"
+                onClick={() => window.print()}
+                className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-semibold"
               >
-                <Bluetooth className="mr-1 h-4 w-4" />
-                {isPrinting ? 'Mencetak…' : 'Thermal'}
+                <FileText className="mr-1 h-4 w-4" /> Cetak / PDF
               </Button>
-            )}
+              {thermalSupported && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleThermal}
+                  disabled={isPrinting}
+                  className="flex-1 h-11 rounded-xl"
+                >
+                  <Bluetooth className="mr-1 h-4 w-4" />
+                  {isPrinting ? 'Mencetak…' : 'Thermal'}
+                </Button>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              className="h-10 rounded-xl text-gray-500"
+            >
+              Tutup
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="h-10 rounded-xl text-gray-500"
-          >
-            Tutup
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Area cetak sebenarnya — di-portal ke body, hanya muncul saat @media print. */}
+      {createPortal(
+        <div className="receipt-print-root">
+          <Receipt data={data} forPrint />
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

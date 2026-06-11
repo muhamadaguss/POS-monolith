@@ -68,8 +68,14 @@ describe('Receipt', () => {
     expect(screen.getByText('Pajak')).toBeInTheDocument();
   });
 
-  it('memiliki id target cetak #receipt-print-area', () => {
-    const { container } = render(<Receipt data={baseData} />);
-    expect(container.querySelector('#receipt-print-area')).not.toBeNull();
+  it('memberi id target cetak #receipt-print-area hanya saat forPrint', () => {
+    // Default (pratinjau di dialog): tanpa id agar tidak bentrok dengan versi cetak.
+    const preview = render(<Receipt data={baseData} />);
+    expect(preview.container.querySelector('#receipt-print-area')).toBeNull();
+    preview.unmount();
+
+    // forPrint (di-portal ke body): punya id sebagai target @media print.
+    const print = render(<Receipt data={baseData} forPrint />);
+    expect(print.container.querySelector('#receipt-print-area')).not.toBeNull();
   });
 });
