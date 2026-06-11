@@ -191,4 +191,46 @@ describe('lib/api', () => {
       expect(state.refreshToken).toBe(goodRefresh);
     });
   });
+
+  /**
+   * Cross-tab refresh lock — mencegah dua tab me-refresh refresh-token YANG SAMA
+   * (memicu reuse-detection backend → seluruh sesi dicabut). Diuji lewat perilaku
+   * publik proactiveRefresh: tab yang kalah lock TIDAK boleh POST /auth/refresh.
+   */
+  describe('cross-tab refresh lock', () => {
+    const LOCK_KEY = 'kasirku-refresh-lock';
+
+    it('tab LAIN memegang lock segar → tab ini TIDAK POST /auth/refresh, pakai token rotasi dari storage', async () => {
+      const oldAccess = makeJwt(10); // expired-soon → memicu refresh
+      setAuth(oldAccess, makeJwt(7 * 24 * 3600));
+      // Tab lain (id berbeda) memegang lock yang masih baru.
+      localStorage.setItem(LOCK_KEY, JSON.stringify({ id: 'tab-lain', at: Date.now() }));
+
+      const p = api.proactiveRefresh();
+      // Simulasikan tab lain selesai merotasi: tulis access baru ke storage.
+      const rotated = makeJwt(900);
+      setAuth(rotated, makeJwt(7 * 24 * 3600));
+      await p;
+
+      // Tab ini menunggu hasil tab lain — tidak ikut memanggil backend.
+      expect(mockedPost).not.toHaveBeenCalled();
+    });
+
+    it('lock BASI (lebih tua dari TTL) diabaikan → tab ini merefresh sendiri', async () => {
+      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600));
+      // Lock dari tab lain tapi sudah kedaluwarsa (>12s) → dianggap hangus.
+      localStorage.setItem(
+        LOCK_KEY,
+        JSON.stringify({ id: 'tab-mati', at: Date.now() - 60_000 }),
+      );
+      mockedPost.mockResolvedValue({
+        data: { success: true, data: { accessToken: makeJwt(900), refreshToken: makeJwt(7 * 24 * 3600) } },
+      });
+
+      await api.proactiveRefresh();
+
+      // Lock basi tidak menghalangi — tab ini mengambil alih & refresh.
+      expect(mockedPost).toHaveBeenCalledTimes(1);
+    });
+  });
 });
