@@ -34,6 +34,33 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
 
   if (!data) return null;
 
+  /**
+   * Cetak via window.print() dengan tinggi kertas mengikuti isi struk.
+   * Chromium hanya menghormati ukuran @page yang eksplisit (bukan `auto`), jadi
+   * kita ukur tinggi area cetak (px → mm) lalu set `@page size: 80mm <h>mm`
+   * tepat sebelum print, dan membersihkannya setelah dialog print tertutup.
+   * Hasil: PDF 80mm tanpa ruang kosong di bawah, berapapun jumlah item.
+   */
+  function printReceipt() {
+    const area = document.getElementById('receipt-print-area');
+    const PX_PER_MM = 96 / 25.4; // 1mm pada 96dpi
+    // Tinggi konten + sedikit margin bawah agar baris terakhir tak terpotong.
+    const heightMm = area ? Math.ceil(area.scrollHeight / PX_PER_MM) + 4 : 200;
+
+    const style = document.createElement('style');
+    style.id = 'receipt-page-size';
+    style.textContent = `@page { size: 80mm ${heightMm}mm; margin: 0; }`;
+    document.head.appendChild(style);
+
+    const cleanup = () => {
+      document.getElementById('receipt-page-size')?.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    window.print();
+  }
+
   async function handleThermal() {
     if (!data || isPrinting) return;
     setIsPrinting(true);
@@ -72,7 +99,7 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
             <div className="flex gap-2">
               <Button
                 type="button"
-                onClick={() => window.print()}
+                onClick={printReceipt}
                 className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-semibold"
               >
                 <FileText className="mr-1 h-4 w-4" /> Cetak / PDF

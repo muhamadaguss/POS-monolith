@@ -141,6 +141,9 @@
  * halaman berikutnya. Hasil: kertas pas 80mm tanpa area kosong A4, tanpa
  * header/footer browser.
  */
+/* Fallback ukuran kertas. Saat tombol "Cetak / PDF" ditekan, ReceiptDialog
+ * meng-inject @page dinamis (#receipt-page-size) dengan tinggi mengikuti isi
+ * struk, yang akan menimpa nilai ini. 200mm hanya berlaku bila JS tak sempat. */
 @page {
   size: 80mm 200mm;
   margin: 0;
