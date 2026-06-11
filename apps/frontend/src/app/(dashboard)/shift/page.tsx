@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Clock, DollarSign, CheckCircle, AlertTriangle, RefreshCw, Printer } from 'lucide-react';
+import Link from 'next/link';
+import { Clock, DollarSign, CheckCircle, AlertTriangle, RefreshCw, Printer, History } from 'lucide-react';
 import { usePageFocus } from '@/hooks/usePageFocus';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ export default function ShiftPage() {
   const outlets = useAuthStore((s) => s.outlets);
   const isOwner = user?.role === 'TENANT_OWNER';
   const isCashier = user?.role === 'CASHIER';
+  const canManageShift = !!user?.permissions.includes('shift.manage');
   const isOwnShift = (shift: Shift | null) => !shift || shift.openedById === user?.id;
 
   // Owner tidak punya currentOutletId (akses lintas cabang), jadi ia memilih
@@ -169,9 +171,18 @@ export default function ShiftPage() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Manajemen Shift</h1>
-        <p className="text-sm text-gray-500 mt-1">Buka dan tutup shift kasir dengan pencatatan kas</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manajemen Shift</h1>
+          <p className="text-sm text-gray-500 mt-1">Buka dan tutup shift kasir dengan pencatatan kas</p>
+        </div>
+        {canManageShift && (
+          <Link href="/shift/history">
+            <Button variant="outline" className="rounded-xl gap-2 shrink-0">
+              <History className="w-4 h-4" /> Riwayat
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Owner: pilih outlet karena tidak terikat satu cabang */}

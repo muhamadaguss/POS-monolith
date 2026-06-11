@@ -47,3 +47,48 @@ export interface CloseShiftPayload {
   closingCash: number;
   notes?: string;
 }
+
+// ---- Riwayat Shift ----
+
+/** Satu baris di daftar riwayat shift (`GET /shifts`). */
+export interface ShiftListItem extends Shift {
+  _count?: { transactions: number };
+}
+
+/** Parameter query untuk `GET /shifts`. */
+export interface ShiftQuery {
+  outletId?: string;
+  status?: ShiftStatus;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ShiftListResponse {
+  items: ShiftListItem[];
+  meta: PaginationMeta;
+}
+
+/** Satu transaksi dalam detail shift (`GET /shifts/:id`). */
+export interface ShiftTransaction {
+  id: string;
+  receiptNumber: string;
+  status: string;
+  paymentMethod: string;
+  totalAmount: number | string;
+  createdAt: string;
+}
+
+/** Detail shift lengkap (`GET /shifts/:id`). */
+export interface ShiftDetail extends Shift {
+  transactions: ShiftTransaction[];
+  _count?: { transactions: number };
+}

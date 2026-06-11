@@ -13,6 +13,7 @@ import {
   CreditCard,
   LogOut,
   Clock,
+  History,
   Store,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -25,6 +26,8 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   permissions?: string[];
+  /** Cocokkan path persis (bukan prefix). Cegah parent menyala saat di sub-rute. */
+  exact?: boolean;
 }
 
 const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
@@ -33,7 +36,13 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'Kasir (POS)', href: '/pos', icon: ShoppingCart },
-      { label: 'Manajemen Shift', href: '/shift', icon: Clock },
+      { label: 'Manajemen Shift', href: '/shift', icon: Clock, exact: true },
+      {
+        label: 'Riwayat Shift',
+        href: '/shift/history',
+        icon: History,
+        permissions: ['shift.manage'],
+      },
     ],
   },
   {
@@ -141,8 +150,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               <ul className="space-y-0.5">
                 {visible.map((item) => {
                   const isActive =
-                    item.href === '/dashboard'
-                      ? pathname === '/dashboard'
+                    item.href === '/dashboard' || item.exact
+                      ? pathname === item.href
                       : pathname.startsWith(item.href);
                   const Icon = item.icon;
 

@@ -1,5 +1,12 @@
 import { api } from '@/lib/api';
-import type { Shift, OpenShiftPayload, CloseShiftPayload } from './types';
+import type {
+  Shift,
+  OpenShiftPayload,
+  CloseShiftPayload,
+  ShiftQuery,
+  ShiftListResponse,
+  ShiftDetail,
+} from './types';
 
 export async function getActiveShift(outletId: string): Promise<Shift | null> {
   try {
@@ -20,5 +27,26 @@ export async function openShift(payload: OpenShiftPayload): Promise<Shift> {
 
 export async function closeShift(shiftId: string, payload: CloseShiftPayload): Promise<Shift> {
   const { data } = await api.patch<Shift>(`/shifts/${shiftId}/close`, payload);
+  return data;
+}
+
+/** Riwayat shift dengan filter & pagination (`GET /shifts`). */
+export async function getShifts(query: ShiftQuery = {}): Promise<ShiftListResponse> {
+  const params = new URLSearchParams();
+  if (query.outletId) params.set('outletId', query.outletId);
+  if (query.status) params.set('status', query.status);
+  if (query.startDate) params.set('startDate', query.startDate);
+  if (query.endDate) params.set('endDate', query.endDate);
+  if (query.page) params.set('page', String(query.page));
+  if (query.limit) params.set('limit', String(query.limit));
+
+  const qs = params.toString();
+  const { data } = await api.get<ShiftListResponse>(`/shifts${qs ? `?${qs}` : ''}`);
+  return data;
+}
+
+/** Detail satu shift beserta daftar transaksinya (`GET /shifts/:id`). */
+export async function getShiftDetail(shiftId: string): Promise<ShiftDetail> {
+  const { data } = await api.get<ShiftDetail>(`/shifts/${shiftId}`);
   return data;
 }
