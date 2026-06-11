@@ -48,7 +48,11 @@ export class ProductsService {
     const skip = (page - 1) * limit;
 
     const where: any = {
-      tenantId: currentUser.tenantId!,
+      // SUPER_ADMIN tidak terikat tenant (tenantId null). Field `tenantId` di
+      // schema NON-NULL, sehingga `where: { tenantId: null }` ditolak Prisma →
+      // 500. Hanya filter tenantId bila ada (Owner/Manager/Cashier). Tanpa
+      // tenantId, SUPER_ADMIN melihat lintas tenant.
+      ...(currentUser.tenantId && { tenantId: currentUser.tenantId }),
       ...(categoryId && { categoryId }),
       ...(status && { status: status as ProductStatus }),
       ...(search && {
@@ -271,23 +275,30 @@ export class ProductsService {
       if (!variant) throw new NotFoundException('Varian tidak ditemukan');
     }
 
-    return this.prisma.outletPrice.upsert({
-      where: {
-        outletId_productId_variantId: {
-          outletId: dto.outletId,
-          productId,
-          variantId: dto.variantId ?? null as any,
-        },
-      },
-      create: {
+    // CATATAN: tidak memakai `upsert` pada compound unique
+    // [outletId, productId, variantId] karena `variantId` nullable. Di Postgres,
+    // NULL tidak pernah sama dengan NULL pada unique index, sehingga
+    // `where: { ...variantId: null }` melempar di runtime (sebelumnya → 500 saat
+    // set harga produk tanpa varian). Cari manual lalu create/update.
+    const variantId = dto.variantId ?? null;
+    const existing = await this.prisma.outletPrice.findFirst({
+      where: { outletId: dto.outletId, productId, variantId },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return this.prisma.outletPrice.update({
+        where: { id: existing.id },
+        data: { costPrice: dto.costPrice, sellPrice: dto.sellPrice },
+      });
+    }
+
+    return this.prisma.outletPrice.create({
+      data: {
         tenantId: currentUser.tenantId!,
         outletId: dto.outletId,
         productId,
-        variantId: dto.variantId,
-        costPrice: dto.costPrice,
-        sellPrice: dto.sellPrice,
-      },
-      update: {
+        variantId,
         costPrice: dto.costPrice,
         sellPrice: dto.sellPrice,
       },

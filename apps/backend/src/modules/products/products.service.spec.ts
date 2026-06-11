@@ -112,4 +112,47 @@ describe('ProductsService', () => {
       await expect(service.remove('nope', owner)).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('setPrice (regresi BUG-3: variantId null tak boleh 500)', () => {
+    const priceDto = { outletId: 'outlet-1', costPrice: 2000, sellPrice: 5000 } as any;
+
+    beforeEach(() => {
+      // findOne() → product ditemukan
+      prisma.product.findFirst.mockResolvedValue({ id: 'prod-1', variants: [] });
+      // outlet milik tenant
+      prisma.outlet.findFirst.mockResolvedValue({ id: 'outlet-1' });
+    });
+
+    it('produk tanpa varian, harga BELUM ada → CREATE (bukan upsert dgn null)', async () => {
+      prisma.outletPrice.findFirst.mockResolvedValue(null);
+      prisma.outletPrice.create.mockResolvedValue({ id: 'op-1', sellPrice: 5000 });
+
+      const res = await service.setPrice('prod-1', priceDto, owner);
+
+      // Tidak memakai upsert (yang gagal saat variantId null di compound unique).
+      expect(prisma.outletPrice.upsert).not.toHaveBeenCalled();
+      expect(prisma.outletPrice.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ variantId: null }) }),
+      );
+      expect(prisma.outletPrice.create).toHaveBeenCalled();
+      expect(res).toHaveProperty('id', 'op-1');
+    });
+
+    it('produk tanpa varian, harga SUDAH ada → UPDATE by id', async () => {
+      prisma.outletPrice.findFirst.mockResolvedValue({ id: 'op-existing' });
+      prisma.outletPrice.update.mockResolvedValue({ id: 'op-existing', sellPrice: 5000 });
+
+      await service.setPrice('prod-1', priceDto, owner);
+
+      expect(prisma.outletPrice.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'op-existing' } }),
+      );
+      expect(prisma.outletPrice.create).not.toHaveBeenCalled();
+    });
+
+    it('menolak outlet yang bukan milik tenant', async () => {
+      prisma.outlet.findFirst.mockResolvedValue(null);
+      await expect(service.setPrice('prod-1', priceDto, owner)).rejects.toThrow(NotFoundException);
+    });
+  });
 });

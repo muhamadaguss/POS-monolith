@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/features/auth/store';
+import { RequirePermission } from '@/features/auth/RequirePermission';
 import { usePageFocus } from '@/hooks/usePageFocus';
 import {
   getSalesSummaryWithGrowth,
@@ -112,7 +113,7 @@ function dateTime(s: string | null): string {
   });
 }
 
-export default function ReportsPage() {
+function ReportsPageInner() {
   const user = useAuthStore((s) => s.user);
   const outlets = useAuthStore((s) => s.outlets);
   const isOwner = user?.role === 'TENANT_OWNER';
@@ -574,5 +575,16 @@ export default function ReportsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <RequirePermission
+      anyOf={['report.view']}
+      message="Hanya Owner/Super Admin yang dapat melihat laporan penjualan."
+    >
+      <ReportsPageInner />
+    </RequirePermission>
   );
 }

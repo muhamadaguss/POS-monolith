@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/features/auth/store';
+import { RequirePermission } from '@/features/auth/RequirePermission';
 import { usePageFocus } from '@/hooks/usePageFocus';
 import {
   listProducts,
@@ -46,7 +47,7 @@ import {
 
 const PAGE_SIZE = PRODUCTS_PAGE_SIZE;
 
-export default function ProductsPage() {
+function ProductsPageInner() {
   const user = useAuthStore((s) => s.user);
   const outlets = useAuthStore((s) => s.outlets);
   const permissions = useMemo(() => user?.permissions ?? [], [user]);
@@ -498,5 +499,16 @@ export default function ProductsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <RequirePermission
+      anyOf={['product.manage']}
+      message="Hanya pemilik bisnis (Owner) yang dapat mengelola katalog produk."
+    >
+      <ProductsPageInner />
+    </RequirePermission>
   );
 }

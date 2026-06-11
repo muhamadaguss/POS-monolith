@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/features/auth/store';
+import { RequirePermission } from '@/features/auth/RequirePermission';
 import { usePageFocus } from '@/hooks/usePageFocus';
 import { listOutlets, createOutlet, updateOutlet, apiErrorMessage } from '@/features/outlets/api';
 import { toastSuccess, errorAlert, confirmDialog } from '@/lib/swal';
@@ -61,7 +62,7 @@ function initials(name: string) {
     .join('');
 }
 
-export default function OutletsPage() {
+function OutletsPageInner() {
   const user = useAuthStore((s) => s.user);
   const canManage = user?.permissions?.includes('outlet.manage') ?? false;
 
@@ -609,5 +610,16 @@ function OutletFormDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export default function OutletsPage() {
+  return (
+    <RequirePermission
+      anyOf={['outlet.manage']}
+      message="Hanya Owner/Super Admin yang dapat mengelola outlet."
+    >
+      <OutletsPageInner />
+    </RequirePermission>
   );
 }

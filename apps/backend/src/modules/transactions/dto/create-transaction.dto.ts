@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   IsArray,
   IsEnum,
   IsNumber,
@@ -34,6 +35,7 @@ export class CreateTransactionDto {
 
   @ApiProperty({ type: [TransactionItemDto], description: 'Minimal 1 item' })
   @IsArray()
+  @ArrayNotEmpty({ message: 'Transaksi harus memiliki minimal 1 item' })
   @ValidateNested({ each: true })
   @Type(() => TransactionItemDto)
   items: TransactionItemDto[];
