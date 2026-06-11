@@ -1,7 +1,8 @@
 # Skenario E2E Testing — Kasirku POS
 
 > Pengujian end-to-end via Playwright untuk **semua role** × **semua flow bisnis**.
-> **Status: SUDAH DIJALANKAN** — 2026-06-11. Kolom Hasil terisi.
+> **Status: SUDAH DIJALANKAN + BUG DIPERBAIKI + RE-VERIFIKASI LULUS** — 2026-06-11.
+> **Hasil final: 92 lulus · 0 gagal · 2 dilewati (F4/F9)** dari 94 skenario.
 >
 > - **Lingkungan:** FE `localhost:3000`, BE `localhost:3001/api/v1`, DB PostgreSQL (seed).
 > - **Metode:** Playwright UI (browser) untuk seluruh flow. RBAC negatif diuji via
@@ -22,6 +23,25 @@
 **Perbaikan diverifikasi live** (API + UI Playwright) + **regression test** ditambahkan:
 BE 53→**59** test (setPrice 3 + DTO empty-items 3), FE **81** test, tsc bersih FE+BE.
 Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
+
+### Re-verifikasi perbaikan — RUN 2026-06-11 (HEAD `96d40be`)
+
+Skenario yang dulu ❌/⚠️ dijalankan ulang melawan kode HEAD untuk memastikan
+perbaikan benar-benar berlaku. **Semua kini lulus:**
+
+| Skenario | Bug | Metode | Hasil sekarang |
+|---|---|---|---|
+| B4 | BUG-4 | API `GET /products` (SUPER_ADMIN & OWNER) | **200** ✅ |
+| C9 | BUG-3 | API `POST /products/:id/prices` (variantId null), create + update | **201** + idempotent (POST ulang → update, bukan 500) ✅ |
+| E14 | BUG-2 | API `POST /transactions` `items:[]` | **422** "Transaksi harus memiliki minimal 1 item" ✅ |
+| D9 | BUG-1 | UI Playwright — manager → `/products` via URL | **"Akses Ditolak"**, data tak bocor ✅ |
+| D11 | BUG-1 | UI Playwright — manager → `/reports` via URL | **"Akses Ditolak"** ✅ |
+| D12 | BUG-1 | UI Playwright — manager → `/outlets` via URL | **"Akses Ditolak"** ✅ |
+| — | regresi | UI Playwright — **owner** → `/products` | tetap **AKSES PENUH** (Es Teh tampil) ✅ |
+| — | regresi | Test suite | BE 14/14 (spec terkait), FE 81/81 ✅ |
+
+Re-verifikasi tidak menambah data baseline (set-harga = update baris seed
+2000/5000 in-place; tak ada transaksi/shift dibuat). Tidak ada artefak tertinggal.
 
 ---
 
@@ -83,7 +103,7 @@ Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
 | B1 | Daftar tenant | `/admin/tenants` | "Demo Toko Makmur", STARTER, status Aktif tampil | ✅ |
 | B2 | Detail tenant | `/admin/tenants/[id]` | API `admin/tenants/:id` → 200 (detail tenant) | ✅ |
 | B3 | Halaman admin utama | `/admin` | "Super Admin Dashboard" (Manajemen Tenant + User) | ✅ |
-| B4 | Akses penuh | users/audit/stats | users 200, audit 200, stats 200. **products → 500** (BUG-4) | ⚠️ |
+| B4 | Akses penuh | users/audit/stats | users 200, audit 200, stats 200, **products 200** (BUG-4 fixed) | ✅ |
 | B5 | Audit log platform | `/audit-log` (API) | 200 | ✅ |
 
 ## BAGIAN C — TENANT_OWNER (lintas outlet)
@@ -98,7 +118,7 @@ Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
 | C6 | Validasi form outlet | POST body kosong | 422 (nama wajib) | ✅ |
 | C7 | Daftar produk | `/products` | Es Teh Manis tampil | ✅ |
 | C8 🔸 | Tambah produk | POST name+sku+categoryId | Produk "Produk Uji E2E" tersimpan | ✅ |
-| C9 🔸 | Set harga produk | POST :id/prices | **500** — gagal (BUG-3: variantId null di unique upsert) | ❌ |
+| C9 🔸 | Set harga produk | POST :id/prices | **201**, idempotent (BUG-3 fixed: findFirst+create/update, variantId null aman) | ✅ |
 | C10 🔸 | Tambah kategori | POST category | "Kategori Uji E2E" tersimpan | ✅ |
 | C11/C12 🔸 | Hapus kategori/produk | DELETE (saat cleanup) | Terhapus bersih (lihat pemulihan) | ✅ |
 | C13 | Cari/filter produk | `?search=Es Teh` | 200, terfilter | ✅ |
@@ -128,10 +148,10 @@ Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
 | D6 | Inventory lokal | `/inventory` | Es Teh + Stock Opname tampil (Total Produk 1) | ✅ |
 | D7 🔸 | Adjust stok lokal | POST adjustments (scoped) | 201 (inventory.adjust) | ✅ |
 | D8 | Shift manage | menu "Manajemen Shift" | Tersedia di sidebar manager | ✅ |
-| D9 | RBAC — produk | ketik `/products` | Menu disembunyikan ✅ TAPI halaman **TETAP TAMPIL** via URL (**BUG-1**) | ❌ |
+| D9 | RBAC — produk | ketik `/products` | Menu disembunyikan ✅ + **"Akses Ditolak"** via URL (BUG-1 fixed: RequirePermission, data tak bocor) | ✅ |
 | D10 | RBAC — billing | ketik `/billing` | **"Akses Ditolak — Hanya Owner"** (guard ada) | ✅ |
-| D11 | RBAC — reports | ketik `/reports` | Menu disembunyikan ✅ TAPI halaman **TAMPIL** via URL (data Rp 0, API 403) (**BUG-1**) | ❌ |
-| D12 | RBAC — outlets | ketik `/outlets` | Menu disembunyikan ✅ TAPI "Manajemen Outlet" **TAMPIL** via URL (**BUG-1**) | ❌ |
+| D11 | RBAC — reports | ketik `/reports` | Menu disembunyikan ✅ + **"Akses Ditolak"** via URL (BUG-1 fixed) | ✅ |
+| D12 | RBAC — outlets | ketik `/outlets` | Menu disembunyikan ✅ + **"Akses Ditolak"** via URL (BUG-1 fixed) | ✅ |
 | D13 | RBAC — mutasi via API | POST products/outlets/billing | **403** semua (API memblokir mutasi dengan benar) | ✅ |
 
 ## BAGIAN E — CASHIER (POS) + Flow Transaksi 🔸
@@ -153,7 +173,7 @@ Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
 | E11 🔸 | Checkout tunai | UI: Rp 50.000 → Konfirmasi | Sukses, **ReceiptDialog muncul**, keranjang kosong, stok turun | ✅ |
 | E12 | Cetak struk (PDF) | ReceiptDialog (UI) | Struk lengkap (TRX-…0007, item, TOTAL 11.100, Kembali 38.900). `.print-root.print-receipt` + `#receipt-print-area` ada | ✅ |
 | E13 🔸 | Checkout non-tunai (QRIS) | POST QRIS | Sukses, amountPaid=total, change 0 | ✅ |
-| E14 | Checkout keranjang kosong | UI vs API | UI: tombol **disabled** ✅. API: **201 buat trx Rp 0** (**BUG-2**) | ⚠️ |
+| E14 | Checkout keranjang kosong | UI vs API | UI: tombol **disabled** ✅. API: **422** "minimal 1 item" (BUG-2 fixed: @ArrayNotEmpty) | ✅ |
 | E15 | Riwayat transaksi | GET transactions | 200, transaksi baru muncul (5 di daftar) | ✅ |
 | E16 | Detail transaksi | GET transactions/:id | Outlet, items, cashier lengkap | ✅ |
 | E17 | Filter status riwayat | filter UI | Dropdown status tersedia (StatusFilter) | ✅ |
@@ -209,39 +229,43 @@ Lihat commit terkait. Data uji perbaikan dibersihkan, baseline tetap utuh.
 
 ## Ringkasan Hasil — RUN 2026-06-11
 
-| Bagian | Total | Lulus | Gagal | Catatan |
+> **Catatan:** kolom "Gagal" di bawah adalah temuan **run pertama** (sebelum fix).
+> Keempat bug (BUG-1..4) sudah diperbaiki & **diverifikasi ulang lulus** — lihat
+> "Re-verifikasi perbaikan" di atas. Status final: **92 lulus, 0 gagal, 2 dilewati**.
+
+| Bagian | Total | Lulus (final) | Gagal (final) | Catatan |
 |---|---|---|---|---|
 | A — Auth & Routing | 14 | 14 | 0 | Semua login/guard/redirect/logout benar |
-| B — SUPER_ADMIN | 5 | 4 | 0 (1⚠️) | products 500 utk superadmin (BUG-4) |
-| C — TENANT_OWNER | 27 | 26 | 1 | set-harga 500 (BUG-3) |
-| D — STORE_MANAGER | 13 | 10 | 3 | guard halaman products/reports/outlets bocor (BUG-1) |
-| E — CASHIER & Transaksi | 26 | 25 | 0 (1⚠️) | empty-cart API 201 (BUG-2); UI aman |
+| B — SUPER_ADMIN | 5 | 5 | 0 | products 200 utk superadmin (BUG-4 fixed) |
+| C — TENANT_OWNER | 27 | 27 | 0 | set-harga 201 (BUG-3 fixed) |
+| D — STORE_MANAGER | 13 | 13 | 0 | guard products/reports/outlets → Akses Ditolak (BUG-1 fixed) |
+| E — CASHIER & Transaksi | 26 | 26 | 0 | empty-cart API 422 (BUG-2 fixed) |
 | F — Ketahanan/Keamanan | 9 | 7 | 0 (2⏭️) | F4/F9 dilewati (tak relevan/aman) |
-| **TOTAL** | **94** | **86** | **4** | + 4 ⚠️/⏭️ |
+| **TOTAL** | **94** | **92** | **0** | + 2 ⏭️ (F4/F9 sengaja dilewati) |
 
 **Kesimpulan:** Inti aplikasi (auth, RBAC API, transaksi, void/refund, shift+rekap,
-cetak struk) **solid**. 4 bug ditemukan — semua di **lapisan validasi/guard**, bukan
-korupsi data. Tak satu pun memblokir alur utama kasir.
+cetak struk) **solid**. 4 bug yang ditemukan di run pertama — semua di **lapisan
+validasi/guard**, bukan korupsi data — **sudah diperbaiki & lulus re-verifikasi**.
+Tak satu pun memblokir alur utama kasir.
 
-### Temuan / Bug (detail)
+### Temuan / Bug (detail) — SEMUA SUDAH DIPERBAIKI ✅
 
-1. **BUG-1 (🟠 RBAC frontend):** `/products`, `/reports`, `/outlets` tak ada guard
-   client-side → manager bisa buka via URL meski menu disembunyikan. `/billing` punya
-   guard ("Akses Ditolak") → inkonsistensi. **Mitigasi sudah ada:** API memblokir semua
-   mutasi (403). Dampak: kebocoran tampilan data read. **Saran:** tambah guard
-   `useAuthGuard`/permission-check di layout `(dashboard)` per-route, samakan dgn /billing.
+1. **BUG-1 (🟠 RBAC frontend) — FIXED:** `/products`, `/reports`, `/outlets` dulu tak ada
+   guard client-side → manager bisa buka via URL. **Perbaikan:** komponen
+   `RequirePermission` (any-of permission) membungkus ketiga halaman → manager kini
+   melihat **"Akses Ditolak"**, owner tetap akses penuh. Diverifikasi UI Playwright.
 
-2. **BUG-2 (🟠 transaksi kosong):** `POST /transactions` `items:[]` → 201, trx Rp 0.
-   **Saran:** tambah `@ArrayNotEmpty()` pada `items` di `CreateTransactionDto`.
+2. **BUG-2 (🟠 transaksi kosong) — FIXED:** `POST /transactions` `items:[]` dulu → 201 Rp 0.
+   **Perbaikan:** `@ArrayNotEmpty()` pada `items` di `CreateTransactionDto` → kini **422**.
 
-3. **BUG-3 (🔴 set harga):** `POST /products/:id/prices` selalu 500 utk produk tanpa
-   varian (upsert Prisma `@@unique([outletId,productId,variantId])` dgn `variantId=null`).
-   **Saran:** ganti upsert → cari manual (`findFirst` dgn `variantId: null`) lalu
-   create/update, atau pisahkan unique index untuk variantId null.
+3. **BUG-3 (🔴 set harga) — FIXED:** `POST /products/:id/prices` dulu selalu 500 utk produk
+   tanpa varian (upsert Prisma `@@unique([outletId,productId,variantId])` dgn `variantId=null`).
+   **Perbaikan:** ganti upsert → `findFirst` (`variantId: null`) lalu create/update by id →
+   kini **201**, idempotent.
 
-4. **BUG-4 (🟡 superadmin products):** `GET /products` oleh SUPER_ADMIN → 500
-   (kemungkinan query bergantung tenantId/outlet yang null utk superadmin).
-   **Saran:** handle konteks tenant-less untuk SUPER_ADMIN di products.service.
+4. **BUG-4 (🟡 superadmin products) — FIXED:** `GET /products` oleh SUPER_ADMIN dulu 500
+   (`where: { tenantId: null }` ditolak Prisma). **Perbaikan:** filter tenantId hanya bila
+   ada (SUPER_ADMIN lintas tenant) → kini **200**.
 
 ### Verifikasi Pembersihan Data ✅
 
