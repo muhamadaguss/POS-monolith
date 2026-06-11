@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '@/features/auth/store';
+import { usePageFocus } from '@/hooks/usePageFocus';
 import { useCartStore } from './store';
 import {
   fetchCategories,
@@ -25,6 +26,12 @@ export function usePosData() {
   // Debounce search
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Watchdog: jangan biarkan spinner abadi. Bila loadInitial menggantung (mis.
+  // request beku saat bangun dari sleep sebelum timeout axios bekerja), paksa
+  // isLoading=false setelah ambang waktu agar UI tidak stuck "harus refresh
+  // manual". Pola jaring-pengaman yang sama dengan useAuthGuard.
+  const loadWatchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadInitial = useCallback(async () => {
     if (!outletId) {
       // Tanpa outlet tak ada yang dimuat — pastikan loading tidak menggantung.
@@ -32,6 +39,8 @@ export function usePosData() {
       return;
     }
     setIsLoading(true);
+    if (loadWatchdog.current) clearTimeout(loadWatchdog.current);
+    loadWatchdog.current = setTimeout(() => setIsLoading(false), 15_000);
     try {
       const [cats, prods, shift] = await Promise.all([
         fetchCategories(outletId),
@@ -44,11 +53,22 @@ export function usePosData() {
     } catch {
       // 401/refresh gagal ditangani interceptor; jangan biarkan jadi unhandled.
     } finally {
+      if (loadWatchdog.current) clearTimeout(loadWatchdog.current);
       setIsLoading(false);
     }
   }, [outletId]);
 
-  useEffect(() => { loadInitial(); }, [loadInitial]);
+  useEffect(() => {
+    loadInitial();
+    return () => {
+      if (loadWatchdog.current) clearTimeout(loadWatchdog.current);
+    };
+  }, [loadInitial]);
+
+  // Tab kembali aktif (bangun dari sleep / pindah tab lama): muat ulang katalog
+  // & shift otomatis. Tanpa ini, outletId tak berubah → loadInitial tak terpicu
+  // ulang → data lama/spinner bertahan sampai user refresh manual.
+  usePageFocus(loadInitial);
 
   function handleSearch(value: string) {
     setSearch(value);

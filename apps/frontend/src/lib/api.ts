@@ -212,9 +212,15 @@ function refreshOnce(): Promise<string> {
         // undefined → persistTokens(undefined) → token expired dipertahankan →
         // retry tetap 401 → "ke login setelah sleep". Unwrap eksplisit di sini.
         type RefreshTokens = { accessToken: string; refreshToken: string };
+        // PENTING: beri timeout eksplisit. Saat desktop bangun dari sleep, koneksi
+        // bisa "setengah mati" sehingga request menggantung tanpa batas. Tanpa
+        // timeout, refreshOnce() tak pernah selesai → single-flight menahan SEMUA
+        // request yang menunggu refresh → Promise.all di loader tak resolve →
+        // "loading stuck, harus refresh manual". Timeout > timeout instance api
+        // (10s) agar tidak saling mendahului saat jaringan lambat tapi hidup.
         const { data: body } = await axios.post<
           RefreshTokens | { success: boolean; data: RefreshTokens }
-        >(`${BASE_URL}/auth/refresh`, { refreshToken: latest });
+        >(`${BASE_URL}/auth/refresh`, { refreshToken: latest }, { timeout: 12_000 });
 
         const tokens: RefreshTokens =
           body && typeof body === 'object' && 'data' in body

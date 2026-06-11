@@ -108,6 +108,8 @@ describe('lib/api', () => {
       expect(mockedPost).toHaveBeenCalledWith(
         expect.stringContaining('/auth/refresh'),
         expect.objectContaining({ refreshToken: expect.any(String) }),
+        // Timeout eksplisit agar refresh tak menggantung tanpa batas pasca-sleep.
+        expect.objectContaining({ timeout: expect.any(Number) }),
       );
       // Token baru tersimpan, field lain (user/outlets) tetap utuh.
       const state = readAuthState();
