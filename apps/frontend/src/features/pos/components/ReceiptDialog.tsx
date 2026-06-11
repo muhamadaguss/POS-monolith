@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,9 @@ interface ReceiptDialogProps {
  */
 export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) {
   const [isPrinting, setIsPrinting] = useState(false);
+  // Ref ke struk PRATINJAU (yang terlihat di layar) untuk mengukur tinggi.
+  // Tidak mengukur node portal cetak karena itu display:none (scrollHeight=0).
+  const previewRef = useRef<HTMLDivElement>(null);
   const thermalSupported = isThermalSupported();
 
   if (!data) return null;
@@ -42,10 +45,12 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
    * Hasil: PDF 80mm tanpa ruang kosong di bawah, berapapun jumlah item.
    */
   function printReceipt() {
-    const area = document.getElementById('receipt-print-area');
     const PX_PER_MM = 96 / 25.4; // 1mm pada 96dpi
-    // Tinggi konten + sedikit margin bawah agar baris terakhir tak terpotong.
-    const heightMm = area ? Math.ceil(area.scrollHeight / PX_PER_MM) + 4 : 200;
+    // Ukur dari pratinjau yang TERLIHAT (previewRef). Node portal cetak tidak
+    // bisa diukur karena display:none → scrollHeight 0 → tinggi @page salah →
+    // konten pecah jadi banyak halaman. Tambah margin bawah agar tak terpotong.
+    const px = previewRef.current?.scrollHeight ?? 0;
+    const heightMm = px > 0 ? Math.ceil(px / PX_PER_MM) + 4 : 200;
 
     const style = document.createElement('style');
     style.id = 'receipt-page-size';
@@ -87,9 +92,10 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
             </DialogTitle>
           </DialogHeader>
 
-          {/* Pratinjau struk di layar (tanpa id cetak; hanya tampilan). */}
+          {/* Pratinjau struk di layar (tanpa id cetak; hanya tampilan).
+           * previewRef pada pembungkus <Receipt> dipakai mengukur tinggi cetak. */}
           <div className="max-h-[55vh] overflow-y-auto bg-gray-100 px-4 py-4 print:hidden">
-            <div className="shadow-sm">
+            <div ref={previewRef} className="shadow-sm">
               <Receipt data={data} />
             </div>
           </div>
