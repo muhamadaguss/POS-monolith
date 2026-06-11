@@ -33,10 +33,14 @@ describe('ReceiptDialog', () => {
   afterEach(() => cleanup());
 
   it('tidak merender apa pun bila data null', () => {
-    const { container } = render(
-      <ReceiptDialog open onOpenChange={() => {}} data={null} />,
-    );
-    expect(container.querySelector('.receipt-print-root')).toBeNull();
+    render(<ReceiptDialog open onOpenChange={() => {}} data={null} />);
+    // Portal cetak di-render ke body; tanpa data komponen early-return null.
+    expect(document.body.querySelector('.print-receipt')).toBeNull();
+  });
+
+  it('merender area cetak (.print-root.print-receipt) ke body saat ada data', () => {
+    render(<ReceiptDialog open onOpenChange={() => {}} data={data} />);
+    expect(document.body.querySelector('.print-root.print-receipt')).not.toBeNull();
   });
 
   it('menyembunyikan tombol Thermal bila Web Bluetooth tak didukung', () => {

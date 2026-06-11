@@ -130,62 +130,67 @@
 }
 
 /*
- * Cetak struk: saat window.print() dipanggil, hanya #receipt-print-area yang
- * tampil. Semua elemen lain disembunyikan agar struk tidak bercampur dengan UI
- * aplikasi. Dipakai oleh ReceiptDialog (lihat features/pos/components).
+ * Cetak terisolasi (dipakai dua tempat):
+ *  - ReceiptDialog (struk transaksi)   → .print-root.print-receipt (kertas 80mm)
+ *  - PrintModal/CloseRekapModal (shift) → .print-root (kertas default A4/Letter)
  *
- * Kertas diset 80mm × 200mm (gulungan thermal). PENTING: Chromium MENGABAIKAN
- * `size: 80mm auto` (keyword auto untuk tinggi) dan fallback ke Letter/A4 — itu
- * penyebab "PDF terlalu besar". Tinggi harus eksplisit agar Chromium menghormati
- * lebar 80mm. 200mm cukup untuk struk umum; struk sangat panjang lanjut ke
- * halaman berikutnya. Hasil: kertas pas 80mm tanpa area kosong A4, tanpa
- * header/footer browser.
+ * Pola: saat window.print(), HANYA .print-root yang tampil; seluruh UI lain
+ * disembunyikan agar tidak ikut tercetak. Konten cetak diberi .print-area.
+ *
+ * PENTING (regresi yang diperbaiki): sebelumnya selektor di-hardcode ke
+ * `.receipt-print-root` + `@page { size: 80mm }` GLOBAL. Akibatnya halaman shift
+ * yang memanggil window.print() tanpa .receipt-print-root → SEMUA tersembunyi →
+ * "print preview kosong". Solusi: selektor umum `.print-root`, dan ukuran 80mm
+ * HANYA pada varian struk (.print-receipt), bukan global.
  */
-/* Fallback ukuran kertas. Saat tombol "Cetak / PDF" ditekan, ReceiptDialog
- * meng-inject @page dinamis (#receipt-page-size) dengan tinggi mengikuti isi
- * struk, yang akan menimpa nilai ini. 200mm hanya berlaku bila JS tak sempat. */
-@page {
-  size: 80mm 200mm;
-  margin: 0;
-}
 
-/* Area cetak (di-portal ke body oleh ReceiptDialog) hanya tampil saat mencetak. */
-.receipt-print-root {
+/* Area cetak struk (di-portal ke body oleh ReceiptDialog) hanya tampil saat cetak. */
+.print-receipt {
   display: none;
 }
 
 @media print {
-  /* Batasi html & body ke 80mm: sebagian browser memakai lebar body untuk
-   * menentukan ukuran halaman cetak, jadi ini memperkuat `@page size` agar
-   * kertas benar-benar pas 80mm (tanpa area kosong A4). */
-  html,
   body {
-    width: 80mm !important;
-    min-width: 0 !important;
-    max-width: 80mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
     background: #fff !important;
   }
-  /* Sembunyikan SELURUH UI aplikasi; hanya area cetak portal yang ditampilkan.
-   * Karena .receipt-print-root adalah anak langsung <body> (bukan di dalam
-   * dialog), tidak ada containing block yang menggeser posisinya. */
-  body > *:not(.receipt-print-root) {
-    display: none !important;
+  /* Sembunyikan semua, lalu tampilkan kembali HANYA .print-root & isinya.
+   * Pakai `visibility` (bukan `display:none` pada semua) agar layout parent
+   * tidak runtuh — lebih tahan banting untuk konten yang masih di dalam modal
+   * (shift) maupun yang di-portal ke body (struk). */
+  body * {
+    visibility: hidden;
   }
-  /* Tetap di aliran normal (BUKAN absolute): elemen absolute tidak menyumbang
-   * tinggi halaman, sehingga `size: 80mm auto` salah hitung & memunculkan
-   * halaman kedua kosong. Dengan body margin 0, struk tetap di kiri-atas. */
-  .receipt-print-root {
+  .print-root,
+  .print-root * {
+    visibility: visible !important;
+  }
+  /* .print-root ditarik ke kiri-atas kertas, lepas dari posisi modal/overlay. */
+  .print-root {
     display: block !important;
-    width: 80mm !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100%;
   }
-  /* Struk mengisi penuh lebar kertas 80mm; override w-[280px] dari komponen. */
-  #receipt-print-area {
-    width: 80mm !important;
-    max-width: 80mm !important;
+  .print-area {
     margin: 0 !important;
-    padding: 3mm 3mm !important;
     box-shadow: none !important;
   }
+
+  /* ── Varian STRUK: kertas gulungan 80mm (ReceiptDialog) ── */
+  .print-root.print-receipt {
+    width: 80mm !important;
+  }
+  .print-receipt #receipt-print-area {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 3mm !important;
+  }
+}
+
+/* @page margin 0 menghilangkan header/footer browser. Ukuran kertas struk
+ * diatur dinamis oleh ReceiptDialog (#receipt-page-size, 80mm × tinggi-isi);
+ * modal shift memakai ukuran kertas default browser (A4/Letter). */
+@page {
+  margin: 0;
 }

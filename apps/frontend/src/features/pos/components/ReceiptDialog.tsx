@@ -135,9 +135,11 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
         </DialogContent>
       </Dialog>
 
-      {/* Area cetak sebenarnya — di-portal ke body, hanya muncul saat @media print. */}
+      {/* Area cetak sebenarnya — di-portal ke body, hanya muncul saat @media print.
+       * Kelas .print-root + .print-receipt mengaktifkan isolasi cetak global
+       * (globals.css) dengan kertas 80mm. .print-area mereset margin/shadow. */}
       {createPortal(
-        <div className="receipt-print-root">
+        <div className="print-root print-receipt print-area">
           <Receipt data={data} forPrint />
         </div>,
         document.body,

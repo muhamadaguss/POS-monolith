@@ -175,7 +175,8 @@ function PrintModal({
           </Button>
         </div>
 
-        <div className="px-6 py-4 space-y-1 font-mono text-sm">
+        {/* print-root + print-area: hanya blok ini yang tercetak (globals.css). */}
+        <div className="print-root print-area px-6 py-4 space-y-1 font-mono text-sm">
           <p className="text-center font-bold text-base mb-3">{shift.outlet?.name ?? 'Outlet'}</p>
           <div className="border-t border-dashed border-gray-300 my-2" />
           {[
@@ -248,7 +249,8 @@ function CloseRekapModal({
           </Button>
         </div>
 
-        <div className="px-6 py-4 space-y-1 font-mono text-sm">
+        {/* print-root + print-area: hanya blok ini yang tercetak (globals.css). */}
+        <div className="print-root print-area px-6 py-4 space-y-1 font-mono text-sm">
           <p className="text-center font-bold text-base mb-3">{shift.outlet?.name ?? 'Outlet'}</p>
           <div className="border-t border-dashed border-gray-300 my-2" />
           {[
