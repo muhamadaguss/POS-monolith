@@ -1,6 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { createValidationPipe } from './common/pipes/validation.pipe';
 
@@ -12,6 +13,18 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port') ?? 3001;
   const frontendUrl = configService.get<string>('app.frontendUrl') ?? 'http://localhost:3000';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Security headers (helmet) — dipasang paling awal, sebelum route.
+  // CSP dimatikan di non-production agar Swagger UI tetap berfungsi; di
+  // production CSP default helmet aktif. HSTS hanya efektif di belakang
+  // TLS/HTTPS (lihat konfigurasi reverse-proxy saat deployment).
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProduction ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Global prefix untuk semua route: /api/v1/...
   app.setGlobalPrefix('api/v1');
