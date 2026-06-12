@@ -4,6 +4,23 @@
 //   - Lama/historis: API_PRODUCTS, API_DELETE, API_AUTH, ...
 // Plus event manual: USER_LOGIN, USER_LOGIN_FAILED, USER_LOGOUT, TRANSACTION_VOID, dll.
 
+/**
+ * Filter ramah → daftar action mentah (backend pakai "contains").
+ *
+ * PENTING: didefinisikan di module NON-client (format.ts) agar bisa di-import
+ * BAIK oleh Server Component (page.tsx) MAUPUN Client Component (AuditLogView).
+ * Bila ditaruh di module 'use client', Server Component hanya menerima proxy
+ * referensi klien (bukan array) → `FILTERS.find is not a function`.
+ */
+export const FILTERS: { label: string; match?: string }[] = [
+  { label: 'Semua' },
+  { label: 'Login', match: 'LOGIN' },
+  { label: 'Login gagal', match: 'LOGIN_FAILED' },
+  { label: 'Pembatalan', match: 'VOID' },
+  { label: 'Penghapusan', match: 'DELETE' },
+  { label: 'Penyesuaian stok', match: 'STOCK' },
+];
+
 export type ActionTone = 'success' | 'danger' | 'warning' | 'info' | 'neutral';
 
 export interface ActionMeta {
