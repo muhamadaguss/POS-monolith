@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -21,7 +22,15 @@ import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  // Rate-limit ketat khusus login (anti brute-force) — 5 percobaan / menit / IP,
+  // jauh lebih ketat dari throttler global (100/menit). Override-able via env.
   @Public()
+  @Throttle({
+    default: {
+      limit: parseInt(process.env.THROTTLE_LOGIN_LIMIT ?? '5', 10),
+      ttl: parseInt(process.env.THROTTLE_LOGIN_TTL ?? '60000', 10),
+    },
+  })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login dan dapatkan access + refresh token' })
@@ -34,7 +43,14 @@ export class AuthController {
     return this.authService.login(dto, ip, userAgent);
   }
 
+  // Refresh juga endpoint publik — batasi lebih ketat dari global (10/menit/IP).
   @Public()
+  @Throttle({
+    default: {
+      limit: parseInt(process.env.THROTTLE_REFRESH_LIMIT ?? '10', 10),
+      ttl: parseInt(process.env.THROTTLE_REFRESH_TTL ?? '60000', 10),
+    },
+  })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Perbarui access token menggunakan refresh token' })
