@@ -269,6 +269,178 @@ export class ReportsService {
     };
   }
 
+  // ---- Penjualan per Jam (0–23) ----
+
+  /**
+   * Distribusi penjualan per jam untuk mengetahui jam ramai vs sepi.
+   * Selalu mengembalikan 24 baris (jam 0–23); jam tanpa transaksi diisi 0.
+   * Group dilakukan di aplikasi (konsisten dgn getDailyBreakdown).
+   */
+  async getHourlySales(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        tenantId: currentUser.tenantId!,
+        outletId: { in: allowedOutletIds },
+        status: TransactionStatus.COMPLETED,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: { createdAt: true, totalAmount: true },
+    });
+
+    // Inisialisasi 24 jam dengan nilai 0.
+    const hours = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      count: 0,
+      revenue: new Decimal(0),
+    }));
+
+    for (const trx of transactions) {
+      const h = trx.createdAt.getHours();
+      hours[h].count += 1;
+      hours[h].revenue = hours[h].revenue.plus(trx.totalAmount);
+    }
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      hourly: hours,
+    };
+  }
+
+  // ---- Penjualan per Kategori ----
+
+  /**
+   * Kontribusi penjualan per kategori produk. Kategori diambil dari relasi
+   * product.category SAAT INI (TransactionItem tidak menyimpan snapshot
+   * kategori). Produk tanpa kategori dikelompokkan sebagai "Tanpa Kategori".
+   */
+  async getSalesByCategory(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const items = await this.prisma.transactionItem.findMany({
+      where: {
+        transaction: {
+          tenantId: currentUser.tenantId!,
+          outletId: { in: allowedOutletIds },
+          status: TransactionStatus.COMPLETED,
+          createdAt: { gte: startDate, lte: endDate },
+        },
+      },
+      select: {
+        quantity: true,
+        subtotal: true,
+        product: { select: { category: { select: { id: true, name: true } } } },
+      },
+    });
+
+    const NO_CATEGORY = '__none__';
+    const map = new Map<
+      string,
+      { categoryId: string | null; categoryName: string; quantity: Decimal; revenue: Decimal }
+    >();
+
+    for (const item of items) {
+      const cat = item.product?.category ?? null;
+      const key = cat?.id ?? NO_CATEGORY;
+      const existing = map.get(key);
+      if (existing) {
+        existing.quantity = existing.quantity.plus(item.quantity);
+        existing.revenue = existing.revenue.plus(item.subtotal);
+      } else {
+        map.set(key, {
+          categoryId: cat?.id ?? null,
+          categoryName: cat?.name ?? 'Tanpa Kategori',
+          quantity: new Decimal(item.quantity),
+          revenue: new Decimal(item.subtotal),
+        });
+      }
+    }
+
+    const categories = Array.from(map.values()).sort((a, b) =>
+      b.revenue.comparedTo(a.revenue),
+    );
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      categories,
+    };
+  }
+
+  // ---- Perbandingan antar Outlet ----
+
+  /**
+   * Agregat penjualan per outlet untuk perbandingan antar cabang.
+   * Revenue & jumlah transaksi dari Transaction; profit dari item
+   * (subtotal − costPrice×qty). Outlet tanpa transaksi tetap muncul (nilai 0).
+   */
+  async getSalesByOutlet(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const outlets = await this.prisma.outlet.findMany({
+      where: { id: { in: allowedOutletIds }, tenantId: currentUser.tenantId! },
+      select: { id: true, name: true },
+    });
+
+    const txnWhere = {
+      tenantId: currentUser.tenantId!,
+      status: TransactionStatus.COMPLETED,
+      createdAt: { gte: startDate, lte: endDate },
+    };
+
+    // Revenue & jumlah transaksi per outlet (DB groupBy).
+    const revenueByOutlet = await this.prisma.transaction.groupBy({
+      by: ['outletId'],
+      where: { ...txnWhere, outletId: { in: allowedOutletIds } },
+      _count: { id: true },
+      _sum: { totalAmount: true },
+    });
+    const revMap = new Map(
+      revenueByOutlet.map((r) => [
+        r.outletId,
+        { revenue: r._sum.totalAmount ?? new Decimal(0), count: r._count.id },
+      ]),
+    );
+
+    // Profit per outlet dari item (subtotal − cost×qty).
+    const items = await this.prisma.transactionItem.findMany({
+      where: { transaction: { ...txnWhere, outletId: { in: allowedOutletIds } } },
+      select: {
+        quantity: true,
+        subtotal: true,
+        costPrice: true,
+        transaction: { select: { outletId: true } },
+      },
+    });
+    const profitMap = new Map<string, Decimal>();
+    for (const item of items) {
+      const oid = item.transaction.outletId;
+      const profit = item.subtotal.minus(item.costPrice.times(item.quantity));
+      profitMap.set(oid, (profitMap.get(oid) ?? new Decimal(0)).plus(profit));
+    }
+
+    const result = outlets
+      .map((o) => {
+        const rev = revMap.get(o.id);
+        return {
+          outletId: o.id,
+          outletName: o.name,
+          revenue: rev?.revenue ?? new Decimal(0),
+          transactions: rev?.count ?? 0,
+          profit: profitMap.get(o.id) ?? new Decimal(0),
+        };
+      })
+      .sort((a, b) => b.revenue.comparedTo(a.revenue));
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      outlets: result,
+    };
+  }
+
   // ---- Export Excel (.xlsx) Penjualan ----
 
   async exportSalesXlsx(

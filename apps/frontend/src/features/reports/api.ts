@@ -194,6 +194,10 @@ function previousRange({ startDate, endDate }: DateRange): DateRange {
 export interface SalesSummaryWithGrowth extends SalesSummary {
   /** % perubahan omzet vs periode sebelumnya; null bila tak ada baseline. */
   revenueGrowth: number | null;
+  /** Omzet periode sebelumnya (untuk perbandingan); null bila gagal/tak ada. */
+  previousRevenue: number | null;
+  /** Tren harian periode sebelumnya (untuk overlay grafik). */
+  dailyBreakdownPrevious: { date: string; revenue: number; transactions: number }[];
 }
 
 /**
@@ -222,7 +226,48 @@ export async function getSalesSummaryWithGrowth(
       ((current.totalRevenue - previous.totalRevenue) / previous.totalRevenue) * 100;
   }
 
-  return { ...current, revenueGrowth };
+  return {
+    ...current,
+    revenueGrowth,
+    previousRevenue: previous?.totalRevenue ?? null,
+    dailyBreakdownPrevious: previous?.dailyBreakdown ?? [],
+  };
+}
+
+// ---- Perbandingan antar Outlet ----
+
+export interface OutletSalesItem {
+  outletId: string;
+  outletName: string;
+  revenue: number;
+  transactions: number;
+  profit: number;
+}
+
+export async function getSalesByOutlet(
+  period: ReportPeriod | DateRange = 'WEEK',
+  outletId?: string,
+): Promise<OutletSalesItem[]> {
+  const { startDate, endDate } = resolveRange(period);
+  const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
+  if (outletId) params.set('outletId', outletId);
+  const { data } = await api.get<{
+    outlets?: {
+      outletId: string;
+      outletName: string;
+      revenue: Num;
+      transactions: Num;
+      profit: Num;
+    }[];
+  }>(`/reports/by-outlet?${params}`);
+
+  return (data.outlets ?? []).map((o) => ({
+    outletId: o.outletId,
+    outletName: o.outletName,
+    revenue: Number(o.revenue ?? 0),
+    transactions: Number(o.transactions ?? 0),
+    profit: Number(o.profit ?? 0),
+  }));
 }
 
 export async function getTopProducts(
@@ -278,6 +323,60 @@ export async function getShiftSummary(
     })),
     meta: data.meta ?? { total: 0, page, limit, totalPages: 0 },
   };
+}
+
+// ---- Penjualan per Jam ----
+
+export interface HourlySalesPoint {
+  hour: number;
+  count: number;
+  revenue: number;
+}
+
+export async function getHourlySales(
+  period: ReportPeriod | DateRange = 'WEEK',
+  outletId?: string,
+): Promise<HourlySalesPoint[]> {
+  const { startDate, endDate } = resolveRange(period);
+  const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
+  if (outletId) params.set('outletId', outletId);
+  const { data } = await api.get<{ hourly?: { hour: number; count: Num; revenue: Num }[] }>(
+    `/reports/hourly?${params}`,
+  );
+
+  return (data.hourly ?? []).map((h) => ({
+    hour: Number(h.hour ?? 0),
+    count: Number(h.count ?? 0),
+    revenue: Number(h.revenue ?? 0),
+  }));
+}
+
+// ---- Penjualan per Kategori ----
+
+export interface CategorySalesItem {
+  categoryId: string | null;
+  categoryName: string;
+  quantity: number;
+  revenue: number;
+}
+
+export async function getSalesByCategory(
+  period: ReportPeriod | DateRange = 'WEEK',
+  outletId?: string,
+): Promise<CategorySalesItem[]> {
+  const { startDate, endDate } = resolveRange(period);
+  const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
+  if (outletId) params.set('outletId', outletId);
+  const { data } = await api.get<{
+    categories?: { categoryId: string | null; categoryName: string; quantity: Num; revenue: Num }[];
+  }>(`/reports/by-category?${params}`);
+
+  return (data.categories ?? []).map((c) => ({
+    categoryId: c.categoryId ?? null,
+    categoryName: c.categoryName ?? 'Tanpa Kategori',
+    quantity: Number(c.quantity ?? 0),
+    revenue: Number(c.revenue ?? 0),
+  }));
 }
 
 /** Unduh laporan penjualan sebagai file Excel (.xlsx) — memicu download di browser. */

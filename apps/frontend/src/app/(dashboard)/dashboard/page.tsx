@@ -15,13 +15,29 @@ import {
 import Link from 'next/link';
 import { useAuthStore, useAuthHydrated } from '@/features/auth/store';
 import { usePageFocus } from '@/hooks/usePageFocus';
-import { getSalesSummaryWithGrowth, getTopProducts } from '@/features/reports/api';
+import {
+  getSalesSummaryWithGrowth,
+  getTopProducts,
+  getHourlySales,
+  getSalesByCategory,
+} from '@/features/reports/api';
 import { resolveImageUrl } from '@/features/products/api';
 import { getActiveShift } from '@/features/shifts/api';
 import { fetchCashierDailyStats } from '@/features/pos/api';
 import { proactiveRefresh } from '@/lib/api';
-import { SalesTrendChart, PaymentBreakdown } from '@/features/reports/components/charts';
-import type { SalesSummaryWithGrowth, TopProduct, ReportPeriod } from '@/features/reports/api';
+import {
+  SalesTrendChart,
+  PaymentBreakdown,
+  HourlyBarChart,
+  CategoryBreakdown,
+} from '@/features/reports/components/charts';
+import type {
+  SalesSummaryWithGrowth,
+  TopProduct,
+  HourlySalesPoint,
+  CategorySalesItem,
+  ReportPeriod,
+} from '@/features/reports/api';
 import type { Shift } from '@/features/shifts/types';
 import { IDR, formatShiftDuration } from '@/lib/format';
 
@@ -284,6 +300,8 @@ function ManagerDashboard({ isOwner, outlets }: { isOwner: boolean; outlets: { i
   const [selectedOutletId, setSelectedOutletId] = useState<string>('');
   const [summary, setSummary] = useState<SalesSummaryWithGrowth | null>(null);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [hourly, setHourly] = useState<HourlySalesPoint[]>([]);
+  const [categories, setCategories] = useState<CategorySalesItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const outletIdParam = selectedOutletId || undefined;
@@ -292,12 +310,16 @@ function ManagerDashboard({ isOwner, outlets }: { isOwner: boolean; outlets: { i
     await proactiveRefresh().catch(() => {});
     setIsLoading(true);
     try {
-      const [s, t] = await Promise.all([
+      const [s, t, hr, cat] = await Promise.all([
         getSalesSummaryWithGrowth(period, outletIdParam),
         getTopProducts(period, outletIdParam),
+        getHourlySales(period, outletIdParam),
+        getSalesByCategory(period, outletIdParam),
       ]);
       setSummary(s);
       setTopProducts(t);
+      setHourly(hr);
+      setCategories(cat);
     } catch {
       // 401/refresh gagal sudah ditangani interceptor (redirect ke login).
       // Telan di sini agar tidak jadi unhandledRejection yang berisik.
@@ -422,6 +444,26 @@ function ManagerDashboard({ isOwner, outlets }: { isOwner: boolean; outlets: { i
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Metode Pembayaran</p>
               <PaymentBreakdown data={summary.paymentBreakdown} />
+            </div>
+          </div>
+
+          {/* Jam ramai + kontribusi kategori (ringkas; versi penuh di /reports) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-semibold text-gray-900">Jam Ramai</p>
+                <Link
+                  href="/reports"
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+                >
+                  Lihat Analitik
+                </Link>
+              </div>
+              <HourlyBarChart data={hourly} />
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <p className="text-sm font-semibold text-gray-900 mb-4">Penjualan per Kategori</p>
+              <CategoryBreakdown data={categories} />
             </div>
           </div>
 

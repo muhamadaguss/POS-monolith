@@ -24,6 +24,9 @@ import {
   getSalesSummaryWithGrowth,
   getTopProducts,
   getShiftSummary,
+  getHourlySales,
+  getSalesByCategory,
+  getSalesByOutlet,
   exportSalesXlsx,
   apiErrorMessage,
 } from '@/features/reports/api';
@@ -31,10 +34,19 @@ import type {
   SalesSummaryWithGrowth,
   TopProduct,
   ShiftReportResult,
+  HourlySalesPoint,
+  CategorySalesItem,
+  OutletSalesItem,
   ReportPeriod,
   DateRange,
 } from '@/features/reports/api';
-import { SalesTrendChart, PaymentBreakdown } from '@/features/reports/components/charts';
+import {
+  SalesTrendChart,
+  PaymentBreakdown,
+  HourlyBarChart,
+  CategoryBreakdown,
+  OutletComparisonChart,
+} from '@/features/reports/components/charts';
 import { IDR } from '@/lib/format';
 
 const PRESETS: { value: ReportPeriod; label: string }[] = [
@@ -44,9 +56,10 @@ const PRESETS: { value: ReportPeriod; label: string }[] = [
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
-type Tab = 'sales' | 'products' | 'shifts';
+type Tab = 'sales' | 'analytics' | 'products' | 'shifts';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'sales', label: 'Penjualan' },
+  { value: 'analytics', label: 'Analitik' },
   { value: 'products', label: 'Produk Terlaris' },
   { value: 'shifts', label: 'Rekap Shift' },
 ];
@@ -140,6 +153,10 @@ function ReportsPageInner() {
   const [topLimit, setTopLimit] = useState(10);
   const [shiftData, setShiftData] = useState<ShiftReportResult | null>(null);
   const [shiftPage, setShiftPage] = useState(1);
+  const [hourly, setHourly] = useState<HourlySalesPoint[]>([]);
+  const [categories, setCategories] = useState<CategorySalesItem[]>([]);
+  const [outletSales, setOutletSales] = useState<OutletSalesItem[]>([]);
+  const [compareTrend, setCompareTrend] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -148,14 +165,20 @@ function ReportsPageInner() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [s, t, sh] = await Promise.all([
+      const [s, t, sh, hr, cat, outlet] = await Promise.all([
         getSalesSummaryWithGrowth(range, outletParam),
         getTopProducts(range, outletParam, topLimit),
         getShiftSummary(range, outletParam, shiftPage, SHIFT_PAGE_SIZE),
+        getHourlySales(range, outletParam),
+        getSalesByCategory(range, outletParam),
+        getSalesByOutlet(range, outletParam),
       ]);
       setSummary(s);
       setTopProducts(t);
       setShiftData(sh);
+      setHourly(hr);
+      setCategories(cat);
+      setOutletSales(outlet);
     } catch {
       // 401/refresh ditangani interceptor; jangan jadi unhandledRejection.
     } finally {
@@ -370,12 +393,33 @@ function ReportsPageInner() {
                   Tren Penjualan{' '}
                   <span className="font-normal text-gray-400">({trendLabel})</span>
                 </p>
-                <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Penjualan
-                </span>
+                <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={compareTrend}
+                    onChange={(e) => setCompareTrend(e.target.checked)}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  Bandingkan periode sebelumnya
+                </label>
               </div>
-              <SalesTrendChart data={summary?.dailyBreakdown ?? []} />
+              {compareTrend && summary && summary.previousRevenue !== null && (
+                <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-3 h-0.5 rounded bg-emerald-500" /> Periode ini
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-3 h-0.5 rounded bg-gray-300" /> Periode sebelumnya
+                  </span>
+                  <span className="ml-auto">
+                    Sebelumnya: <span className="font-semibold text-gray-700">{IDR.format(summary.previousRevenue)}</span>
+                  </span>
+                </div>
+              )}
+              <SalesTrendChart
+                data={summary?.dailyBreakdown ?? []}
+                previousData={compareTrend ? summary?.dailyBreakdownPrevious : undefined}
+              />
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Metode Pembayaran</p>
@@ -413,6 +457,53 @@ function ReportsPageInner() {
                   {IDR.format(netRevenue)}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Analitik (per jam + per kategori) */}
+      {tab === 'analytics' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-semibold text-gray-900">Penjualan per Jam</p>
+              <span className="text-xs text-gray-400">Jam ramai disorot hijau pekat</span>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Distribusi omzet sepanjang hari — bantu atur jadwal shift &amp; stok
+            </p>
+            <HourlyBarChart data={hourly} />
+          </div>
+
+          {/* Perbandingan antar outlet — hanya bila ≥2 cabang dalam cakupan */}
+          {outletSales.length > 1 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-gray-900">Perbandingan Outlet</p>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Omzet
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-blue-500" /> Profit
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">
+                Omzet &amp; profit tiap cabang berdampingan
+              </p>
+              <OutletComparisonChart data={outletSales} />
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Penjualan per Kategori</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Kontribusi tiap kategori produk terhadap omzet
+            </p>
+            <div className="max-w-md">
+              <CategoryBreakdown data={categories} />
             </div>
           </div>
         </div>
