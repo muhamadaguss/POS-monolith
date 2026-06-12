@@ -176,3 +176,58 @@ describe('ReportsService — getSalesByCategory', () => {
     expect(res.categories[0].categoryId).toBeNull();
   });
 });
+
+describe('ReportsService — getSalesByOutlet', () => {
+  let service: ReportsService;
+  let prisma: MockPrisma;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [ReportsService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    service = moduleRef.get(ReportsService);
+    prisma.outlet.findMany.mockResolvedValue([
+      { id: 'o1', name: 'Jakarta' },
+      { id: 'o2', name: 'Bekasi' },
+    ]);
+  });
+
+  it('menggabungkan revenue/transaksi (groupBy) + profit (item) per outlet, urut revenue desc', async () => {
+    prisma.transaction.groupBy.mockResolvedValue([
+      { outletId: 'o1', _count: { id: 3 }, _sum: { totalAmount: new Decimal(30000) } },
+      { outletId: 'o2', _count: { id: 5 }, _sum: { totalAmount: new Decimal(50000) } },
+    ]);
+    // profit: o1 = 10000−4000=6000 ; o2 = 20000−8000=12000
+    prisma.transactionItem.findMany.mockResolvedValue([
+      { quantity: new Decimal(1), subtotal: new Decimal(10000), costPrice: new Decimal(4000), transaction: { outletId: 'o1' } },
+      { quantity: new Decimal(2), subtotal: new Decimal(20000), costPrice: new Decimal(4000), transaction: { outletId: 'o2' } },
+    ]);
+
+    const res = await service.getSalesByOutlet(owner, query);
+
+    expect(res.outlets).toHaveLength(2);
+    // Bekasi (50000) di atas Jakarta (30000)
+    expect(res.outlets[0].outletName).toBe('Bekasi');
+    expect(res.outlets[0].revenue.toString()).toBe('50000');
+    expect(res.outlets[0].transactions).toBe(5);
+    expect(res.outlets[0].profit.toString()).toBe('12000');
+    expect(res.outlets[1].outletName).toBe('Jakarta');
+    expect(res.outlets[1].profit.toString()).toBe('6000');
+  });
+
+  it('outlet tanpa transaksi tetap muncul dengan nilai 0', async () => {
+    prisma.transaction.groupBy.mockResolvedValue([
+      { outletId: 'o1', _count: { id: 2 }, _sum: { totalAmount: new Decimal(15000) } },
+    ]);
+    prisma.transactionItem.findMany.mockResolvedValue([]);
+
+    const res = await service.getSalesByOutlet(owner, query);
+
+    const bekasi = res.outlets.find((o) => o.outletName === 'Bekasi');
+    expect(bekasi).toBeDefined();
+    expect(bekasi!.revenue.toString()).toBe('0');
+    expect(bekasi!.transactions).toBe(0);
+    expect(bekasi!.profit.toString()).toBe('0');
+  });
+});

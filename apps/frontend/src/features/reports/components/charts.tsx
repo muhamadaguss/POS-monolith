@@ -43,24 +43,31 @@ function SalesTooltip({
   label,
 }: {
   active?: boolean;
-  payload?: { value: number; payload: { transactions: number } }[];
+  payload?: { value: number; name?: string; payload: { transactions: number } }[];
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
-  const p = payload[0];
+  const current = payload.find((p) => p.name === 'revenue') ?? payload[0];
+  const previous = payload.find((p) => p.name === 'previous');
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-gray-900">{label}</p>
-      <p className="mt-1 text-emerald-600 font-bold">{IDR.format(p.value)}</p>
-      <p className="text-gray-400">{p.payload.transactions} transaksi</p>
+      <p className="mt-1 text-emerald-600 font-bold">{IDR.format(current.value)}</p>
+      {previous && (
+        <p className="text-gray-400">Sebelumnya {IDR.format(previous.value)}</p>
+      )}
+      {!previous && <p className="text-gray-400">{current.payload.transactions} transaksi</p>}
     </div>
   );
 }
 
 export function SalesTrendChart({
   data,
+  previousData,
 }: {
   data: { date: string; revenue: number; transactions: number }[];
+  /** Tren periode sebelumnya untuk overlay (opsional). Disejajarkan per indeks hari. */
+  previousData?: { date: string; revenue: number; transactions: number }[];
 }) {
   if (data.length === 0) {
     return (
@@ -69,9 +76,13 @@ export function SalesTrendChart({
       </div>
     );
   }
-  const chartData = data.map((d) => ({
+  const showCompare = !!previousData && previousData.length > 0;
+  // Overlay disejajarkan per indeks hari ke-N (bukan tanggal absolut), karena
+  // rentang sebelumnya bergeser. Label sumbu tetap dari periode saat ini.
+  const chartData = data.map((d, i) => ({
     ...d,
     label: new Date(d.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+    previous: showCompare ? (previousData![i]?.revenue ?? 0) : undefined,
   }));
   return (
     <ResponsiveContainer width="100%" height={224}>
@@ -102,9 +113,23 @@ export function SalesTrendChart({
           content={<SalesTooltip />}
           cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
         />
+        {showCompare && (
+          <Area
+            type="monotone"
+            dataKey="previous"
+            name="previous"
+            stroke="#cbd5e1"
+            strokeWidth={2}
+            strokeDasharray="5 4"
+            fill="none"
+            dot={false}
+            activeDot={{ r: 4, fill: '#cbd5e1' }}
+          />
+        )}
         <Area
           type="monotone"
           dataKey="revenue"
+          name="revenue"
           stroke="#10b981"
           strokeWidth={2.5}
           fill="url(#revFill)"
@@ -358,5 +383,80 @@ export function CategoryBreakdown({
         })}
       </div>
     </div>
+  );
+}
+
+// ── Perbandingan antar Outlet (bar omzet vs profit) ──────────────────────────
+
+function OutletTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { value: number; name?: string; dataKey?: string; payload: { transactions: number } }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const rev = payload.find((p) => p.dataKey === 'revenue');
+  const profit = payload.find((p) => p.dataKey === 'profit');
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900">{label}</p>
+      {rev && <p className="mt-1 text-emerald-600 font-bold">Omzet {IDR.format(rev.value)}</p>}
+      {profit && <p className="text-blue-600 font-semibold">Profit {IDR.format(profit.value)}</p>}
+      <p className="text-gray-400">{payload[0].payload.transactions} transaksi</p>
+    </div>
+  );
+}
+
+export function OutletComparisonChart({
+  data,
+}: {
+  data: { outletName: string; revenue: number; transactions: number; profit: number }[];
+}) {
+  const totalRevenue = data.reduce((s, o) => s + o.revenue, 0);
+  if (data.length === 0 || totalRevenue === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center text-sm text-gray-400">
+        Belum ada penjualan untuk dibandingkan.
+      </div>
+    );
+  }
+  const chartData = data.map((o) => ({
+    name: o.outletName,
+    revenue: o.revenue,
+    profit: o.profit,
+    transactions: o.transactions,
+  }));
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(160, chartData.length * 64)}>
+      <BarChart
+        data={chartData}
+        layout="vertical"
+        margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
+        barCategoryGap={16}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+        <XAxis
+          type="number"
+          tickFormatter={shortIDR}
+          tick={{ fontSize: 11, fill: '#94a3b8' }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          type="category"
+          dataKey="name"
+          tick={{ fontSize: 12, fill: '#475569' }}
+          tickLine={false}
+          axisLine={false}
+          width={96}
+        />
+        <Tooltip content={<OutletTooltip />} cursor={{ fill: '#f8fafc' }} />
+        <Bar dataKey="revenue" name="Omzet" fill="#10b981" radius={[0, 4, 4, 0]} barSize={14} />
+        <Bar dataKey="profit" name="Profit" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={14} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }

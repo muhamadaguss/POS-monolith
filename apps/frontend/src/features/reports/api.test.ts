@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@/lib/api', () => ({ api: { get: vi.fn() } }));
 
 import { api } from '@/lib/api';
-import { getHourlySales, getSalesByCategory } from './api';
+import { getHourlySales, getSalesByCategory, getSalesByOutlet } from './api';
 
 const mockedGet = api.get as unknown as ReturnType<typeof vi.fn>;
 
@@ -71,5 +71,37 @@ describe('getSalesByCategory', () => {
   it('respons kosong → array kosong', async () => {
     mockedGet.mockResolvedValueOnce({ data: {} });
     expect(await getSalesByCategory('WEEK')).toEqual([]);
+  });
+});
+
+describe('getSalesByOutlet', () => {
+  beforeEach(() => mockedGet.mockReset());
+
+  it('memetakan outlet (revenue/transactions/profit → number)', async () => {
+    mockedGet.mockResolvedValueOnce({
+      data: {
+        outlets: [
+          { outletId: 'o2', outletName: 'Bekasi', revenue: '50000', transactions: '5', profit: '12000' },
+          { outletId: 'o1', outletName: 'Jakarta', revenue: '30000', transactions: '3', profit: '6000' },
+        ],
+      },
+    });
+
+    const res = await getSalesByOutlet('MONTH');
+
+    expect(res[0]).toEqual({
+      outletId: 'o2',
+      outletName: 'Bekasi',
+      revenue: 50000,
+      transactions: 5,
+      profit: 12000,
+    });
+    expect(res[1].profit).toBe(6000);
+    expect(mockedGet.mock.calls[0][0]).toContain('/reports/by-outlet?');
+  });
+
+  it('respons kosong → array kosong', async () => {
+    mockedGet.mockResolvedValueOnce({ data: {} });
+    expect(await getSalesByOutlet('WEEK')).toEqual([]);
   });
 });

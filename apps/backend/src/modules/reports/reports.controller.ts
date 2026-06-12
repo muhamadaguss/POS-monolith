@@ -67,6 +67,16 @@ export class ReportsController {
     return this.reportsService.getSalesByCategory(user, query);
   }
 
+  @Get('by-outlet')
+  @RequirePermissions(PERMISSIONS.REPORT_VIEW)
+  @ApiOperation({ summary: 'Perbandingan penjualan antar outlet (omzet/transaksi/profit)' })
+  getSalesByOutlet(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SalesReportQueryDto,
+  ) {
+    return this.reportsService.getSalesByOutlet(user, query);
+  }
+
   @Get('sales/export')
   @RequirePermissions(PERMISSIONS.REPORT_VIEW)
   @ApiOperation({ summary: 'Download laporan penjualan dalam format Excel (.xlsx)' })

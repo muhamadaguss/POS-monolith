@@ -369,6 +369,78 @@ export class ReportsService {
     };
   }
 
+  // ---- Perbandingan antar Outlet ----
+
+  /**
+   * Agregat penjualan per outlet untuk perbandingan antar cabang.
+   * Revenue & jumlah transaksi dari Transaction; profit dari item
+   * (subtotal − costPrice×qty). Outlet tanpa transaksi tetap muncul (nilai 0).
+   */
+  async getSalesByOutlet(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const outlets = await this.prisma.outlet.findMany({
+      where: { id: { in: allowedOutletIds }, tenantId: currentUser.tenantId! },
+      select: { id: true, name: true },
+    });
+
+    const txnWhere = {
+      tenantId: currentUser.tenantId!,
+      status: TransactionStatus.COMPLETED,
+      createdAt: { gte: startDate, lte: endDate },
+    };
+
+    // Revenue & jumlah transaksi per outlet (DB groupBy).
+    const revenueByOutlet = await this.prisma.transaction.groupBy({
+      by: ['outletId'],
+      where: { ...txnWhere, outletId: { in: allowedOutletIds } },
+      _count: { id: true },
+      _sum: { totalAmount: true },
+    });
+    const revMap = new Map(
+      revenueByOutlet.map((r) => [
+        r.outletId,
+        { revenue: r._sum.totalAmount ?? new Decimal(0), count: r._count.id },
+      ]),
+    );
+
+    // Profit per outlet dari item (subtotal − cost×qty).
+    const items = await this.prisma.transactionItem.findMany({
+      where: { transaction: { ...txnWhere, outletId: { in: allowedOutletIds } } },
+      select: {
+        quantity: true,
+        subtotal: true,
+        costPrice: true,
+        transaction: { select: { outletId: true } },
+      },
+    });
+    const profitMap = new Map<string, Decimal>();
+    for (const item of items) {
+      const oid = item.transaction.outletId;
+      const profit = item.subtotal.minus(item.costPrice.times(item.quantity));
+      profitMap.set(oid, (profitMap.get(oid) ?? new Decimal(0)).plus(profit));
+    }
+
+    const result = outlets
+      .map((o) => {
+        const rev = revMap.get(o.id);
+        return {
+          outletId: o.id,
+          outletName: o.name,
+          revenue: rev?.revenue ?? new Decimal(0),
+          transactions: rev?.count ?? 0,
+          profit: profitMap.get(o.id) ?? new Decimal(0),
+        };
+      })
+      .sort((a, b) => b.revenue.comparedTo(a.revenue));
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      outlets: result,
+    };
+  }
+
   // ---- Export Excel (.xlsx) Penjualan ----
 
   async exportSalesXlsx(
