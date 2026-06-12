@@ -122,14 +122,15 @@ Audit terhadap OWASP Top 10 — melengkapi SOP internal. Status per 2026-06-12.
 | **A03** | Injection | ✅ | 100% Prisma ORM (parameterized) — tak ada raw SQL. Frontend React auto-escape — tak ada `dangerouslySetInnerHTML`/`innerHTML`. ValidationPipe global. |
 | **A04** | Insecure Design | ✅ | Refresh-token rotation + reuse-detection, audit log, multi-tenant by-design, PIN manager untuk void/refund. |
 | **A05** | Security Misconfiguration | ✅ | helmet (security headers), Swagger non-aktif di production, CORS dibatasi `FRONTEND_URL`, exception filter tidak membocorkan stack ke klien (hanya di-log). |
-| **A06** | Vulnerable & Outdated Components | ⚠️ | Terdapat kerentanan pada **transitive deps** (mis. `tar` high via `exceljs`→`node-pre-gyp`, `uuid` moderate) — bukan di kode aplikasi. Mitigasi: jalankan `npm audit fix` berkala; pertimbangkan upgrade `exceljs`. Jalankan `npm audit` di CI. |
-| **A07** | Identification & Authentication Failures | ⚠️ | Throttler global (100 req/60s/IP), error login generik (anti user-enumeration), rotation token. **Rekomendasi:** rate-limit lebih ketat khusus `POST /auth/login` (mis. 5–10/menit) untuk lawan brute-force. |
+| **A06** | Vulnerable & Outdated Components | ✅ (mitigasi) | Dua kerentanan **high** (`tar`, `@mapbox/node-pre-gyp`) ditambal via `overrides: { "tar": "^7.5.16" }` di `apps/backend/package.json`. Sisa **2 moderate** (`uuid` via `exceljs`) **tidak dapat dijangkau**: exceljs memanggil `uuid.v4()` tanpa argumen buffer, sedangkan advisory hanya berlaku "when buf is provided". Satu-satunya "fix" npm adalah menurunkan `exceljs` ke major lama (breaking) — tidak dilakukan. Audit diulang berkala. |
+| **A07** | Identification & Authentication Failures | ✅ | Selain throttler global (100/60s), error login generik, & rotation token: **rate-limit ketat khusus** `POST /auth/login` (**5/menit/IP**) dan `POST /auth/refresh` (**10/menit/IP**) via `@Throttle` — anti brute-force. Diverifikasi: percobaan ke-6 pada login → **429**. Limit override-able via env (`THROTTLE_LOGIN_LIMIT`, dst). |
 | **A08** | Software & Data Integrity Failures | ✅ | Tak ada deserialisasi tak aman; GitGuardian Security Check di CI; lockfile dikunci. |
 | **A09** | Security Logging & Monitoring | ✅ | `AuditLogInterceptor` mencatat semua request mutasi (POST/PATCH/PUT/DELETE) beserta IP; error di-log oleh exception filter. |
 | **A10** | Server-Side Request Forgery (SSRF) | ✅ (N/A) | Backend tidak melakukan outbound request ke URL dari input user — tak ada surface SSRF. |
 
-**Ringkas:** 8/10 kategori terpenuhi penuh; 2 catatan (**A06** kerentanan dependency
-transitif, **A07** rate-limit login bisa diperketat) tercatat di _Roadmap_ di bawah.
+**Ringkas:** 10/10 kategori tertangani. **A07** ditutup (rate-limit ketat login/refresh).
+**A06** ditambal untuk 2 kerentanan **high** (override `tar`); sisa 2 moderate tak dapat
+dijangkau (lihat baris A06).
 
 ---
 
@@ -137,7 +138,8 @@ transitif, **A07** rate-limit login bisa diperketat) tercatat di _Roadmap_ di ba
 
 - **AES-256 per kolom** — terapkan bila menyimpan PII tingkat tinggi (NIK, nomor kartu).
   Gunakan `crypto` AES-256-GCM dengan kunci dari `process.env` / KMS; simpan IV per baris.
-- **A07 — Rate limit ketat pada auth** — sudah ada throttler global (100/60s);
-  tambahkan `@Throttle` khusus `POST /auth/login` (mis. 5–10/menit) untuk lawan brute-force.
-- **A06 — Audit dependency** — jalankan `npm audit` di CI; `npm audit fix` berkala;
-  pertimbangkan upgrade `exceljs` untuk menambal rantai `node-pre-gyp`→`tar`.
+- **A07 — Rate limit ketat pada auth** — ✅ selesai: `@Throttle` pada `/auth/login`
+  (5/menit) & `/auth/refresh` (10/menit), override via env.
+- **A06 — Audit dependency** — ✅ 2 high ditambal (`overrides.tar`). Sisa 2 moderate
+  (`uuid` via `exceljs`) tak terjangkau; pantau rilis `exceljs` yang memperbarui `uuid`,
+  dan jalankan `npm audit` di CI.
