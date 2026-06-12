@@ -1,238 +1,47 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import axios from 'axios';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { api, setApiAccessToken, getRefreshToken, proactiveRefresh } from './api';
 
-// Mock axios MENTAH (dipakai refreshOnce untuk /auth/refresh tanpa lewat interceptor).
-// `api` instance dibuat dari axios.create — kita biarkan asli, hanya intip post mentah.
-vi.mock('axios', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('axios')>();
-  return {
-    ...actual,
-    default: {
-      ...actual.default,
-      post: vi.fn(),
-    },
-  };
-});
-
-const AUTH_KEY = 'kasirku-auth';
-
-/** Buat JWT palsu dengan klaim exp (detik epoch). Hanya bagian payload yang dibaca. */
-function makeJwt(expSecondsFromNow: number): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }));
-  return `${header}.${payload}.sig`;
-}
-
-function setAuth(accessToken: string | null, refreshToken: string | null) {
-  localStorage.setItem(
-    AUTH_KEY,
-    JSON.stringify({ state: { accessToken, refreshToken, user: { id: 'u1' }, outlets: [{ id: 'o1' }] }, version: 0 }),
-  );
-}
-
-function readAuthState() {
-  const raw = localStorage.getItem(AUTH_KEY);
-  return raw ? JSON.parse(raw).state : null;
-}
-
+/**
+ * lib/api kini MINIMAL: token disuntik dari session Auth.js (lewat setApiAccessToken),
+ * envelope di-unwrap, 401 → redirect. Mesin refresh manual (single-flight, cross-tab,
+ * localStorage) sudah DIHAPUS — refresh ditangani Auth.js di server.
+ */
 describe('lib/api', () => {
-  let api: typeof import('./api');
-  const mockedPost = axios.post as unknown as ReturnType<typeof vi.fn>;
+  beforeEach(() => setApiAccessToken(null));
 
-  beforeEach(async () => {
-    localStorage.clear();
-    vi.resetModules();
-    mockedPost.mockReset();
-    // import ulang tiap test agar state modul (refreshPromise) bersih.
-    api = await import('./api');
+  it('request interceptor menyuntik Bearer dari token yang di-set', async () => {
+    setApiAccessToken('tok-123');
+    const handlers = (api.interceptors.request as unknown as {
+      handlers: Array<{ fulfilled: (c: { headers: Record<string, string> }) => { headers: Record<string, string> } }>;
+    }).handlers;
+    const cfg = handlers[0].fulfilled({ headers: {} });
+    expect(cfg.headers['Authorization']).toBe('Bearer tok-123');
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('tanpa token: tidak menyuntik Authorization', () => {
+    setApiAccessToken(null);
+    const handlers = (api.interceptors.request as unknown as {
+      handlers: Array<{ fulfilled: (c: { headers: Record<string, string> }) => { headers: Record<string, string> } }>;
+    }).handlers;
+    const cfg = handlers[0].fulfilled({ headers: {} });
+    expect(cfg.headers['Authorization']).toBeUndefined();
   });
 
-  describe('hasUsableRefreshToken', () => {
-    it('false bila tidak ada refresh token', () => {
-      setAuth(makeJwt(900), null);
-      expect(api.hasUsableRefreshToken()).toBe(false);
-    });
-
-    it('true bila refresh token belum kedaluwarsa', () => {
-      setAuth(null, makeJwt(7 * 24 * 3600));
-      expect(api.hasUsableRefreshToken()).toBe(true);
-    });
-
-    it('false bila refresh token sudah kedaluwarsa', () => {
-      setAuth(null, makeJwt(-10));
-      expect(api.hasUsableRefreshToken()).toBe(false);
-    });
+  it('response interceptor meng-unwrap envelope { success, data }', () => {
+    const handlers = (api.interceptors.response as unknown as {
+      handlers: Array<{ fulfilled: (r: { data: unknown }) => { data: unknown } }>;
+    }).handlers;
+    const res = handlers[0].fulfilled({ data: { success: true, data: { foo: 'bar' } } });
+    expect(res.data).toEqual({ foo: 'bar' });
   });
 
-  describe('getRefreshToken', () => {
-    it('mengembalikan refresh token dari storage', () => {
-      const rt = makeJwt(3600);
-      setAuth(makeJwt(900), rt);
-      expect(api.getRefreshToken()).toBe(rt);
+  describe('compat shims (dipensiunkan)', () => {
+    it('getRefreshToken selalu null (refresh token server-only)', () => {
+      expect(getRefreshToken()).toBeNull();
     });
 
-    it('null bila storage kosong', () => {
-      expect(api.getRefreshToken()).toBeNull();
-    });
-  });
-
-  describe('proactiveRefresh', () => {
-    it('tidak memanggil /auth/refresh bila access token masih segar', async () => {
-      setAuth(makeJwt(900), makeJwt(7 * 24 * 3600)); // access hidup 15m
-      await api.proactiveRefresh();
-      expect(mockedPost).not.toHaveBeenCalled();
-    });
-
-    it('tidak melakukan apa-apa bila tidak ada refresh token', async () => {
-      setAuth(makeJwt(-10), null);
-      await api.proactiveRefresh();
-      expect(mockedPost).not.toHaveBeenCalled();
-    });
-
-    it('me-refresh bila access token hampir kedaluwarsa & menyimpan token baru (unwrap envelope)', async () => {
-      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600)); // access expired-soon (buffer 60s)
-      const newAccess = makeJwt(900);
-      const newRefresh = makeJwt(7 * 24 * 3600);
-      // Backend membungkus { success, data } — refreshOnce harus meng-unwrap.
-      mockedPost.mockResolvedValue({
-        data: { success: true, data: { accessToken: newAccess, refreshToken: newRefresh } },
-      });
-
-      await api.proactiveRefresh();
-
-      expect(mockedPost).toHaveBeenCalledTimes(1);
-      expect(mockedPost).toHaveBeenCalledWith(
-        expect.stringContaining('/auth/refresh'),
-        expect.objectContaining({ refreshToken: expect.any(String) }),
-        // Timeout eksplisit agar refresh tak menggantung tanpa batas pasca-sleep.
-        expect.objectContaining({ timeout: expect.any(Number) }),
-      );
-      // Token baru tersimpan, field lain (user/outlets) tetap utuh.
-      const state = readAuthState();
-      expect(state.accessToken).toBe(newAccess);
-      expect(state.refreshToken).toBe(newRefresh);
-      expect(state.user).toEqual({ id: 'u1' });
-      expect(state.outlets).toEqual([{ id: 'o1' }]);
-    });
-
-    it('single-flight: dua pemanggil paralel hanya memicu SATU request refresh', async () => {
-      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600));
-      mockedPost.mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve({
-                  data: { success: true, data: { accessToken: makeJwt(900), refreshToken: makeJwt(7 * 24 * 3600) } },
-                }),
-              20,
-            ),
-          ),
-      );
-
-      await Promise.all([api.proactiveRefresh(), api.proactiveRefresh()]);
-
-      expect(mockedPost).toHaveBeenCalledTimes(1);
-    });
-
-    it('tidak menimpa token valid bila respons refresh malformed', async () => {
-      const goodAccess = makeJwt(10);
-      const goodRefresh = makeJwt(7 * 24 * 3600);
-      setAuth(goodAccess, goodRefresh);
-      mockedPost.mockResolvedValue({ data: { success: true, data: { foo: 'bar' } } }); // tanpa token
-
-      await api.proactiveRefresh();
-
-      // Token lama dipertahankan, bukan ditimpa undefined.
-      const state = readAuthState();
-      expect(state.accessToken).toBe(goodAccess);
-      expect(state.refreshToken).toBe(goodRefresh);
-    });
-
-    it('backend MENOLAK refresh (401) → sesi dihapus & redirect ke /login', async () => {
-      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600));
-      // Backend bilang refresh token invalid/di-revoke.
-      mockedPost.mockRejectedValue({ response: { status: 401 } });
-
-      // jsdom tak benar-benar bernavigasi saat set location.href ("Not
-      // implemented"); intip lewat stub agar bisa assert tujuan redirect.
-      const hrefSetter = vi.fn();
-      const original = window.location;
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: { pathname: '/dashboard', set href(v: string) { hrefSetter(v); } },
-      });
-
-      await api.proactiveRefresh();
-
-      // Storage auth dibersihkan (kredensial sudah tak sah).
-      expect(localStorage.getItem(AUTH_KEY)).toBeNull();
-      // Diarahkan ke login.
-      expect(hrefSetter).toHaveBeenCalledWith('/login');
-
-      Object.defineProperty(window, 'location', { configurable: true, value: original });
-    });
-
-    it('error JARINGAN (server mati / offline) → JANGAN hapus sesi, JANGAN redirect', async () => {
-      const goodAccess = makeJwt(10);
-      const goodRefresh = makeJwt(7 * 24 * 3600);
-      setAuth(goodAccess, goodRefresh);
-      // Tanpa `response` → ini error jaringan, bukan penolakan backend.
-      mockedPost.mockRejectedValue(new Error('Network Error'));
-
-      await api.proactiveRefresh();
-
-      // Sesi TETAP utuh — request berikutnya akan retry. Ini mencegah
-      // "balik ke login" padahal refresh token masih valid 7 hari.
-      const state = readAuthState();
-      expect(state.accessToken).toBe(goodAccess);
-      expect(state.refreshToken).toBe(goodRefresh);
-    });
-  });
-
-  /**
-   * Cross-tab refresh lock — mencegah dua tab me-refresh refresh-token YANG SAMA
-   * (memicu reuse-detection backend → seluruh sesi dicabut). Diuji lewat perilaku
-   * publik proactiveRefresh: tab yang kalah lock TIDAK boleh POST /auth/refresh.
-   */
-  describe('cross-tab refresh lock', () => {
-    const LOCK_KEY = 'kasirku-refresh-lock';
-
-    it('tab LAIN memegang lock segar → tab ini TIDAK POST /auth/refresh, pakai token rotasi dari storage', async () => {
-      const oldAccess = makeJwt(10); // expired-soon → memicu refresh
-      setAuth(oldAccess, makeJwt(7 * 24 * 3600));
-      // Tab lain (id berbeda) memegang lock yang masih baru.
-      localStorage.setItem(LOCK_KEY, JSON.stringify({ id: 'tab-lain', at: Date.now() }));
-
-      const p = api.proactiveRefresh();
-      // Simulasikan tab lain selesai merotasi: tulis access baru ke storage.
-      const rotated = makeJwt(900);
-      setAuth(rotated, makeJwt(7 * 24 * 3600));
-      await p;
-
-      // Tab ini menunggu hasil tab lain — tidak ikut memanggil backend.
-      expect(mockedPost).not.toHaveBeenCalled();
-    });
-
-    it('lock BASI (lebih tua dari TTL) diabaikan → tab ini merefresh sendiri', async () => {
-      setAuth(makeJwt(10), makeJwt(7 * 24 * 3600));
-      // Lock dari tab lain tapi sudah kedaluwarsa (>12s) → dianggap hangus.
-      localStorage.setItem(
-        LOCK_KEY,
-        JSON.stringify({ id: 'tab-mati', at: Date.now() - 60_000 }),
-      );
-      mockedPost.mockResolvedValue({
-        data: { success: true, data: { accessToken: makeJwt(900), refreshToken: makeJwt(7 * 24 * 3600) } },
-      });
-
-      await api.proactiveRefresh();
-
-      // Lock basi tidak menghalangi — tab ini mengambil alih & refresh.
-      expect(mockedPost).toHaveBeenCalledTimes(1);
+    it('proactiveRefresh no-op (tidak melempar)', async () => {
+      await expect(proactiveRefresh()).resolves.toBeUndefined();
     });
   });
 });

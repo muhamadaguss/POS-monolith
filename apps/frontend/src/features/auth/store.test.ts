@@ -1,94 +1,76 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useAuthStore } from './store';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { useAuthStore, useAuthHydrated } from './store';
+import { setMockSession, mockUseSession, resetMockSession } from '@/test/session';
 
-const AUTH_KEY = 'kasirku-auth';
+// store.ts kini SHIM di atas useSession (Auth.js), bukan Zustand/localStorage.
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
-function readState() {
-  const raw = localStorage.getItem(AUTH_KEY);
-  return raw ? JSON.parse(raw).state : null;
-}
+describe('useAuthStore (shim di atas session)', () => {
+  beforeEach(() => resetMockSession());
 
-/**
- * Fokus: mergingStorage adapter. Inti perbaikan "token hilang padahal user &
- * outlets ada" — setUser/setOutlets TIDAK boleh menimpa token yang sudah ada,
- * dan setTokens(access, '') TIDAK boleh menghapus refresh token valid.
- */
-describe('auth store — mergingStorage', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    // reset state in-memory
-    useAuthStore.setState({ accessToken: null, refreshToken: null, user: null, outlets: [] });
-  });
-
-  it('setTokens lalu setUser: token TETAP ada (tidak tertimpa)', () => {
-    useAuthStore.getState().setTokens('access-1', 'refresh-1');
-    useAuthStore.getState().setUser({
-      id: 'u1',
-      name: 'Andi',
-      email: 'a@b.c',
-      role: 'CASHIER',
-      tenantId: 't1',
-      currentOutletId: 'o1',
-      permissions: ['shift.own'],
+  it('selector mengambil user dari session', () => {
+    setMockSession({
+      user: { id: 'u1', name: 'Andi', role: 'CASHIER', currentOutletId: 'o1', permissions: ['shift.own'] },
     });
-
-    const state = readState();
-    expect(state.accessToken).toBe('access-1');
-    expect(state.refreshToken).toBe('refresh-1');
-    expect(state.user.name).toBe('Andi');
+    const { result } = renderHook(() => useAuthStore((s) => s.user));
+    expect(result.current?.name).toBe('Andi');
+    expect(result.current?.currentOutletId).toBe('o1');
+    expect(result.current?.permissions).toEqual(['shift.own']);
   });
 
-  it('setTokens(access, "") TIDAK menghapus refresh token valid yang sudah ada', () => {
-    useAuthStore.getState().setTokens('access-1', 'refresh-1');
-    // Skenario select-outlet: backend hanya mengembalikan access baru, refresh ''.
-    useAuthStore.getState().setTokens('access-2', '');
-
-    const state = readState();
-    expect(state.accessToken).toBe('access-2');
-    expect(state.refreshToken).toBe('refresh-1'); // dipertahankan
-  });
-
-  it('setOutlets tidak menyentuh token', () => {
-    useAuthStore.getState().setTokens('access-1', 'refresh-1');
-    useAuthStore.getState().setOutlets([{ id: 'o1', name: 'Outlet 1' } as never]);
-
-    const state = readState();
-    expect(state.accessToken).toBe('access-1');
-    expect(state.refreshToken).toBe('refresh-1');
-    expect(state.outlets).toHaveLength(1);
-  });
-
-  it('setCurrentOutlet memperbarui role & permissions pada user, token tetap', () => {
-    useAuthStore.getState().setTokens('access-1', 'refresh-1');
-    useAuthStore.getState().setUser({
-      id: 'u1',
-      name: 'Owner',
-      email: 'o@b.c',
-      role: 'TENANT_OWNER',
-      tenantId: 't1',
-      currentOutletId: null,
-      permissions: [],
+  it('selector outlets mengambil dari session', () => {
+    setMockSession({
+      user: { id: 'u1' },
+      outlets: [{ id: 'o1', name: 'Outlet 1' }],
     });
-    useAuthStore.getState().setCurrentOutlet('o9', 'STORE_MANAGER', ['staff.manage_local']);
-
-    const state = readState();
-    expect(state.user.currentOutletId).toBe('o9');
-    expect(state.user.role).toBe('STORE_MANAGER');
-    expect(state.user.permissions).toEqual(['staff.manage_local']);
-    expect(state.refreshToken).toBe('refresh-1');
+    const { result } = renderHook(() => useAuthStore((s) => s.outlets));
+    expect(result.current).toHaveLength(1);
+    expect(result.current[0].name).toBe('Outlet 1');
   });
 
-  it('clear menghapus token & user (tidak ada kredensial tersisa)', () => {
-    useAuthStore.getState().setTokens('access-1', 'refresh-1');
-    useAuthStore.getState().clear();
+  it('tanpa selector mengembalikan state penuh (accessToken + user)', () => {
+    setMockSession({ user: { id: 'u1', name: 'Owner' }, backendAccessToken: 'tok-123' });
+    const { result } = renderHook(() => useAuthStore());
+    expect(result.current.accessToken).toBe('tok-123');
+    expect(result.current.user?.name).toBe('Owner');
+  });
 
-    // Catatan: persist middleware menulis ulang key dengan state null setelah
-    // clear(), jadi key bisa tetap ada — yang penting TIDAK ada token tersisa.
-    const state = readState();
-    expect(state?.accessToken ?? null).toBeNull();
-    expect(state?.refreshToken ?? null).toBeNull();
-    expect(state?.user ?? null).toBeNull();
-    expect(useAuthStore.getState().accessToken).toBeNull();
-    expect(useAuthStore.getState().user).toBeNull();
+  it('refreshToken TIDAK pernah diekspos ke klien (selalu null)', () => {
+    setMockSession({ user: { id: 'u1' }, backendAccessToken: 'tok' });
+    const { result } = renderHook(() => useAuthStore());
+    expect(result.current.refreshToken).toBeNull();
+  });
+
+  it('tanpa sesi: user null', () => {
+    setMockSession(null);
+    const { result } = renderHook(() => useAuthStore((s) => s.user));
+    expect(result.current).toBeNull();
+  });
+
+  it('method mutasi adalah no-op (tidak melempar)', () => {
+    setMockSession({ user: { id: 'u1' } });
+    const { result } = renderHook(() => useAuthStore());
+    expect(() => {
+      result.current.setTokens('a', 'b');
+      result.current.setUser({ id: 'x' } as never);
+      result.current.clear();
+    }).not.toThrow();
+  });
+});
+
+describe('useAuthHydrated (shim)', () => {
+  beforeEach(() => resetMockSession());
+
+  it('false saat status loading', () => {
+    setMockSession({ user: { id: 'u1' }, status: 'loading' });
+    const { result } = renderHook(() => useAuthHydrated());
+    expect(result.current).toBe(false);
+  });
+
+  it('true saat authenticated', () => {
+    setMockSession({ user: { id: 'u1' }, status: 'authenticated' });
+    const { result } = renderHook(() => useAuthHydrated());
+    expect(result.current).toBe(true);
   });
 });

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { MapPin, ShieldCheck, LogOut, HelpCircle, Bell, RefreshCw, StoreIcon } from 'lucide-react';
-import { useAuthStore } from '@/features/auth/store';
 import { useSelectOutlet, useLogout } from '@/features/auth/hooks';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -16,8 +16,9 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function SelectOutletPage() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const outlets = useAuthStore((s) => s.outlets);
+  const { data: session } = useSession();
+  const user = session?.user;
+  const outlets = session?.outlets ?? [];
   const { selectOutlet, isPending } = useSelectOutlet();
   const { logout } = useLogout();
   const [selectingId, setSelectingId] = useState<string | null>(null);

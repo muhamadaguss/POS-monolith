@@ -1,61 +1,72 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { loginApi, logoutApi, selectOutletApi, type LoginPayload } from './api';
-import { useAuthStore } from './store';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { useCartStore } from '@/features/pos/store';
-import { getRefreshToken } from '@/lib/api';
+import { selectOutletAction, logoutAction } from './actions';
+import type { LoginPayload } from './api';
 
+/**
+ * Login via Auth.js Credentials provider.
+ *
+ * `signIn('credentials', { redirect:false })` memanggil `authorize()` di `auth.ts`,
+ * yang mendelegasikan ke `POST /auth/login` backend & menaruh token backend ke
+ * dalam JWT session (cookie HttpOnly). TIDAK ada lagi penyimpanan token di
+ * localStorage / Zustand — ini menggantikan alur lama.
+ *
+ * Redirect by-role tetap di sini agar UX sama, tapi gating sebenarnya di proxy.ts.
+ */
 export function useLogin() {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const { setTokens, setUser, setOutlets } = useAuthStore();
+  const { update } = useSession();
 
   async function login(payload: LoginPayload) {
     setIsPending(true);
     setError(null);
     try {
-      const data = await loginApi(payload);
-      setTokens(data.accessToken, data.refreshToken);
-      setUser(data.user);
-      setOutlets(data.outlets);
+      const res = await signIn('credentials', {
+        redirect: false,
+        email: payload.email,
+        password: payload.password,
+        tenantSlug: payload.tenantSlug ?? '',
+      });
 
-      if (data.user.role === 'SUPER_ADMIN') {
+      if (!res || res.error) {
+        // Auth.js v5 menyamarkan pesan error Credentials → tampilkan pesan umum.
+        setError('Login gagal. Periksa email, password, dan kode toko Anda.');
+        return;
+      }
+
+      // Sesi sudah terbentuk. Ambil sesi terbaru untuk menentukan tujuan & outlet.
+      const session = await update();
+      const user = session?.user;
+      const outlets = session?.outlets ?? [];
+      if (!user) {
+        setError('Sesi tidak terbentuk. Coba lagi.');
+        return;
+      }
+
+      if (user.role === 'SUPER_ADMIN') {
         window.location.href = '/admin';
         return;
       }
-
-      // Owner langsung ke dashboard — tidak perlu pilih outlet
-      if (data.user.role === 'TENANT_OWNER') {
+      if (user.role === 'TENANT_OWNER') {
         window.location.href = '/dashboard';
         return;
       }
-
-      // Manager & Kasir wajib pilih outlet
-      if (data.outlets.length === 0) {
+      if (outlets.length === 0) {
         setError('Akun Anda belum memiliki akses ke outlet manapun. Hubungi administrator.');
-        useAuthStore.getState().clear();
+        await signOut({ redirect: false });
         return;
       }
-
-      if (data.outlets.length === 1) {
-        const outlet = data.outlets[0];
-        const res = await selectOutletApi(outlet.id);
-        // Simpan refresh token baru hasil rotasi (bukan yang lama dari login).
-        setTokens(res.accessToken, res.refreshToken);
-        useAuthStore.getState().setCurrentOutlet(res.currentOutletId, res.role, outlet.permissions);
-        window.location.href = res.role === 'CASHIER' ? '/pos' : '/dashboard';
+      if (outlets.length === 1) {
+        await applySelectOutlet(outlets[0].id, update);
         return;
       }
-
-      router.push('/select-outlet');
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Login gagal. Periksa kembali kredensial Anda.';
-      setError(msg);
+      window.location.href = '/select-outlet';
+    } catch {
+      setError('Login gagal. Periksa kembali kredensial Anda.');
     } finally {
       setIsPending(false);
     }
@@ -64,24 +75,40 @@ export function useLogin() {
   return { login, isPending, error };
 }
 
+/**
+ * Tukar outlet aktif: panggil `/auth/select-outlet` backend (rotasi token), lalu
+ * perbarui JWT session Auth.js via `update()` (memicu callback jwt trigger 'update').
+ */
+async function applySelectOutlet(
+  outletId: string,
+  update: ReturnType<typeof useSession>['update'],
+  redirectTo?: string,
+) {
+  // Server Action: berjalan di server, akses backend token dari session (server-only).
+  const res = await selectOutletAction(outletId);
+  // Perbarui sesi dengan token backend baru + currentOutletId/role/permissions baru.
+  const refreshed = await update({
+    backendAccessToken: res.accessToken,
+    backendRefreshToken: res.refreshToken,
+    outletUpdate: {
+      currentOutletId: res.currentOutletId,
+      role: res.role,
+      permissions: res.permissions,
+    },
+  });
+  const role = refreshed?.user?.role ?? res.role;
+  const dest = redirectTo || (role === 'CASHIER' ? '/pos' : '/dashboard');
+  window.location.href = dest;
+}
+
 export function useSelectOutlet() {
   const [isPending, setIsPending] = useState(false);
-  const { setTokens, setCurrentOutlet } = useAuthStore();
+  const { update } = useSession();
 
   async function selectOutlet(outletId: string, redirectTo?: string) {
     setIsPending(true);
     try {
-      const res = await selectOutletApi(outletId);
-      // Backend kini merotasi refresh token juga (currentOutletId konsisten).
-      // Simpan PASANGAN baru — refresh token lama sudah dicabut backend.
-      setTokens(res.accessToken, res.refreshToken);
-      // Pakai role & permissions dari backend (untuk Owner: tetap TENANT_OWNER
-      // dengan permissions global; untuk lainnya: role per-outlet).
-      setCurrentOutlet(res.currentOutletId, res.role, res.permissions);
-      // Tujuan: hormati redirect eksplisit (mis. dari menu POS), jika tidak —
-      // CASHIER ke POS, lainnya ke dashboard.
-      const dest = redirectTo || (res.role === 'CASHIER' ? '/pos' : '/dashboard');
-      window.location.href = dest;
+      await applySelectOutlet(outletId, update, redirectTo);
     } finally {
       setIsPending(false);
     }
@@ -91,21 +118,14 @@ export function useSelectOutlet() {
 }
 
 export function useLogout() {
-  const clear = useAuthStore((s) => s.clear);
   const clearCart = useCartStore((s) => s.clear);
-  const router = useRouter();
 
   async function logout() {
-    const refreshToken = getRefreshToken() ?? undefined;
-    try {
-      await logoutApi(refreshToken);
-    } catch {
-      // Server-side logout gagal — tetap bersihkan client state
-    } finally {
-      clear();
-      clearCart();
-      router.push('/login');
-    }
+    clearCart();
+    // Revoke refresh token backend dulu (Server Action, best-effort), lalu hapus
+    // cookie sesi Auth.js & arahkan ke /login.
+    await logoutAction();
+    await signOut({ redirectTo: '/login' });
   }
 
   return { logout };

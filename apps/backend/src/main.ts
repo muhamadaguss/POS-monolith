@@ -2,6 +2,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { createValidationPipe } from './common/pipes/validation.pipe';
 
@@ -25,6 +26,11 @@ async function bootstrap() {
       crossOriginEmbedderPolicy: false,
     }),
   );
+
+  // Parse cookie agar JwtStrategy bisa membaca access token dari cookie (opsional;
+  // header Authorization tetap jalur utama). Mendukung migrasi frontend ke
+  // auth cookie-based (Auth.js) tanpa mengubah kontrak Bearer yang sudah ada.
+  app.use(cookieParser());
 
   // Global prefix untuk semua route: /api/v1/...
   app.setGlobalPrefix('api/v1');

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { useAuthStore } from '@/features/auth/store';
+import { setMockSession, mockUseSession, resetMockSession } from '@/test/session';
 import type { ShiftListResponse, ShiftStats } from '@/features/shifts/types';
+
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -58,19 +60,17 @@ const STATS: ShiftStats = {
 };
 
 function setUser(permissions: string[], role = 'TENANT_OWNER') {
-  useAuthStore.setState({
-    accessToken: 'a',
-    refreshToken: 'r',
-    outlets: [{ id: 'o1', name: 'Cabang Jakarta Pusat' }] as never,
+  setMockSession({
     user: {
       id: 'u1',
       name: 'Budi',
       email: 'owner@demotoko.com',
-      role: role as never,
+      role,
       tenantId: 't1',
       currentOutletId: null,
       permissions,
     },
+    outlets: [{ id: 'o1', name: 'Cabang Jakarta Pusat', role, permissions }],
   });
 }
 
@@ -81,7 +81,10 @@ describe('ShiftHistoryPage', () => {
     mockedGetStats.mockResolvedValue(STATS);
     mockedExport.mockResolvedValue(undefined);
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    resetMockSession();
+  });
 
   it('menampilkan kartu statistik (total shift, selisih kas, durasi)', async () => {
     setUser(['shift.manage']);
