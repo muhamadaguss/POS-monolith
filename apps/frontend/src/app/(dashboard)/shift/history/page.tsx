@@ -1,23 +1,7 @@
-'use client';
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import {
-  Clock,
-  ChevronRight,
-  History,
-  Scale,
-  Hourglass,
-  Search,
-  Download,
-  AlertTriangle,
-} from 'lucide-react';
+import { Clock, ChevronRight, History, Scale, Hourglass, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useAuthStore } from '@/features/auth/store';
-import { RequirePermission } from '@/features/auth/RequirePermission';
-import { getShifts, getShiftStats, exportShifts } from '@/features/shifts/api';
-import { errorAlert, toastSuccess } from '@/lib/swal';
+import { verifySession, serverFetch } from '@/lib/session';
 import {
   IDR,
   toNum,
@@ -27,23 +11,16 @@ import {
   formatMinutes,
 } from '@/lib/format';
 import type {
-  ShiftListItem,
-  ShiftStatus,
-  PaginationMeta,
+  ShiftListResponse,
   ShiftStats,
+  ShiftStatus,
   ShiftQuery,
 } from '@/features/shifts/types';
+import { ShiftHistoryToolbar } from './ShiftHistoryToolbar';
 
-const STATUS_OPTIONS: { value: '' | ShiftStatus; label: string }[] = [
-  { value: '', label: 'Semua Status' },
-  { value: 'OPEN', label: 'Berjalan' },
-  { value: 'CLOSED', label: 'Ditutup' },
-];
-
-type Period = '7' | '30' | 'CUSTOM';
 const PAGE_SIZE = 10;
 
-/** Rentang tanggal (rolling) untuk preset 7/30 hari. CUSTOM dikelola terpisah. */
+/** Rentang tanggal (rolling) untuk preset 7/30 hari. */
 function presetRange(days: number): { startDate: string; endDate: string } {
   const today = new Date();
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
@@ -111,99 +88,109 @@ function StatCard({
   );
 }
 
-function ShiftHistoryInner() {
-  const user = useAuthStore((s) => s.user);
-  const isOwner = user?.role === 'TENANT_OWNER';
+type Period = '7' | '30' | 'CUSTOM';
 
-  const [filterStatus, setFilterStatus] = useState<'' | ShiftStatus>('');
-  const [period, setPeriod] = useState<Period>('7');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+interface SearchParams {
+  status?: string;
+  period?: string;
+  start?: string;
+  end?: string;
+  search?: string;
+  page?: string;
+}
 
-  const [items, setItems] = useState<ShiftListItem[]>([]);
-  const [meta, setMeta] = useState<PaginationMeta | null>(null);
-  const [stats, setStats] = useState<ShiftStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
+/** Bangun URL halaman ini dengan satu param diubah (untuk Link pagination). */
+function buildHref(current: SearchParams, patch: Partial<SearchParams>): string {
+  const params = new URLSearchParams();
+  const merged = { ...current, ...patch };
+  for (const [k, v] of Object.entries(merged)) {
+    if (v) params.set(k, String(v));
+  }
+  const qs = params.toString();
+  return `/shift/history${qs ? `?${qs}` : ''}`;
+}
 
-  const effectiveOutletId = isOwner ? '' : (user?.currentOutletId ?? '');
+export default async function ShiftHistoryPage({
+  searchParams,
+}: {
+  // Next.js 16: searchParams adalah Promise.
+  searchParams: Promise<SearchParams>;
+}) {
+  const session = await verifySession();
+  const user = session.user;
 
-  // Debounce input pencarian (350ms) → set `search` yang memicu reload.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  // Rentang tanggal efektif yang dikirim ke API.
-  const range = useMemo(() => {
-    if (period === '7') return presetRange(7);
-    if (period === '30') return presetRange(30);
-    // CUSTOM: hanya kirim bila kedua tanggal terisi.
-    return customStart && customEnd
-      ? { startDate: customStart, endDate: customEnd }
-      : { startDate: undefined, endDate: undefined };
-  }, [period, customStart, customEnd]);
-
-  const baseQuery: ShiftQuery = useMemo(
-    () => ({
-      outletId: effectiveOutletId || undefined,
-      status: filterStatus || undefined,
-      startDate: range.startDate,
-      endDate: range.endDate,
-      search: search || undefined,
-    }),
-    [effectiveOutletId, filterStatus, range.startDate, range.endDate, search],
-  );
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [listRes, statsRes] = await Promise.all([
-        getShifts({ ...baseQuery, page, limit: PAGE_SIZE }),
-        getShiftStats(baseQuery),
-      ]);
-      setItems(listRes.items);
-      setMeta(listRes.meta);
-      setStats(statsRes);
-    } catch {
-      setItems([]);
-      setMeta(null);
-      setStats(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [baseQuery, page]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  async function handleExport() {
-    setIsExporting(true);
-    try {
-      await exportShifts(baseQuery);
-      toastSuccess('Riwayat shift diunduh');
-    } catch {
-      errorAlert('Gagal mengunduh riwayat shift');
-    } finally {
-      setIsExporting(false);
-    }
+  // RBAC: hanya Manager/Owner (punya shift.manage). Tampilkan blok "Akses Ditolak"
+  // inline (konsisten dgn pola RequirePermission lama; bukan redirect karena tak
+  // ada route /unauthorized). Backend tetap sumber kebenaran (mutasi 403).
+  if (!user.permissions?.includes('shift.manage')) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
+        <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Hanya Manager atau Owner yang dapat melihat riwayat shift.
+        </p>
+      </div>
+    );
   }
 
-  const totalPages = meta?.totalPages ?? 1;
-  const pageNumbers = useMemo(() => {
-    const pages: number[] = [];
-    for (let p = 1; p <= totalPages; p += 1) pages.push(p);
-    return pages.slice(0, 8); // batasi tampilan nomor agar ringkas
-  }, [totalPages]);
+  const sp = await searchParams;
+  const isOwner = user.role === 'TENANT_OWNER';
+  const effectiveOutletId = isOwner ? '' : (user.currentOutletId ?? '');
+
+  const period = (sp.period as Period) ?? '7';
+  const filterStatus = (sp.status as ShiftStatus | '') ?? '';
+  const search = sp.search?.trim() ?? '';
+  const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+
+  // Rentang tanggal efektif.
+  const range =
+    period === '7'
+      ? presetRange(7)
+      : period === '30'
+        ? presetRange(30)
+        : sp.start && sp.end
+          ? { startDate: sp.start, endDate: sp.end }
+          : { startDate: undefined as string | undefined, endDate: undefined as string | undefined };
+
+  const baseQuery: ShiftQuery = {
+    outletId: effectiveOutletId || undefined,
+    status: filterStatus || undefined,
+    startDate: range.startDate,
+    endDate: range.endDate,
+    search: search || undefined,
+  };
+
+  // Manager tanpa outlet aktif: jangan fetch, tampilkan peringatan.
+  const needsOutlet = !isOwner && !effectiveOutletId;
+
+  let list: ShiftListResponse = { items: [], meta: { total: 0, page: 1, limit: PAGE_SIZE, totalPages: 1 } };
+  let stats: ShiftStats | null = null;
+
+  if (!needsOutlet) {
+    const qs = (q: ShiftQuery) => {
+      const params = new URLSearchParams();
+      if (q.outletId) params.set('outletId', q.outletId);
+      if (q.status) params.set('status', q.status);
+      if (q.startDate) params.set('startDate', q.startDate);
+      if (q.endDate) params.set('endDate', q.endDate);
+      if (q.search) params.set('search', q.search);
+      if (q.page) params.set('page', String(q.page));
+      if (q.limit) params.set('limit', String(q.limit));
+      const s = params.toString();
+      return s ? `?${s}` : '';
+    };
+    // Fetch paralel di server (data sudah ter-render saat HTML sampai ke klien).
+    [list, stats] = await Promise.all([
+      serverFetch<ShiftListResponse>(`/shifts${qs({ ...baseQuery, page, limit: PAGE_SIZE })}`),
+      serverFetch<ShiftStats>(`/shifts/stats${qs(baseQuery)}`),
+    ]);
+  }
 
   const periodBadge = period === '7' ? '7 Hari' : period === '30' ? '30 Hari' : 'Custom';
+  const meta = list.meta;
+  const totalPages = meta.totalPages ?? 1;
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -216,14 +203,7 @@ function ShiftHistoryInner() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button
-            variant="outline"
-            className="rounded-xl gap-2"
-            onClick={handleExport}
-            disabled={isExporting}
-          >
-            <Download className="w-4 h-4" /> {isExporting ? 'Mengunduh...' : 'Export'}
-          </Button>
+          {/* Tombol export (blob download) butuh klien → di toolbar */}
           <Link href="/shift">
             <Button className="rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
               <Clock className="w-4 h-4" /> Kelola Shift
@@ -248,7 +228,11 @@ function ShiftHistoryInner() {
           iconColor="text-red-500"
           label="Total Selisih Kas"
           badge={periodBadge}
-          value={stats ? `${toNum(stats.totalCashDifference) > 0 ? '+' : ''}${IDR.format(toNum(stats.totalCashDifference))}` : '—'}
+          value={
+            stats
+              ? `${toNum(stats.totalCashDifference) > 0 ? '+' : ''}${IDR.format(toNum(stats.totalCashDifference))}`
+              : '—'
+          }
           valueColor={stats ? cashColor(toNum(stats.totalCashDifference)) : undefined}
         />
         <StatCard
@@ -261,101 +245,18 @@ function ShiftHistoryInner() {
         />
       </div>
 
-      {/* Toolbar: search + status + periode */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              aria-label="Cari shift atau kasir"
-              placeholder="Cari shift atau kasir..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10 h-11 rounded-xl"
-            />
-          </div>
-          <select
-            aria-label="Status"
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value as '' | ShiftStatus);
-              setPage(1);
-            }}
-            className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          {/* Preset periode */}
-          <div className="flex items-center gap-1 ml-auto">
-            {(['7', '30'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setPeriod(p);
-                  setPage(1);
-                }}
-                className={`h-11 px-4 rounded-xl text-sm font-medium transition-colors ${
-                  period === p
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {p} Hari
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setPeriod('CUSTOM');
-                setPage(1);
-              }}
-              className={`h-11 px-4 rounded-xl text-sm font-medium transition-colors ${
-                period === 'CUSTOM'
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              Custom
-            </button>
-          </div>
-        </div>
+      {/* Toolbar interaktif (Client Component): search, status, periode, export */}
+      <ShiftHistoryToolbar
+        status={filterStatus}
+        period={period}
+        customStart={sp.start ?? ''}
+        customEnd={sp.end ?? ''}
+        search={search}
+        query={baseQuery}
+      />
 
-        {/* Input tanggal custom */}
-        {period === 'CUSTOM' && (
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              type="date"
-              aria-label="Tanggal mulai"
-              value={customStart}
-              onChange={(e) => {
-                setCustomStart(e.target.value);
-                setPage(1);
-              }}
-              className="h-11 rounded-xl w-auto"
-            />
-            <span className="text-gray-400">—</span>
-            <Input
-              type="date"
-              aria-label="Tanggal akhir"
-              value={customEnd}
-              onChange={(e) => {
-                setCustomEnd(e.target.value);
-                setPage(1);
-              }}
-              className="h-11 rounded-xl w-auto"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Tabel */}
+      {/* Tabel (server-rendered; baris = Link navigasi) */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        {/* Header kolom */}
         <div className="hidden md:grid grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
           <span>Informasi Shift</span>
           <span>Waktu</span>
@@ -364,11 +265,7 @@ function ShiftHistoryInner() {
           <span className="w-4" />
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : items.length === 0 ? (
+        {list.items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <History className="w-10 h-10 text-gray-200 mb-3" />
             <p className="text-sm font-medium text-gray-900">Belum ada riwayat shift</p>
@@ -378,13 +275,12 @@ function ShiftHistoryInner() {
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {items.map((shift) => (
+            {list.items.map((shift) => (
               <li key={shift.id}>
                 <Link
                   href={`/shift/history/${shift.id}`}
                   className="grid grid-cols-1 md:grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 hover:bg-gray-50 transition-colors items-center"
                 >
-                  {/* Informasi Shift */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-xs font-bold text-gray-500">
                       {getInitials(shift.openedBy?.name ?? '?')}
@@ -402,7 +298,6 @@ function ShiftHistoryInner() {
                     </div>
                   </div>
 
-                  {/* Waktu */}
                   <div className="text-sm">
                     <p className="font-medium text-gray-900">{formatDate(shift.openedAt)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -410,12 +305,10 @@ function ShiftHistoryInner() {
                     </p>
                   </div>
 
-                  {/* Transaksi */}
                   <div className="text-sm text-gray-600">
                     {shift._count?.transactions ?? 0} transaksi
                   </div>
 
-                  {/* Selisih Kas */}
                   <div className="text-sm md:text-right">
                     {shift.status === 'CLOSED' ? (
                       <CashAmount value={shift.cashDifference} />
@@ -431,52 +324,43 @@ function ShiftHistoryInner() {
           </ul>
         )}
 
-        {/* Pagination bernomor */}
-        {meta && meta.total > 0 && (
+        {/* Pagination bernomor (Link → ubah ?page=) */}
+        {meta.total > 0 && (
           <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
             <p className="text-sm text-gray-500">
               Menampilkan {(meta.page - 1) * meta.limit + 1}-
               {Math.min(meta.page * meta.limit, meta.total)} dari {meta.total} shift
             </p>
             <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl"
-                disabled={page <= 1 || isLoading}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Sebelumnya
-              </Button>
+              <PageLink
+                disabled={page <= 1}
+                href={buildHref(sp, { page: String(page - 1) })}
+                label="Sebelumnya"
+              />
               {pageNumbers.map((p) => (
-                <button
+                <Link
                   key={p}
-                  type="button"
-                  onClick={() => setPage(p)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  href={buildHref(sp, { page: String(p) })}
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                     p === page
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   {p}
-                </button>
+                </Link>
               ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl"
-                disabled={page >= totalPages || isLoading}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Selanjutnya
-              </Button>
+              <PageLink
+                disabled={page >= totalPages}
+                href={buildHref(sp, { page: String(page + 1) })}
+                label="Selanjutnya"
+              />
             </div>
           </div>
         )}
       </div>
 
-      {!isOwner && !effectiveOutletId && (
+      {needsOutlet && (
         <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
           <p className="text-sm text-amber-700">
@@ -488,13 +372,18 @@ function ShiftHistoryInner() {
   );
 }
 
-export default function ShiftHistoryPage() {
+/** Tombol pagination prev/next sebagai Link (disabled → span). */
+function PageLink({ disabled, href, label }: { disabled: boolean; href: string; label: string }) {
+  const base =
+    'inline-flex items-center h-9 px-3 rounded-xl border text-sm font-medium transition-colors';
+  if (disabled) {
+    return (
+      <span className={`${base} border-gray-200 text-gray-300 cursor-not-allowed`}>{label}</span>
+    );
+  }
   return (
-    <RequirePermission
-      anyOf={['shift.manage']}
-      message="Hanya Manager atau Owner yang dapat melihat riwayat shift."
-    >
-      <ShiftHistoryInner />
-    </RequirePermission>
+    <Link href={href} className={`${base} border-gray-200 text-gray-700 hover:bg-gray-50`}>
+      {label}
+    </Link>
   );
 }
