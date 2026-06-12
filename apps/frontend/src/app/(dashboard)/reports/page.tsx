@@ -24,6 +24,8 @@ import {
   getSalesSummaryWithGrowth,
   getTopProducts,
   getShiftSummary,
+  getHourlySales,
+  getSalesByCategory,
   exportSalesXlsx,
   apiErrorMessage,
 } from '@/features/reports/api';
@@ -31,10 +33,17 @@ import type {
   SalesSummaryWithGrowth,
   TopProduct,
   ShiftReportResult,
+  HourlySalesPoint,
+  CategorySalesItem,
   ReportPeriod,
   DateRange,
 } from '@/features/reports/api';
-import { SalesTrendChart, PaymentBreakdown } from '@/features/reports/components/charts';
+import {
+  SalesTrendChart,
+  PaymentBreakdown,
+  HourlyBarChart,
+  CategoryBreakdown,
+} from '@/features/reports/components/charts';
 import { IDR } from '@/lib/format';
 
 const PRESETS: { value: ReportPeriod; label: string }[] = [
@@ -44,9 +53,10 @@ const PRESETS: { value: ReportPeriod; label: string }[] = [
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
-type Tab = 'sales' | 'products' | 'shifts';
+type Tab = 'sales' | 'analytics' | 'products' | 'shifts';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'sales', label: 'Penjualan' },
+  { value: 'analytics', label: 'Analitik' },
   { value: 'products', label: 'Produk Terlaris' },
   { value: 'shifts', label: 'Rekap Shift' },
 ];
@@ -140,6 +150,8 @@ function ReportsPageInner() {
   const [topLimit, setTopLimit] = useState(10);
   const [shiftData, setShiftData] = useState<ShiftReportResult | null>(null);
   const [shiftPage, setShiftPage] = useState(1);
+  const [hourly, setHourly] = useState<HourlySalesPoint[]>([]);
+  const [categories, setCategories] = useState<CategorySalesItem[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -148,14 +160,18 @@ function ReportsPageInner() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [s, t, sh] = await Promise.all([
+      const [s, t, sh, hr, cat] = await Promise.all([
         getSalesSummaryWithGrowth(range, outletParam),
         getTopProducts(range, outletParam, topLimit),
         getShiftSummary(range, outletParam, shiftPage, SHIFT_PAGE_SIZE),
+        getHourlySales(range, outletParam),
+        getSalesByCategory(range, outletParam),
       ]);
       setSummary(s);
       setTopProducts(t);
       setShiftData(sh);
+      setHourly(hr);
+      setCategories(cat);
     } catch {
       // 401/refresh ditangani interceptor; jangan jadi unhandledRejection.
     } finally {
@@ -413,6 +429,32 @@ function ReportsPageInner() {
                   {IDR.format(netRevenue)}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Analitik (per jam + per kategori) */}
+      {tab === 'analytics' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-semibold text-gray-900">Penjualan per Jam</p>
+              <span className="text-xs text-gray-400">Jam ramai disorot hijau pekat</span>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Distribusi omzet sepanjang hari — bantu atur jadwal shift &amp; stok
+            </p>
+            <HourlyBarChart data={hourly} />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <p className="text-sm font-semibold text-gray-900 mb-1">Penjualan per Kategori</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Kontribusi tiap kategori produk terhadap omzet
+            </p>
+            <div className="max-w-md">
+              <CategoryBreakdown data={categories} />
             </div>
           </div>
         </div>

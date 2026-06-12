@@ -269,6 +269,106 @@ export class ReportsService {
     };
   }
 
+  // ---- Penjualan per Jam (0–23) ----
+
+  /**
+   * Distribusi penjualan per jam untuk mengetahui jam ramai vs sepi.
+   * Selalu mengembalikan 24 baris (jam 0–23); jam tanpa transaksi diisi 0.
+   * Group dilakukan di aplikasi (konsisten dgn getDailyBreakdown).
+   */
+  async getHourlySales(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        tenantId: currentUser.tenantId!,
+        outletId: { in: allowedOutletIds },
+        status: TransactionStatus.COMPLETED,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: { createdAt: true, totalAmount: true },
+    });
+
+    // Inisialisasi 24 jam dengan nilai 0.
+    const hours = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      count: 0,
+      revenue: new Decimal(0),
+    }));
+
+    for (const trx of transactions) {
+      const h = trx.createdAt.getHours();
+      hours[h].count += 1;
+      hours[h].revenue = hours[h].revenue.plus(trx.totalAmount);
+    }
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      hourly: hours,
+    };
+  }
+
+  // ---- Penjualan per Kategori ----
+
+  /**
+   * Kontribusi penjualan per kategori produk. Kategori diambil dari relasi
+   * product.category SAAT INI (TransactionItem tidak menyimpan snapshot
+   * kategori). Produk tanpa kategori dikelompokkan sebagai "Tanpa Kategori".
+   */
+  async getSalesByCategory(currentUser: AuthenticatedUser, query: SalesReportQueryDto) {
+    const { startDate, endDate } = this.resolveDateRange(query.period, query.startDate, query.endDate);
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
+
+    const items = await this.prisma.transactionItem.findMany({
+      where: {
+        transaction: {
+          tenantId: currentUser.tenantId!,
+          outletId: { in: allowedOutletIds },
+          status: TransactionStatus.COMPLETED,
+          createdAt: { gte: startDate, lte: endDate },
+        },
+      },
+      select: {
+        quantity: true,
+        subtotal: true,
+        product: { select: { category: { select: { id: true, name: true } } } },
+      },
+    });
+
+    const NO_CATEGORY = '__none__';
+    const map = new Map<
+      string,
+      { categoryId: string | null; categoryName: string; quantity: Decimal; revenue: Decimal }
+    >();
+
+    for (const item of items) {
+      const cat = item.product?.category ?? null;
+      const key = cat?.id ?? NO_CATEGORY;
+      const existing = map.get(key);
+      if (existing) {
+        existing.quantity = existing.quantity.plus(item.quantity);
+        existing.revenue = existing.revenue.plus(item.subtotal);
+      } else {
+        map.set(key, {
+          categoryId: cat?.id ?? null,
+          categoryName: cat?.name ?? 'Tanpa Kategori',
+          quantity: new Decimal(item.quantity),
+          revenue: new Decimal(item.subtotal),
+        });
+      }
+    }
+
+    const categories = Array.from(map.values()).sort((a, b) =>
+      b.revenue.comparedTo(a.revenue),
+    );
+
+    return {
+      period: { startDate, endDate, type: query.period ?? ReportPeriod.DAILY },
+      categories,
+    };
+  }
+
   // ---- Export Excel (.xlsx) Penjualan ----
 
   async exportSalesXlsx(

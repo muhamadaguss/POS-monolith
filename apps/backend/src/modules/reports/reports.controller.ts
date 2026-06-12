@@ -47,6 +47,26 @@ export class ReportsController {
     return this.reportsService.getShiftSummary(user, query);
   }
 
+  @Get('hourly')
+  @RequirePermissions(PERMISSIONS.REPORT_VIEW)
+  @ApiOperation({ summary: 'Distribusi penjualan per jam (0–23) — jam ramai vs sepi' })
+  getHourlySales(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SalesReportQueryDto,
+  ) {
+    return this.reportsService.getHourlySales(user, query);
+  }
+
+  @Get('by-category')
+  @RequirePermissions(PERMISSIONS.REPORT_VIEW)
+  @ApiOperation({ summary: 'Kontribusi penjualan per kategori produk' })
+  getSalesByCategory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: SalesReportQueryDto,
+  ) {
+    return this.reportsService.getSalesByCategory(user, query);
+  }
+
   @Get('sales/export')
   @RequirePermissions(PERMISSIONS.REPORT_VIEW)
   @ApiOperation({ summary: 'Download laporan penjualan dalam format Excel (.xlsx)' })

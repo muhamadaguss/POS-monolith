@@ -280,6 +280,60 @@ export async function getShiftSummary(
   };
 }
 
+// ---- Penjualan per Jam ----
+
+export interface HourlySalesPoint {
+  hour: number;
+  count: number;
+  revenue: number;
+}
+
+export async function getHourlySales(
+  period: ReportPeriod | DateRange = 'WEEK',
+  outletId?: string,
+): Promise<HourlySalesPoint[]> {
+  const { startDate, endDate } = resolveRange(period);
+  const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
+  if (outletId) params.set('outletId', outletId);
+  const { data } = await api.get<{ hourly?: { hour: number; count: Num; revenue: Num }[] }>(
+    `/reports/hourly?${params}`,
+  );
+
+  return (data.hourly ?? []).map((h) => ({
+    hour: Number(h.hour ?? 0),
+    count: Number(h.count ?? 0),
+    revenue: Number(h.revenue ?? 0),
+  }));
+}
+
+// ---- Penjualan per Kategori ----
+
+export interface CategorySalesItem {
+  categoryId: string | null;
+  categoryName: string;
+  quantity: number;
+  revenue: number;
+}
+
+export async function getSalesByCategory(
+  period: ReportPeriod | DateRange = 'WEEK',
+  outletId?: string,
+): Promise<CategorySalesItem[]> {
+  const { startDate, endDate } = resolveRange(period);
+  const params = new URLSearchParams({ period: 'CUSTOM', startDate, endDate });
+  if (outletId) params.set('outletId', outletId);
+  const { data } = await api.get<{
+    categories?: { categoryId: string | null; categoryName: string; quantity: Num; revenue: Num }[];
+  }>(`/reports/by-category?${params}`);
+
+  return (data.categories ?? []).map((c) => ({
+    categoryId: c.categoryId ?? null,
+    categoryName: c.categoryName ?? 'Tanpa Kategori',
+    quantity: Number(c.quantity ?? 0),
+    revenue: Number(c.revenue ?? 0),
+  }));
+}
+
 /** Unduh laporan penjualan sebagai file Excel (.xlsx) — memicu download di browser. */
 export async function exportSalesXlsx(
   period: ReportPeriod | DateRange = 'WEEK',

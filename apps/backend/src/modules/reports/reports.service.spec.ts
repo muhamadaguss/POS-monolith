@@ -86,3 +86,93 @@ describe('ReportsService — RBAC outlet scoping (getSalesSummary)', () => {
     expect(where.outletId).toEqual({ in: ['o1', 'o2'] });
   });
 });
+
+describe('ReportsService — getHourlySales', () => {
+  let service: ReportsService;
+  let prisma: MockPrisma;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [ReportsService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    service = moduleRef.get(ReportsService);
+    prisma.outlet.findMany.mockResolvedValue([{ id: 'o1' }]);
+  });
+
+  it('selalu mengembalikan 24 baris (jam 0–23), kosong = 0', async () => {
+    prisma.transaction.findMany.mockResolvedValue([]);
+    const res = await service.getHourlySales(owner, query);
+    expect(res.hourly).toHaveLength(24);
+    expect(res.hourly.every((h) => h.count === 0)).toBe(true);
+    expect(res.hourly[0].hour).toBe(0);
+    expect(res.hourly[23].hour).toBe(23);
+  });
+
+  it('mengakumulasi count & revenue ke jam yang benar', async () => {
+    // dua transaksi jam 9, satu jam 14
+    const at = (h: number) => new Date(2026, 5, 11, h, 30, 0);
+    prisma.transaction.findMany.mockResolvedValue([
+      { createdAt: at(9), totalAmount: new Decimal(10000) },
+      { createdAt: at(9), totalAmount: new Decimal(5000) },
+      { createdAt: at(14), totalAmount: new Decimal(8000) },
+    ]);
+
+    const res = await service.getHourlySales(owner, query);
+
+    expect(res.hourly[9].count).toBe(2);
+    expect(res.hourly[9].revenue.toString()).toBe('15000');
+    expect(res.hourly[14].count).toBe(1);
+    expect(res.hourly[14].revenue.toString()).toBe('8000');
+  });
+
+  it('hanya transaksi COMPLETED (filter where)', async () => {
+    prisma.transaction.findMany.mockResolvedValue([]);
+    await service.getHourlySales(owner, query);
+    const where = prisma.transaction.findMany.mock.calls[0][0].where;
+    expect(where.status).toBe('COMPLETED');
+  });
+});
+
+describe('ReportsService — getSalesByCategory', () => {
+  let service: ReportsService;
+  let prisma: MockPrisma;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [ReportsService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+    service = moduleRef.get(ReportsService);
+    prisma.outlet.findMany.mockResolvedValue([{ id: 'o1' }]);
+  });
+
+  it('mengakumulasi revenue & qty per kategori, urut revenue desc', async () => {
+    prisma.transactionItem.findMany.mockResolvedValue([
+      { quantity: new Decimal(2), subtotal: new Decimal(10000), product: { category: { id: 'c1', name: 'Minuman' } } },
+      { quantity: new Decimal(1), subtotal: new Decimal(5000), product: { category: { id: 'c1', name: 'Minuman' } } },
+      { quantity: new Decimal(3), subtotal: new Decimal(30000), product: { category: { id: 'c2', name: 'Makanan' } } },
+    ]);
+
+    const res = await service.getSalesByCategory(owner, query);
+
+    expect(res.categories).toHaveLength(2);
+    // Makanan (30000) di atas Minuman (15000)
+    expect(res.categories[0].categoryName).toBe('Makanan');
+    expect(res.categories[0].revenue.toString()).toBe('30000');
+    expect(res.categories[1].categoryName).toBe('Minuman');
+    expect(res.categories[1].revenue.toString()).toBe('15000');
+    expect(res.categories[1].quantity.toString()).toBe('3');
+  });
+
+  it('produk tanpa kategori → "Tanpa Kategori"', async () => {
+    prisma.transactionItem.findMany.mockResolvedValue([
+      { quantity: new Decimal(1), subtotal: new Decimal(7000), product: { category: null } },
+    ]);
+
+    const res = await service.getSalesByCategory(owner, query);
+
+    expect(res.categories[0].categoryName).toBe('Tanpa Kategori');
+    expect(res.categories[0].categoryId).toBeNull();
+  });
+});
