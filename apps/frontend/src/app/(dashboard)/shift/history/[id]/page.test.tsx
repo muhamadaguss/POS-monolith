@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { useAuthStore } from '@/features/auth/store';
+import { setMockSession, mockUseSession, resetMockSession } from '@/test/session';
 import type { ShiftDetail } from '@/features/shifts/types';
+
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -58,19 +60,17 @@ const DETAIL: ShiftDetail = {
 };
 
 function setUser(permissions: string[], role = 'TENANT_OWNER') {
-  useAuthStore.setState({
-    accessToken: 'a',
-    refreshToken: 'r',
-    outlets: [],
+  setMockSession({
     user: {
       id: 'u1',
       name: 'Budi',
       email: 'owner@demotoko.com',
-      role: role as never,
+      role,
       tenantId: 't1',
       currentOutletId: null,
       permissions,
     },
+    outlets: [],
   });
 }
 
@@ -79,7 +79,10 @@ describe('ShiftDetailPage', () => {
     vi.clearAllMocks();
     mockedDetail.mockResolvedValue(DETAIL);
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    resetMockSession();
+  });
 
   it('menampilkan rekap kas + daftar transaksi shift', async () => {
     setUser(['shift.manage']);

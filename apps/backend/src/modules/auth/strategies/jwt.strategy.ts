@@ -2,9 +2,17 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import type { JwtPayload, AuthenticatedUser } from '../../../common/types/jwt-payload.type';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserStatus } from '@prisma/client';
+
+/** Ekstrak access token dari cookie `access_token` (bila ada). Mengembalikan
+ *  null bila tak ada — agar extractor berikutnya (header) dicoba. */
+function cookieExtractor(req: Request): string | null {
+  const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+  return cookies?.access_token ?? null;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -13,7 +21,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // Header Authorization tetap jalur UTAMA (tak breaking); cookie `access_token`
+      // sebagai fallback untuk frontend cookie-based. Urutan: header dulu, lalu cookie.
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        cookieExtractor,
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('jwt.accessSecret') ?? '',
     });

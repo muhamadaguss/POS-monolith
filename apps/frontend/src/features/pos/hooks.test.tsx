@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useCheckout, usePosData } from './hooks';
 import { useCartStore } from './store';
-import { useAuthStore } from '@/features/auth/store';
+import { setMockSession, mockUseSession, resetMockSession } from '@/test/session';
 import type { ReceiptData } from './types';
+
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
 // Mock layer API & alert agar hook tidak menyentuh jaringan / SweetAlert nyata.
 vi.mock('./api', () => ({
@@ -51,12 +53,12 @@ describe('useCheckout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedTaxRate.mockResolvedValue(0.1); // 10%
-    useAuthStore.setState({
-      accessToken: 'a', refreshToken: 'r', outlets: [],
+    setMockSession({
       user: {
         id: 'u1', name: 'Kasir', email: 'k@b.c', role: 'CASHIER',
         tenantId: 't1', currentOutletId: 'o1', permissions: ['pos.transaction'],
       },
+      outlets: [],
     });
     useCartStore.setState({ items: [], discountId: null });
   });
@@ -151,11 +153,13 @@ describe('useCheckout', () => {
  */
 describe('usePosData', () => {
   function setOutlet(id: string | null) {
-    useAuthStore.setState({
-      accessToken: 'a', refreshToken: 'r', outlets: [],
-      user: id
-        ? { id: 'u1', name: 'Kasir', email: 'k@b.c', role: 'CASHIER', tenantId: 't1', currentOutletId: id, permissions: [] }
-        : null,
+    if (!id) {
+      setMockSession(null);
+      return;
+    }
+    setMockSession({
+      user: { id: 'u1', name: 'Kasir', email: 'k@b.c', role: 'CASHIER', tenantId: 't1', currentOutletId: id, permissions: [] },
+      outlets: [],
     });
   }
 

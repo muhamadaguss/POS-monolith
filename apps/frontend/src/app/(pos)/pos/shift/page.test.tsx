@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { useAuthStore } from '@/features/auth/store';
+import { setMockSession, mockUseSession, resetMockSession } from '@/test/session';
 import type { Shift } from '@/features/shifts/types';
+
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
 // Router & komponen berat di-stub agar test fokus ke alur tutup-shift → rekap.
 const pushMock = vi.fn();
@@ -52,15 +54,18 @@ const CLOSED: Shift = {
 describe('PosShiftPage — alur tutup shift → rekap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthStore.setState({
-      accessToken: 'a', refreshToken: 'r', outlets: [],
+    setMockSession({
       user: {
         id: 'u1', name: 'Andi Prasetyo', email: 'kasir@demotoko.com', role: 'CASHIER',
         tenantId: 't1', currentOutletId: 'o1', permissions: ['shift.own'],
       },
+      outlets: [],
     });
   });
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    resetMockSession();
+  });
 
   it('menutup shift menampilkan modal Rekap Shift + tombol Cetak (regresi: dulu langsung ke form buka shift)', async () => {
     mockedActive.mockResolvedValue(ACTIVE);

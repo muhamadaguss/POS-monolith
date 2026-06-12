@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PosSidebar } from './PosSidebar';
-import { useAuthStore } from '@/features/auth/store';
+import { setMockSession, mockUseSession } from '@/test/session';
+
+vi.mock('next-auth/react', () => ({ useSession: () => mockUseSession() }));
 
 // next/navigation: usePathname menentukan link mana yang "active".
 const pathname = { current: '/pos' };
@@ -45,7 +47,7 @@ vi.mock('@/features/auth/hooks', () => ({
 }));
 
 function seedCashier() {
-  useAuthStore.setState({
+  setMockSession({
     user: {
       id: 'u1',
       name: 'Andi Kasir',
@@ -55,7 +57,7 @@ function seedCashier() {
       currentOutletId: 'o1',
       permissions: ['shift.own'],
     },
-    outlets: [{ id: 'o1', name: 'Cabang Senayan' } as never],
+    outlets: [{ id: 'o1', name: 'Cabang Senayan', role: 'CASHIER', permissions: ['shift.own'] }],
   });
 }
 

@@ -1,42 +1,24 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore, useAuthHydrated } from '@/features/auth/store';
+/**
+ * Entry redirector — Server Component. Membaca session Auth.js (cookie) di server
+ * dan mengarahkan sesuai login state & role. Tak ada lagi spinner hydration klien.
+ */
+export default async function RootPage() {
+  const session = await getSession();
+  const user = session?.user;
 
-export default function RootPage() {
-  const router = useRouter();
-  const hydrated = useAuthHydrated();
+  if (!user) redirect('/login');
 
-  useEffect(() => {
-    if (!hydrated) return;
-
-    // Baca state setelah hydrate selesai — arahkan sesuai login state & role.
-    const { accessToken, user } = useAuthStore.getState();
-
-    if (!accessToken || !user) {
-      router.replace('/login');
-      return;
-    }
-
-    switch (user.role) {
-      case 'SUPER_ADMIN':
-        router.replace('/admin');
-        break;
-      case 'CASHIER':
-        router.replace('/pos');
-        break;
-      case 'TENANT_OWNER':
-        router.replace('/dashboard');
-        break;
-      default: // STORE_MANAGER
-        router.replace(user.currentOutletId ? '/dashboard' : '/select-outlet');
-    }
-  }, [hydrated, router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  switch (user.role) {
+    case 'SUPER_ADMIN':
+      redirect('/admin');
+    case 'CASHIER':
+      redirect('/pos');
+    case 'TENANT_OWNER':
+      redirect('/dashboard');
+    default: // STORE_MANAGER
+      redirect(user.currentOutletId ? '/dashboard' : '/select-outlet');
+  }
 }
