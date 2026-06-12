@@ -111,10 +111,33 @@ helmet aktif.
 
 ---
 
+## Pemetaan OWASP Top 10 (2021)
+
+Audit terhadap OWASP Top 10 — melengkapi SOP internal. Status per 2026-06-12.
+
+| # | Kategori | Status | Bukti / Catatan |
+|---|---|---|---|
+| **A01** | Broken Access Control | ✅ | Guard global berlapis (`JwtAuthGuard` + `RolesGuard` + `PermissionsGuard`, `app.module.ts`), RBAC 4 role, dan **scoping `tenantId` di seluruh query** (anti IDOR / cross-tenant). Detail entity diambil via `findFirst` + guard tenant. |
+| **A02** | Cryptographic Failures | ✅ | bcrypt (password cost 12, PIN cost 10), refresh token di-hash SHA-256, JWT secret dari env. Kredensial tak pernah plaintext. |
+| **A03** | Injection | ✅ | 100% Prisma ORM (parameterized) — tak ada raw SQL. Frontend React auto-escape — tak ada `dangerouslySetInnerHTML`/`innerHTML`. ValidationPipe global. |
+| **A04** | Insecure Design | ✅ | Refresh-token rotation + reuse-detection, audit log, multi-tenant by-design, PIN manager untuk void/refund. |
+| **A05** | Security Misconfiguration | ✅ | helmet (security headers), Swagger non-aktif di production, CORS dibatasi `FRONTEND_URL`, exception filter tidak membocorkan stack ke klien (hanya di-log). |
+| **A06** | Vulnerable & Outdated Components | ⚠️ | Terdapat kerentanan pada **transitive deps** (mis. `tar` high via `exceljs`→`node-pre-gyp`, `uuid` moderate) — bukan di kode aplikasi. Mitigasi: jalankan `npm audit fix` berkala; pertimbangkan upgrade `exceljs`. Jalankan `npm audit` di CI. |
+| **A07** | Identification & Authentication Failures | ⚠️ | Throttler global (100 req/60s/IP), error login generik (anti user-enumeration), rotation token. **Rekomendasi:** rate-limit lebih ketat khusus `POST /auth/login` (mis. 5–10/menit) untuk lawan brute-force. |
+| **A08** | Software & Data Integrity Failures | ✅ | Tak ada deserialisasi tak aman; GitGuardian Security Check di CI; lockfile dikunci. |
+| **A09** | Security Logging & Monitoring | ✅ | `AuditLogInterceptor` mencatat semua request mutasi (POST/PATCH/PUT/DELETE) beserta IP; error di-log oleh exception filter. |
+| **A10** | Server-Side Request Forgery (SSRF) | ✅ (N/A) | Backend tidak melakukan outbound request ke URL dari input user — tak ada surface SSRF. |
+
+**Ringkas:** 8/10 kategori terpenuhi penuh; 2 catatan (**A06** kerentanan dependency
+transitif, **A07** rate-limit login bisa diperketat) tercatat di _Roadmap_ di bawah.
+
+---
+
 ## Roadmap kepatuhan (bila kebutuhan bertambah)
 
 - **AES-256 per kolom** — terapkan bila menyimpan PII tingkat tinggi (NIK, nomor kartu).
   Gunakan `crypto` AES-256-GCM dengan kunci dari `process.env` / KMS; simpan IV per baris.
-- **Rate limit ketat pada auth** — sudah ada throttler global; pertimbangkan limit lebih
-  ketat khusus `/auth/login`.
-- **Audit dependency** — `npm audit` rutin di CI.
+- **A07 — Rate limit ketat pada auth** — sudah ada throttler global (100/60s);
+  tambahkan `@Throttle` khusus `POST /auth/login` (mis. 5–10/menit) untuk lawan brute-force.
+- **A06 — Audit dependency** — jalankan `npm audit` di CI; `npm audit fix` berkala;
+  pertimbangkan upgrade `exceljs` untuk menambal rantai `node-pre-gyp`→`tar`.
