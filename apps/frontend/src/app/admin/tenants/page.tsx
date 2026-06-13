@@ -58,7 +58,11 @@ function StatCard({
 
 export default function AdminTenantsPage() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  // Ambil PRIMITIF stabil dari shim, BUKAN objek user. Shim membangun objek user
+  // baru tiap render (lapis di atas useSession) → memakai `user` di dependency
+  // useEffect memicu loop fetch tak terbatas (429). role/isLoggedIn = string/bool stabil.
+  const userRole = useAuthStore((s) => s.user?.role ?? null);
+  const isLoggedIn = useAuthStore((s) => s.user != null);
   const [hydrated, setHydrated] = useState(false);
 
   const [stats, setStats] = useState<PlatformStats | null>(null);
@@ -79,9 +83,9 @@ export default function AdminTenantsPage() {
   // Guard Super Admin.
   useEffect(() => {
     if (!hydrated) return;
-    if (!user) router.replace('/login');
-    else if (user.role !== 'SUPER_ADMIN') router.replace('/dashboard');
-  }, [hydrated, user, router]);
+    if (!isLoggedIn) router.replace('/login');
+    else if (userRole !== 'SUPER_ADMIN') router.replace('/dashboard');
+  }, [hydrated, isLoggedIn, userRole, router]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -106,8 +110,8 @@ export default function AdminTenantsPage() {
   }, [search, statusFilter, planFilter, page]);
 
   useEffect(() => {
-    if (hydrated && user?.role === 'SUPER_ADMIN') load();
-  }, [hydrated, user, load]);
+    if (hydrated && userRole === 'SUPER_ADMIN') load();
+  }, [hydrated, userRole, load]);
 
   function handleSearchInput(v: string) {
     setSearchInput(v);
@@ -118,7 +122,7 @@ export default function AdminTenantsPage() {
     }, 300);
   }
 
-  if (!hydrated || !user || user.role !== 'SUPER_ADMIN') {
+  if (!hydrated || !isLoggedIn || userRole !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
