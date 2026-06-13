@@ -60,7 +60,10 @@ export default function AdminTenantDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const user = useAuthStore((s) => s.user);
+  // Primitif stabil — bukan objek user (shim membangun objek baru tiap render →
+  // loop fetch tak terbatas jika dipakai di dependency useEffect).
+  const userRole = useAuthStore((s) => s.user?.role ?? null);
+  const isLoggedIn = useAuthStore((s) => s.user != null);
   const [hydrated, setHydrated] = useState(false);
 
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
@@ -77,9 +80,9 @@ export default function AdminTenantDetailPage() {
   }, []);
   useEffect(() => {
     if (!hydrated) return;
-    if (!user) router.replace('/login');
-    else if (user.role !== 'SUPER_ADMIN') router.replace('/dashboard');
-  }, [hydrated, user, router]);
+    if (!isLoggedIn) router.replace('/login');
+    else if (userRole !== 'SUPER_ADMIN') router.replace('/dashboard');
+  }, [hydrated, isLoggedIn, userRole, router]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -96,8 +99,8 @@ export default function AdminTenantDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (hydrated && user?.role === 'SUPER_ADMIN') load();
-  }, [hydrated, user, load]);
+    if (hydrated && userRole === 'SUPER_ADMIN') load();
+  }, [hydrated, userRole, load]);
 
   async function handleSaveStatus() {
     const ok = await confirmDialog({
@@ -144,7 +147,7 @@ export default function AdminTenantDetailPage() {
     }
   }
 
-  if (!hydrated || !user || user.role !== 'SUPER_ADMIN') {
+  if (!hydrated || !isLoggedIn || userRole !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />

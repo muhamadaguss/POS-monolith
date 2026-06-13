@@ -22,7 +22,10 @@ const ADMIN_CARDS: {
 export default function AdminPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
+  // Primitif stabil untuk dependency efek — objek `user`/`accessToken` dibangun
+  // ulang tiap render oleh shim, jadi tak boleh jadi dependency (memicu loop).
+  const userRole = useAuthStore((s) => s.user?.role ?? null);
+  const isLoggedIn = useAuthStore((s) => s.user != null);
   const { logout } = useLogout();
   const [hydrated, setHydrated] = useState(false);
 
@@ -30,16 +33,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!accessToken || !user) {
+    if (!isLoggedIn) {
       router.replace('/login');
       return;
     }
-    if (user.role !== 'SUPER_ADMIN') {
+    if (userRole !== 'SUPER_ADMIN') {
       router.replace('/dashboard');
     }
-  }, [hydrated, accessToken, user, router]);
+  }, [hydrated, isLoggedIn, userRole, router]);
 
-  if (!hydrated || !user || user.role !== 'SUPER_ADMIN') {
+  if (!hydrated || !user || userRole !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />

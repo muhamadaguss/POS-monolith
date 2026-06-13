@@ -113,15 +113,20 @@ export default function InventoryPage() {
 
   const [selectedOutletId, setSelectedOutletId] = useState<string>("");
 
+  // Primitif stabil untuk dependency efek — objek user/outlets dibangun ulang
+  // tiap render oleh shim, jadi tak boleh jadi dependency (memicu re-run).
+  const currentOutletId = user?.currentOutletId ?? null;
+  const firstOutletId = outlets[0]?.id ?? null;
+
   useEffect(() => {
     if (!hydrated) return;
     if (selectedOutletId) return;
-    if (user?.currentOutletId) {
-      setSelectedOutletId(user.currentOutletId);
-    } else if (isOwner && outlets.length > 0) {
-      setSelectedOutletId(outlets[0].id);
+    if (currentOutletId) {
+      setSelectedOutletId(currentOutletId);
+    } else if (isOwner && firstOutletId) {
+      setSelectedOutletId(firstOutletId);
     }
-  }, [hydrated, user, outlets, isOwner, selectedOutletId]);
+  }, [hydrated, currentOutletId, firstOutletId, isOwner, selectedOutletId]);
 
   const outletId = selectedOutletId;
 
