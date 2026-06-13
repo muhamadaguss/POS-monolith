@@ -1,25 +1,17 @@
-'use client';
-
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import {
   TrendingUp,
   ShoppingCart,
   Receipt,
   Percent,
-  RefreshCw,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
   ArrowUpRight,
   ArrowDownRight,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuthStore } from '@/features/auth/store';
-import { RequirePermission } from '@/features/auth/RequirePermission';
-import { usePageFocus } from '@/hooks/usePageFocus';
+import { verifySession } from '@/lib/session';
+import { IDR } from '@/lib/format';
 import {
   getSalesSummaryWithGrowth,
   getTopProducts,
@@ -27,9 +19,7 @@ import {
   getHourlySales,
   getSalesByCategory,
   getSalesByOutlet,
-  exportSalesXlsx,
-  apiErrorMessage,
-} from '@/features/reports/api';
+} from '@/features/reports/server';
 import type {
   SalesSummaryWithGrowth,
   TopProduct,
@@ -39,7 +29,7 @@ import type {
   OutletSalesItem,
   ReportPeriod,
   DateRange,
-} from '@/features/reports/api';
+} from '@/features/reports/shared';
 import {
   SalesTrendChart,
   PaymentBreakdown,
@@ -47,25 +37,38 @@ import {
   CategoryBreakdown,
   OutletComparisonChart,
 } from '@/features/reports/components/charts';
-import { IDR } from '@/lib/format';
-
-const PRESETS: { value: ReportPeriod; label: string }[] = [
-  { value: 'TODAY', label: 'Hari ini' },
-  { value: 'WEEK', label: '7 Hari' },
-  { value: 'MONTH', label: '30 Hari' },
-  { value: 'CUSTOM', label: 'Custom' },
-];
-
-type Tab = 'sales' | 'analytics' | 'products' | 'shifts';
-const TABS: { value: Tab; label: string }[] = [
-  { value: 'sales', label: 'Penjualan' },
-  { value: 'analytics', label: 'Analitik' },
-  { value: 'products', label: 'Produk Terlaris' },
-  { value: 'shifts', label: 'Rekap Shift' },
-];
+import { ReportsControls } from './ReportsControls';
+import { ReportsTabNav, type ReportTab } from './ReportsTabNav';
+import { CompareToggle, TopLimitSelect } from './ReportsParamControls';
 
 const SHIFT_PAGE_SIZE = 20;
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const VALID_TABS: ReportTab[] = ['sales', 'analytics', 'products', 'shifts'];
+const VALID_LIMITS = [10, 25, 50];
+
+interface SearchParams {
+  outlet?: string;
+  period?: string;
+  from?: string;
+  to?: string;
+  tab?: string;
+  limit?: string;
+  page?: string;
+  compare?: string;
+}
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dateTime(s: string | null): string {
+  if (!s) return '—';
+  return new Date(s).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 /** Badge pertumbuhan (mis. +12,5% / −8%). Disembunyikan bila growth null. */
 function GrowthBadge({ growth }: { growth: number | null }) {
@@ -98,7 +101,6 @@ function KpiCard({
   value: string;
   sub?: string;
   color: string;
-  /** Elemen di pojok kanan-atas (mis. badge growth). */
   badge?: React.ReactNode;
 }) {
   return (
@@ -116,125 +118,117 @@ function KpiCard({
   );
 }
 
-function dateTime(s: string | null): string {
-  if (!s) return '—';
-  return new Date(s).toLocaleString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/** Bangun href halaman ini dgn satu param diubah (untuk Link pagination). */
+function buildHref(current: SearchParams, patch: Partial<SearchParams>): string {
+  const params = new URLSearchParams();
+  const merged = { ...current, ...patch };
+  for (const [k, v] of Object.entries(merged)) {
+    if (v) params.set(k, String(v));
+  }
+  const qs = params.toString();
+  return `/reports${qs ? `?${qs}` : ''}`;
 }
 
-function ReportsPageInner() {
-  const user = useAuthStore((s) => s.user);
-  const outlets = useAuthStore((s) => s.outlets);
-  const isOwner = user?.role === 'TENANT_OWNER';
+export default async function ReportsPage({
+  searchParams,
+}: {
+  // Next.js 16: searchParams adalah Promise.
+  searchParams: Promise<SearchParams>;
+}) {
+  const session = await verifySession();
+  const user = session.user;
 
-  // Owner: pilih cabang ('' = semua). Lainnya: terkunci ke outletnya.
-  const [pickedOutletId, setPickedOutletId] = useState('');
-  const outletId = isOwner ? pickedOutletId : (user?.currentOutletId ?? '');
-  const outletParam = outletId || undefined;
-
-  const [preset, setPreset] = useState<ReportPeriod>('MONTH');
-  const [customStart, setCustomStart] = useState(todayStr());
-  const [customEnd, setCustomEnd] = useState(todayStr());
-
-  // Rentang efektif yang dikirim ke API. Preset → string period; Custom → DateRange.
-  const range: ReportPeriod | DateRange = useMemo(
-    () => (preset === 'CUSTOM' ? { startDate: customStart, endDate: customEnd } : preset),
-    [preset, customStart, customEnd],
-  );
-
-  const [tab, setTab] = useState<Tab>('sales');
-
-  const [summary, setSummary] = useState<SalesSummaryWithGrowth | null>(null);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [topLimit, setTopLimit] = useState(10);
-  const [shiftData, setShiftData] = useState<ShiftReportResult | null>(null);
-  const [shiftPage, setShiftPage] = useState(1);
-  const [hourly, setHourly] = useState<HourlySalesPoint[]>([]);
-  const [categories, setCategories] = useState<CategorySalesItem[]>([]);
-  const [outletSales, setOutletSales] = useState<OutletSalesItem[]>([]);
-  const [compareTrend, setCompareTrend] = useState(false);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [s, t, sh, hr, cat, outlet] = await Promise.all([
-        getSalesSummaryWithGrowth(range, outletParam),
-        getTopProducts(range, outletParam, topLimit),
-        getShiftSummary(range, outletParam, shiftPage, SHIFT_PAGE_SIZE),
-        getHourlySales(range, outletParam),
-        getSalesByCategory(range, outletParam),
-        getSalesByOutlet(range, outletParam),
-      ]);
-      setSummary(s);
-      setTopProducts(t);
-      setShiftData(sh);
-      setHourly(hr);
-      setCategories(cat);
-      setOutletSales(outlet);
-    } catch {
-      // 401/refresh ditangani interceptor; jangan jadi unhandledRejection.
-    } finally {
-      setIsLoading(false);
-    }
-  }, [range, outletParam, topLimit, shiftPage]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  usePageFocus(load);
-
-  async function handleExport() {
-    setError(null);
-    setExporting(true);
-    try {
-      await exportSalesXlsx(range, outletParam);
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Gagal mengunduh Excel.'));
-    } finally {
-      setExporting(false);
-    }
+  // RBAC: hanya yang punya report.view (Owner/Super Admin). Inline "Akses Ditolak"
+  // konsisten dgn pola lama (RequirePermission); backend tetap sumber kebenaran.
+  if (!user.permissions?.includes('report.view')) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
+        <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Hanya Owner/Super Admin yang dapat melihat laporan penjualan.
+        </p>
+      </div>
+    );
   }
 
-  const profit = useMemo(
-    () => topProducts.reduce((sum, p) => sum + (p.revenue - p.hpp), 0),
-    [topProducts],
-  );
+  const sp = await searchParams;
+  const isOwner = user.role === 'TENANT_OWNER';
 
-  // Persentase void (dari total termasuk void) & margin kotor (profit/omzet).
-  const voidPct = useMemo(() => {
-    const total = (summary?.totalTransactions ?? 0) + (summary?.voidedCount ?? 0);
-    if (total === 0) return 0;
-    return Math.round(((summary?.voidedCount ?? 0) / total) * 100);
-  }, [summary]);
+  // Outlet efektif: Owner boleh memilih ('' = semua); lainnya terkunci ke outletnya.
+  const pickedOutletId = isOwner ? (sp.outlet ?? '') : (user.currentOutletId ?? '');
+  const outletParam = pickedOutletId || undefined;
 
-  const marginPct = useMemo(() => {
-    if (!summary || summary.totalRevenue <= 0) return null;
-    return Math.round((profit / summary.totalRevenue) * 100);
-  }, [summary, profit]);
+  const preset = (['TODAY', 'WEEK', 'MONTH', 'CUSTOM'].includes(sp.period ?? '')
+    ? sp.period
+    : 'MONTH') as ReportPeriod;
+  const customStart = sp.from ?? todayStr();
+  const customEnd = sp.to ?? todayStr();
+  const range: ReportPeriod | DateRange =
+    preset === 'CUSTOM' ? { startDate: customStart, endDate: customEnd } : preset;
 
-  // Net revenue = penjualan kotor − diskon (pajak adalah titipan, bukan pendapatan).
-  const netRevenue = (summary?.totalRevenue ?? 0) - (summary?.totalDiscount ?? 0);
+  const tab: ReportTab = (VALID_TABS.includes(sp.tab as ReportTab) ? sp.tab : 'sales') as ReportTab;
+  const topLimit = VALID_LIMITS.includes(Number(sp.limit)) ? Number(sp.limit) : 10;
+  const shiftPage = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+  const compare = sp.compare === '1';
 
-  // Label periode untuk header chart: "Mei 2026" (preset) / rentang (custom).
-  const trendLabel = useMemo(() => {
+  // KPI butuh ringkasan + produk (untuk estimasi profit) → selalu di-fetch.
+  // Data tab lain di-fetch sesuai tab aktif agar kerja server minimal.
+  const summaryP = getSalesSummaryWithGrowth(range, outletParam);
+  const profitProductsP = getTopProducts(range, outletParam, 50);
+
+  let summary: SalesSummaryWithGrowth;
+  let profitProducts: TopProduct[];
+  let topProducts: TopProduct[] = [];
+  let shiftData: ShiftReportResult | null = null;
+  let hourly: HourlySalesPoint[] = [];
+  let categories: CategorySalesItem[] = [];
+  let outletSales: OutletSalesItem[] = [];
+
+  if (tab === 'products') {
+    [summary, profitProducts, topProducts] = await Promise.all([
+      summaryP,
+      profitProductsP,
+      getTopProducts(range, outletParam, topLimit),
+    ]);
+  } else if (tab === 'shifts') {
+    [summary, profitProducts, shiftData] = await Promise.all([
+      summaryP,
+      profitProductsP,
+      getShiftSummary(range, outletParam, shiftPage, SHIFT_PAGE_SIZE),
+    ]);
+  } else if (tab === 'analytics') {
+    [summary, profitProducts, hourly, categories, outletSales] = await Promise.all([
+      summaryP,
+      profitProductsP,
+      getHourlySales(range, outletParam),
+      getSalesByCategory(range, outletParam),
+      getSalesByOutlet(range, outletParam),
+    ]);
+  } else {
+    [summary, profitProducts] = await Promise.all([summaryP, profitProductsP]);
+  }
+
+  // Estimasi profit & margin dari produk (50 teratas mencakup mayoritas omzet).
+  const profit = profitProducts.reduce((sum, p) => sum + (p.revenue - p.hpp), 0);
+  const marginPct =
+    summary.totalRevenue > 0 ? Math.round((profit / summary.totalRevenue) * 100) : null;
+
+  const totalWithVoid = summary.totalTransactions + summary.voidedCount;
+  const voidPct = totalWithVoid === 0 ? 0 : Math.round((summary.voidedCount / totalWithVoid) * 100);
+  const netRevenue = summary.totalRevenue - summary.totalDiscount;
+
+  // Label periode untuk header chart.
+  const trendLabel = (() => {
     if (preset === 'CUSTOM') {
       const fmt = (d: string) =>
         new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
       return `${fmt(customStart)} – ${fmt(customEnd)}`;
     }
-    const days = summary?.dailyBreakdown ?? [];
+    const days = summary.dailyBreakdown;
     const anchor = days.length ? new Date(days[days.length - 1].date) : new Date();
     return anchor.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-  }, [preset, customStart, customEnd, summary]);
+  })();
 
   return (
     <div className="space-y-5">
@@ -244,144 +238,57 @@ function ReportsPageInner() {
           <h1 className="text-2xl font-bold text-gray-900">Laporan Penjualan</h1>
           <p className="text-sm text-gray-500 mt-0.5">Analisis penjualan, produk, &amp; shift.</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isOwner && outlets.length > 0 && (
-            <select
-              value={pickedOutletId}
-              onChange={(e) => setPickedOutletId(e.target.value)}
-              className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
-            >
-              <option value="">Semua Cabang</option>
-              {outlets.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setPreset(p.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  preset === p.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <Button variant="outline" size="icon-lg" onClick={load} title="Muat ulang">
-            <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button onClick={handleExport} disabled={exporting}>
-            {exporting ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-            Export Excel
-          </Button>
-        </div>
+        <ReportsControls
+          isOwner={isOwner}
+          outlets={session.outlets.map((o) => ({ id: o.id, name: o.name }))}
+          pickedOutletId={pickedOutletId}
+          preset={preset}
+          customStart={sp.from ?? ''}
+          customEnd={sp.to ?? ''}
+          range={range}
+          outletParam={outletParam}
+        />
       </div>
-
-      {/* Custom date range */}
-      {preset === 'CUSTOM' && (
-        <div className="flex items-end gap-3 flex-wrap rounded-xl border border-gray-200 bg-white p-3">
-          <div>
-            <Label htmlFor="r-from" className="mb-1 text-xs text-gray-500">
-              Dari
-            </Label>
-            <Input
-              id="r-from"
-              type="date"
-              value={customStart}
-              max={customEnd}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="h-9"
-            />
-          </div>
-          <div>
-            <Label htmlFor="r-to" className="mb-1 text-xs text-gray-500">
-              Sampai
-            </Label>
-            <Input
-              id="r-to"
-              type="date"
-              value={customEnd}
-              min={customStart}
-              max={todayStr()}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="h-9"
-            />
-          </div>
-        </div>
-      )}
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {isLoading && !summary ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
-          ))
-        ) : (
-          <>
-            <KpiCard
-              icon={TrendingUp}
-              label="Total Omset"
-              value={IDR.format(summary?.totalRevenue ?? 0)}
-              sub={`${summary?.totalTransactions ?? 0} transaksi`}
-              color="bg-emerald-100 text-emerald-600"
-              badge={<GrowthBadge growth={summary?.revenueGrowth ?? null} />}
-            />
-            <KpiCard
-              icon={ShoppingCart}
-              label="Total Transaksi"
-              value={String(summary?.totalTransactions ?? 0)}
-              sub={`${summary?.voidedCount ?? 0} Void (${voidPct}%)`}
-              color="bg-blue-100 text-blue-600"
-            />
-            <KpiCard
-              icon={Receipt}
-              label="Rata-rata / Transaksi"
-              value={IDR.format(
-                summary && summary.totalTransactions > 0
-                  ? Math.round(summary.totalRevenue / summary.totalTransactions)
-                  : 0,
-              )}
-              sub="Nilai belanja per struk"
-              color="bg-amber-100 text-amber-600"
-            />
-            <KpiCard
-              icon={Percent}
-              label="Estimasi Profit"
-              value={IDR.format(profit)}
-              sub={marginPct !== null ? `Margin kotor: ${marginPct}%` : 'dari produk terlaris'}
-              color="bg-purple-100 text-purple-600"
-            />
-          </>
-        )}
+        <KpiCard
+          icon={TrendingUp}
+          label="Total Omset"
+          value={IDR.format(summary.totalRevenue)}
+          sub={`${summary.totalTransactions} transaksi`}
+          color="bg-emerald-100 text-emerald-600"
+          badge={<GrowthBadge growth={summary.revenueGrowth} />}
+        />
+        <KpiCard
+          icon={ShoppingCart}
+          label="Total Transaksi"
+          value={String(summary.totalTransactions)}
+          sub={`${summary.voidedCount} Void (${voidPct}%)`}
+          color="bg-blue-100 text-blue-600"
+        />
+        <KpiCard
+          icon={Receipt}
+          label="Rata-rata / Transaksi"
+          value={IDR.format(
+            summary.totalTransactions > 0
+              ? Math.round(summary.totalRevenue / summary.totalTransactions)
+              : 0,
+          )}
+          sub="Nilai belanja per struk"
+          color="bg-amber-100 text-amber-600"
+        />
+        <KpiCard
+          icon={Percent}
+          label="Estimasi Profit"
+          value={IDR.format(profit)}
+          sub={marginPct !== null ? `Margin kotor: ${marginPct}%` : 'dari produk terlaris'}
+          color="bg-purple-100 text-purple-600"
+        />
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTab(t.value)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-              tab === t.value
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs (Client: ubah ?tab=) */}
+      <ReportsTabNav active={tab} />
 
       {/* Tab: Penjualan */}
       {tab === 'sales' && (
@@ -390,20 +297,11 @@ function ReportsPageInner() {
             <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm font-semibold text-gray-900">
-                  Tren Penjualan{' '}
-                  <span className="font-normal text-gray-400">({trendLabel})</span>
+                  Tren Penjualan <span className="font-normal text-gray-400">({trendLabel})</span>
                 </p>
-                <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={compareTrend}
-                    onChange={(e) => setCompareTrend(e.target.checked)}
-                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  Bandingkan periode sebelumnya
-                </label>
+                <CompareToggle checked={compare} />
               </div>
-              {compareTrend && summary && summary.previousRevenue !== null && (
+              {compare && summary.previousRevenue !== null && (
                 <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="w-3 h-0.5 rounded bg-emerald-500" /> Periode ini
@@ -412,18 +310,21 @@ function ReportsPageInner() {
                     <span className="w-3 h-0.5 rounded bg-gray-300" /> Periode sebelumnya
                   </span>
                   <span className="ml-auto">
-                    Sebelumnya: <span className="font-semibold text-gray-700">{IDR.format(summary.previousRevenue)}</span>
+                    Sebelumnya:{' '}
+                    <span className="font-semibold text-gray-700">
+                      {IDR.format(summary.previousRevenue)}
+                    </span>
                   </span>
                 </div>
               )}
               <SalesTrendChart
-                data={summary?.dailyBreakdown ?? []}
-                previousData={compareTrend ? summary?.dailyBreakdownPrevious : undefined}
+                data={summary.dailyBreakdown}
+                previousData={compare ? summary.dailyBreakdownPrevious : undefined}
               />
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <p className="text-sm font-semibold text-gray-900 mb-4">Metode Pembayaran</p>
-              <PaymentBreakdown data={summary?.paymentBreakdown ?? []} />
+              <PaymentBreakdown data={summary.paymentBreakdown} />
             </div>
           </div>
 
@@ -434,20 +335,20 @@ function ReportsPageInner() {
                 <div>
                   <p className="text-xs text-gray-400">Total Penjualan Kotor</p>
                   <p className="text-base font-bold text-gray-900 tabular-nums">
-                    {IDR.format(summary?.totalRevenue ?? 0)}
+                    {IDR.format(summary.totalRevenue)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Total Diskon</p>
                   <p className="text-base font-bold text-red-600 tabular-nums">
-                    {(summary?.totalDiscount ?? 0) > 0 ? '- ' : ''}
-                    {IDR.format(summary?.totalDiscount ?? 0)}
+                    {summary.totalDiscount > 0 ? '- ' : ''}
+                    {IDR.format(summary.totalDiscount)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Total Pajak (PB1)</p>
                   <p className="text-base font-bold text-gray-900 tabular-nums">
-                    {IDR.format(summary?.totalTax ?? 0)}
+                    {IDR.format(summary.totalTax)}
                   </p>
                 </div>
               </div>
@@ -462,7 +363,7 @@ function ReportsPageInner() {
         </div>
       )}
 
-      {/* Tab: Analitik (per jam + per kategori) */}
+      {/* Tab: Analitik (per jam + per kategori + perbandingan outlet) */}
       {tab === 'analytics' && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
@@ -476,7 +377,6 @@ function ReportsPageInner() {
             <HourlyBarChart data={hourly} />
           </div>
 
-          {/* Perbandingan antar outlet — hanya bila ≥2 cabang dalam cakupan */}
           {outletSales.length > 1 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-1">
@@ -514,15 +414,7 @@ function ReportsPageInner() {
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <p className="text-sm font-semibold text-gray-900">Produk Terlaris</p>
-            <select
-              value={topLimit}
-              onChange={(e) => setTopLimit(Number(e.target.value))}
-              className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700"
-            >
-              <option value={10}>Top 10</option>
-              <option value={25}>Top 25</option>
-              <option value={50}>Top 50</option>
-            </select>
+            <TopLimitSelect value={topLimit} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -584,7 +476,7 @@ function ReportsPageInner() {
       )}
 
       {/* Tab: Rekap Shift */}
-      {tab === 'shifts' && (
+      {tab === 'shifts' && shiftData && (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -600,14 +492,14 @@ function ReportsPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {(shiftData?.items.length ?? 0) === 0 ? (
+                {shiftData.items.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-5 py-12 text-center text-gray-400">
                       Belum ada shift pada periode ini.
                     </td>
                   </tr>
                 ) : (
-                  shiftData!.items.map((s) => (
+                  shiftData.items.map((s) => (
                     <tr key={s.id} className="border-b border-gray-50">
                       <td className="px-5 py-3 text-gray-700">{dateTime(s.openedAt)}</td>
                       <td className="px-5 py-3 text-gray-500">{dateTime(s.closedAt)}</td>
@@ -637,29 +529,22 @@ function ReportsPageInner() {
             </table>
           </div>
 
-          {shiftData && shiftData.meta.totalPages > 1 && (
+          {shiftData.meta.totalPages > 1 && (
             <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500">
               <span>Total {shiftData.meta.total} shift</span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
+                <PageLink
                   disabled={shiftPage <= 1}
-                  onClick={() => setShiftPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
+                  href={buildHref(sp, { page: String(shiftPage - 1) })}
+                />
                 <span className="tabular-nums">
                   Hal {shiftData.meta.page} / {shiftData.meta.totalPages}
                 </span>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
+                <PageLink
                   disabled={shiftPage >= shiftData.meta.totalPages}
-                  onClick={() => setShiftPage((p) => p + 1)}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
+                  href={buildHref(sp, { page: String(shiftPage + 1) })}
+                  next
+                />
               </div>
             </div>
           )}
@@ -669,13 +554,21 @@ function ReportsPageInner() {
   );
 }
 
-export default function ReportsPage() {
+/** Tombol pagination prev/next sebagai Link (disabled → span). */
+function PageLink({ disabled, href, next }: { disabled: boolean; href: string; next?: boolean }) {
+  const Icon = next ? ChevronRight : ChevronLeft;
+  const base =
+    'inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors';
+  if (disabled) {
+    return (
+      <span className={`${base} border-gray-200 text-gray-300 cursor-not-allowed`} aria-disabled>
+        <Icon className="size-4" />
+      </span>
+    );
+  }
   return (
-    <RequirePermission
-      anyOf={['report.view']}
-      message="Hanya Owner/Super Admin yang dapat melihat laporan penjualan."
-    >
-      <ReportsPageInner />
-    </RequirePermission>
+    <Link href={href} className={`${base} border-gray-200 text-gray-700 hover:bg-gray-50`}>
+      <Icon className="size-4" />
+    </Link>
   );
 }
