@@ -146,3 +146,103 @@ describe('AuthService — refreshTokens (rotation & reuse)', () => {
     expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Fokus: TTL access/refresh token dibaca dari config (env), bukan hardcode.
+ * Regresi guard untuk fix "JWT_ACCESS_EXPIRES_IN / JWT_REFRESH_EXPIRES_IN tak berefek".
+ * Sebelumnya expiresIn di-hardcode '15m'/'7d' & expiresAt DB hardcode +7 hari.
+ */
+describe('AuthService — TTL token dari config', () => {
+  let service: AuthService;
+  let prisma: MockPrisma;
+  let jwt: { verify: jest.Mock; sign: jest.Mock; signAsync: jest.Mock };
+
+  const configMap: Record<string, string> = {
+    'jwt.accessSecret': 'access-secret',
+    'jwt.refreshSecret': 'refresh-secret',
+    'jwt.accessExpiresIn': '30m',
+    'jwt.refreshExpiresIn': '14d',
+  };
+
+  const activeUser = {
+    id: 'user-1',
+    email: 'u@toko.com',
+    tenantId: 'tenant-1',
+    role: Role.CASHIER,
+    status: UserStatus.ACTIVE,
+    tenant: { id: 'tenant-1', status: 'ACTIVE' },
+  };
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    jwt = {
+      verify: jest.fn().mockReturnValue({ sub: 'user-1', tokenId: 'tok-1', currentOutletId: 'outlet-1' }),
+      sign: jest.fn().mockReturnValue('signed.refresh.token'),
+      signAsync: jest.fn().mockResolvedValue('signed.access.token'),
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: jwt },
+        { provide: ConfigService, useValue: { get: jest.fn((k: string) => configMap[k]) } },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(AuthService);
+    prisma.refreshToken.create.mockResolvedValue({ id: 'new-tok' });
+    prisma.refreshToken.update.mockResolvedValue({});
+  });
+
+  const validParent = {
+    id: 'tok-1',
+    userId: 'user-1',
+    tokenHash: 'hash',
+    expiresAt: new Date(Date.now() + 86_400_000),
+    revokedAt: null,
+    replacedByTokenId: null,
+    user: activeUser,
+  };
+
+  it('memakai expiresIn dari config untuk access (signAsync) & refresh (sign)', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue(validParent);
+
+    await service.refreshTokens({ refreshToken: 'valid.token' });
+
+    // access token pakai jwt.accessExpiresIn
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ secret: 'access-secret', expiresIn: '30m' }),
+    );
+    // refresh token pakai jwt.refreshExpiresIn
+    expect(jwt.sign).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ secret: 'refresh-secret', expiresIn: '14d' }),
+    );
+  });
+
+  it('expiresAt baris DB sinkron dgn durasi refresh dari config (14 hari, bukan hardcode 7)', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue(validParent);
+
+    // Tangkap expiresAt yang ditulis ke DB lewat implementasi mock (typed),
+    // hindari akses `mock.calls[0][0]` yang ber-tipe `any`.
+    let capturedExpiresAt: Date | undefined;
+    prisma.refreshToken.create.mockImplementation(
+      (args: { data: { expiresAt: Date } }) => {
+        capturedExpiresAt = args.data.expiresAt;
+        return Promise.resolve({ id: 'new-tok' });
+      },
+    );
+
+    const before = Date.now();
+    await service.refreshTokens({ refreshToken: 'valid.token' });
+
+    const expiresAtMs = (capturedExpiresAt as Date).getTime();
+    const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+    // toleransi ±5 detik untuk waktu eksekusi
+    expect(expiresAtMs).toBeGreaterThan(before + fourteenDays - 5_000);
+    expect(expiresAtMs).toBeLessThan(before + fourteenDays + 5_000);
+  });
+});
