@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { useAuthStore, useAuthHydrated } from "@/features/auth/store";
 import { proactiveRefresh } from "@/lib/api";
 import { getInventory, createStockAdjustment } from "@/features/inventory/api";
+import { resolveImageUrl } from "@/features/products/api";
 import { toastSuccess, errorAlert } from "@/lib/swal";
 import type { InventoryItem } from "@/features/inventory/api";
 
@@ -83,7 +84,20 @@ function StockStatusBadge({
   );
 }
 
-function ProductThumbnail({ name }: { name: string }) {
+function ProductThumbnail({ name, imageUrl }: { name: string; imageUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const src = failed ? null : resolveImageUrl(imageUrl);
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- thumbnail kecil, src dinamis dari backend
+      <img
+        src={src}
+        alt={name}
+        onError={() => setFailed(true)}
+        className="w-10 h-10 rounded-lg object-cover shrink-0 bg-gray-100"
+      />
+    );
+  }
   return (
     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
       <ImageOff className="w-4 h-4 text-gray-400" />
@@ -414,7 +428,7 @@ export default function InventoryPage() {
                     {/* Produk + thumbnail */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <ProductThumbnail name={item.productName} />
+                        <ProductThumbnail name={item.productName} imageUrl={item.imageUrl} />
                         <span className="font-semibold text-gray-900">
                           {item.productName}
                         </span>
