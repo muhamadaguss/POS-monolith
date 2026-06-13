@@ -11,6 +11,8 @@ export interface InventoryItem {
   quantity: number;
   minStock: number;
   unit: string;
+  /** Path/URL gambar produk (mis. /uploads/products/x.jpeg); null bila tak ada. */
+  imageUrl: string | null;
 }
 
 interface BackendInventoryItem {
@@ -19,7 +21,14 @@ interface BackendInventoryItem {
   outletId: string;
   quantity: number | string;
   minStock: number | string;
-  product: { id: string; name: string; sku: string; unit: string; category: { name: string } | null };
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    unit: string;
+    imageUrl?: string | null;
+    category: { name: string } | null;
+  };
   variant: { name: string; sku: string } | null;
   isLowStock?: boolean;
 }
@@ -36,6 +45,7 @@ function mapItem(inv: BackendInventoryItem): InventoryItem {
     unit: inv.product.unit,
     quantity: Number(inv.quantity),
     minStock: Number(inv.minStock),
+    imageUrl: inv.product.imageUrl ?? null,
   };
 }
 
