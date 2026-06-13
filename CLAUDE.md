@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Kasirku** — a cloud-based, multi-tenant SaaS POS platform for SMB retail/F&B. Monorepo with three packages, but **not** a configured workspace (no root `workspaces` field). The root `package.json` only pins Prisma so the generated client hoists to the root `node_modules`. Each app is installed and run independently.
 
-- `apps/frontend` — Next.js 16 (App Router, Turbopack dev), React 19, Zustand, Tailwind v4
+- `apps/frontend` — Next.js 16 (App Router, Turbopack dev), React 19, Auth.js v5 (cookie session), Tailwind v4. Read-only pages are React Server Components; POS + CRUD stay client (hybrid)
 - `apps/backend` — NestJS 11, Prisma 5, PostgreSQL, JWT auth
 - `packages/database` — Prisma schema, migrations, seed
 
@@ -49,7 +49,8 @@ npx prisma generate --schema packages/database/prisma/schema.prisma
 NestJS with a global pipeline wired in `apps/backend/src/app.module.ts`. Understanding this pipeline is the fastest way to be productive — most behavior is cross-cutting, not per-controller.
 
 - **Global prefix** `api/v1` (set in `main.ts`). CORS restricted to `FRONTEND_URL`.
-- **Auth is default-on.** `JwtAuthGuard` is a global `APP_GUARD` — every route requires a valid access token *unless* decorated `@Public()` (`common/decorators/public.decorator.ts`).
+- **Auth is default-on.** `JwtAuthGuard` is a global `APP_GUARD` — every route requires a valid access token *unless* decorated `@Public()` (`common/decorators/public.decorator.ts`). `JwtStrategy` extracts the token via `ExtractJwt.fromExtractors([fromAuthHeaderAsBearerToken(), cookieExtractor])` — **Bearer header is primary**, cookie (`access_token`) is a fallback (additive for the Auth.js migration; `cookie-parser` is wired in `main.ts`).
+- **Security headers via Helmet** (`main.ts`); CSP off in non-prod (Swagger). Static uploads at `/uploads` (product images) set `Cross-Origin-Resource-Policy: cross-origin` so the frontend (different origin) can load `<img>` — Helmet's global CORP is `same-origin` and would otherwise block them.
 - **RBAC layered on top.** `RolesGuard` activates only when `@Roles()` is present; `PermissionsGuard` only when `@RequirePermissions()` is present. Roles/permissions are defined in `common/rbac/` — see RBAC model below.
 - **Response envelope.** `ResponseInterceptor` wraps every success response as `{ success, data, timestamp }`. The frontend axios layer unwraps `data`, so backend handlers should return the bare payload.
 - **Errors.** `GlobalExceptionFilter` normalizes all thrown errors.
@@ -68,39 +69,39 @@ Four roles: `SUPER_ADMIN`, `TENANT_OWNER`, `STORE_MANAGER`, `CASHIER`. Permissio
 - A `UserOutletRole` row can override the default permission set for a user at a specific outlet.
 
 ### Auth flow & token rotation
-JWT access token (15m) + refresh token (7d), configured in `config/jwt.config.ts`. The `auth` module implements **refresh-token rotation with reuse-detection and a 30s grace window** (`RefreshToken.replacedByTokenId` links a rotated token to its successor). Rotating the same token twice in parallel triggers reuse-detection and revokes the whole session — this was the root cause of the recurring "always 401 after desktop sleep" bug, which is why the frontend enforces single-flight refresh (see below). `selectOutlet` for an Owner keeps the `TENANT_OWNER` role + global permissions and only verifies the outlet belongs to the tenant.
+JWT access token (15m) + refresh token (7d). TTLs are read from `config/jwt.config.ts` (env `JWT_ACCESS_EXPIRES_IN`/`JWT_REFRESH_EXPIRES_IN`); the `RefreshToken.expiresAt` DB row is derived from the same duration via `ms()` so the JWT `exp` claim and the DB row never diverge. The `auth` module implements **refresh-token rotation with reuse-detection and a 30s grace window** (`RefreshToken.replacedByTokenId` links a rotated token to its successor). Rotating the same token twice in parallel triggers reuse-detection and revokes the whole session — this was the historic "always 401 after desktop sleep" bug. **Refresh is now handled by Auth.js in the `jwt` callback (server-side, serialized per request)**, which structurally avoids the parallel-rotation race the old frontend single-flight code worked around. `selectOutlet` for an Owner keeps the `TENANT_OWNER` role + global permissions and only verifies the outlet belongs to the tenant.
 
 ## Frontend architecture
 
 **This is Next.js 16, not the Next.js in your training data.** `apps/frontend/CLAUDE.md` imports `AGENTS.md`, which mandates: read the relevant guide in `node_modules/next/dist/docs/` before writing Next-specific code, and heed deprecation notices. APIs/conventions may differ.
 
-### Routing & auth guards
-App Router with route groups: `(auth)` (login, select-outlet), `(dashboard)`, `(pos)`, plus `admin`. **There is no middleware** — all auth gating is client-side in the layout files. Each protected layout (`(dashboard)/layout.tsx`, `(pos)/layout.tsx`) calls `useAuthGuard()` and routes by role:
-- Owner → `/dashboard` (skips the `currentOutletId` check)
-- Cashier → `/pos`
-- Manager → `/dashboard` if it has `currentOutletId`, else `/select-outlet`
-- `app/page.tsx` is the role-based entry redirector.
+### Auth: Auth.js v5 + cookie (NOT localStorage anymore)
+Auth was migrated off localStorage/Zustand to **Auth.js v5 (`next-auth@5 beta`)** with a JWT session in an **HttpOnly cookie** (`authjs.session-token`). The backend NestJS stays the token **authority** (bcrypt, RBAC, rotation, audit); Auth.js is the Next.js **session layer** via a `Credentials` provider that delegates login/refresh to `/auth/*`.
+- **`src/auth.ts`** — the config: `Credentials.authorize()` → `POST /auth/login`; `jwt` callback copies backend tokens + refreshes (`POST /auth/refresh`) when the access token nears expiry (`REFRESH_BUFFER_MS = 60s`, must stay **< access TTL** of 15m); `session` callback exposes `user`/`outlets`/`backendAccessToken` to the client but **never** the refresh token. Token-type augmentation uses `declare module '@auth/core/jwt'` (NOT `next-auth/jwt`).
+- **`src/app/api/auth/[...nextauth]/route.ts`** — `import { handlers }; export const { GET, POST } = handlers;` (not `export { GET, POST } from '@/auth'`).
+- **`src/proxy.ts`** (Next 16 renamed `middleware`→`proxy`; file `src/proxy.ts`, runs on Node runtime) — `export { auth as proxy }` wrapper does **optimistic** server-side gating + by-role redirect. This is NOT the only defense (see DAL).
+- **`src/lib/session.ts`** = the **DAL**: `verifySession()` (`cache()`-memoized, redirects to `/login` if no session or `RefreshTokenError`), `getBackendToken()`, and **`serverFetch<T>(path)`** — the server-side replacement for axios: verifies session, injects `Bearer`, unwraps the `{success,data}` envelope, 401→redirect. **Real auth verification happens here, per server-fetch — not in proxy alone.**
 
-`useAuthGuard` (`features/auth/useAuthGuard.ts`) is the **single source of truth for "is the session ready to render"** and is deliberately failsafe-heavy because the app was repeatedly getting stuck on an infinite spinner after sleep / long tab-idle. It guarantees `ready` always becomes `true` via three mechanisms: hydration listener, a timeout failsafe (default 3s), and forcing `persist.rehydrate()` + `setReady(true)` on `visibilitychange`/`pageshow`/`focus`. **Do not gate render solely on `persist.hasHydrated()` / `onFinishHydration` — that is what caused the permanent-spinner bugs.**
+### Routing & role gating
+App Router route groups: `(auth)` (login, select-outlet), `(dashboard)`, `(pos)`, plus `admin`. Gating is layered: `proxy.ts` (optimistic redirect, server) + per-page/DAL checks. By role: Owner → `/dashboard` (skips `currentOutletId`); Cashier → `/pos`; Manager → `/dashboard` if it has `currentOutletId` else `/select-outlet`. `app/page.tsx` is the role-based entry redirector. The `(dashboard)`/`(pos)` layouts are still Client Components and call `useAuthGuard()` (see shims).
 
-### State, persistence, and the auth store
-Zustand with `persist`, single localStorage key **`kasirku-auth`** (`features/auth/store.ts`). The store uses a custom `mergingStorage` adapter — this is load-bearing, do not simplify it away:
-- On `setItem`, it merges the incoming payload with what's already in storage and **preserves existing tokens when the incoming token is empty/null** (treats `''` the same as `null`). This prevents a stray `setUser`/`setOutlets` from re-serializing the whole state and clobbering tokens — the cause of "tokens vanish from localStorage while user/outlets remain".
-- `partialize` was tried and made things worse; the store intentionally persists full state through the merging adapter instead.
+### RSC migration & the HYBRID model
+Read-only pages were converted to **React Server Components** (data fetched server-side via `serverFetch`, rendered to HTML; interactive chrome is small Client children; filters live in **URL searchParams**; each segment has `loading.tsx` + `error.tsx`). **Done:** dashboard, reports, shift/history, audit-log, users. Pattern: page is `async` Server Component → RBAC check renders inline "Akses Ditolak" (no `/unauthorized` route) → `serverFetch` → pass data to a `'use client'` child for interactivity; mutations call `router.refresh()`.
 
-### Axios layer (`lib/api.ts`)
-- Base URL from `NEXT_PUBLIC_API_URL` (default `http://localhost:3001/api/v1`).
-- Request interceptor injects `Bearer` from the raw `kasirku-auth` localStorage entry.
-- Response interceptor unwraps the `{ success, data }` envelope and, on 401, triggers refresh — **except for `/auth/` URLs** (refreshing on a login 401 caused `no_refresh_token` errors).
-- **Single-flight refresh** (`refreshOnce` / `refreshPromise`): only one refresh request is in flight at a time; all callers await the same promise. The promise is reset *inside* its own `try/finally` to avoid floating-promise `unhandledRejection`. This is required because of backend rotation/reuse-detection (above).
-- `persistTokens` writes **only** to raw localStorage (never via the store) to avoid the clobber described above.
-- Redirect-to-login only happens on genuine auth failure (401/403 or `no_refresh_token`), never on network errors.
+**This is deliberately HYBRID, not "everything RSC".** POS (`(pos)/*`) stays Client Component on purpose (offline-first for the planned PWA — RSC can't render offline since it needs the server). Form/CRUD-heavy pages (products, outlets, billing, shift, admin/*) also stay client for now. **Do not convert `(pos)/*` to RSC.**
+
+### Compat shims (kept on purpose, NOT dead code)
+Because client pages remain, these shims survive — each is a thin layer over `useSession()`, not the old localStorage machinery:
+- **`features/auth/store.ts`** — `useAuthStore((s) => s.user/.outlets/.accessToken)` reads from `useSession()`; mutators are no-ops (Auth.js owns state). `useAuthHydrated()` = `status !== 'loading'`. ~12 client consumers (pos, products, outlets, shift, billing, inventory, admin, Sidebar, OutletSwitcher).
+- **`features/auth/useAuthGuard.ts`** — returns `{ ready, user, accessToken, hasRefresh }` from `useSession()`; used by the still-client `(dashboard)`/`(pos)` layouts.
+- **`lib/api.ts`** (axios for Client Components): `setApiAccessToken()` (called by `AuthTokenSync` in `SessionProvider` when the session changes) feeds the Bearer interceptor; response interceptor unwraps `{success,data}` and redirects to `/login` on a non-`/auth/` 401. **No single-flight/rotation/localStorage** — Auth.js does refresh server-side. `proactiveRefresh()`/`getRefreshToken()` are no-op compat stubs still called by a few client loaders.
+- `hooks/usePageFocus.ts` fires a debounced, fire-and-forget `proactiveRefresh()` (now a no-op) on focus — kept for its client consumers.
 
 ### Other conventions
-- `features/<domain>/` holds `api.ts`, `hooks.ts`, `store.ts`, `types.ts`, `components/` per domain (`auth, pos, inventory, users, shifts, reports, outlets, audit-logs`).
+- `features/<domain>/` holds `api.ts`, `hooks.ts`, `store.ts`, `types.ts`, `components/` per domain. For RSC-converted domains, server fetchers live in `features/<domain>/server.ts` (uses `serverFetch`) and **pure** mappers/types in `features/<domain>/shared.ts` — keep pure code out of `'use client'` modules (a value exported from a client module becomes a proxy reference when imported by a Server Component; the `FILTERS.find is not a function` bug).
 - `components/ui/` is the design-system layer; `components/shared/` is app-specific (e.g. `Sidebar`).
-- `hooks/usePageFocus.ts` fires a debounced (150ms), fire-and-forget `proactiveRefresh()` on focus — refresh is **not** awaited before the page's own load callback.
-- Data-loading callbacks (`features/pos/hooks.ts` `loadInitial`, dashboard `load`, etc.) must `setIsLoading(false)` on the empty-`outletId` early-return and wrap the body in `try/catch {}` — otherwise an Owner with no outlet, or a refresh failure, leaves the page spinning or throws `unhandledRejection`.
+- `.env` needs `AUTH_SECRET` (Auth.js JWT encryption) + `NEXT_PUBLIC_API_URL`; `trustHost: true` for dev. Only placeholders in `.env.example`.
+- Data-loading callbacks in remaining client pages must `setIsLoading(false)` on the empty-`outletId` early-return and wrap the body in `try/catch {}` — otherwise an Owner with no outlet, or a fetch failure, leaves the page spinning.
 
 ### Known non-blocking noise
 The ESLint rule `react-hooks/set-state-in-effect` fires across several pages (users/dashboard/inventory/shift). It is pre-existing, project-wide, and does **not** fail the build — treat it as known noise, not a regression.

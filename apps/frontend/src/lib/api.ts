@@ -27,11 +27,12 @@ export function setApiAccessToken(token: string | null): void {
   currentAccessToken = token;
 }
 
-// ── Compat shims (dipensiunkan di Tahap 2/3) ───────────────────────────────
+// ── Compat shims (NO-OP; dipertahankan di model hybrid) ─────────────────────
 /**
  * Dulu memicu refresh token manual. Kini NO-OP — refresh ditangani Auth.js di
- * server. Dipertahankan agar pemanggil lama (loader halaman, usePageFocus) tetap
- * kompilasi tanpa diubah. Aman dipanggil; tidak melakukan apa-apa.
+ * server. Dipertahankan karena masih dipanggil dari layout & loader Client
+ * Component (usePageFocus, shift, inventory). Aman dipanggil; tidak melakukan
+ * apa-apa. Bukan kode mati — selama ada pemanggil client, biarkan ada.
  */
 export async function proactiveRefresh(): Promise<void> {
   /* no-op: Auth.js mengelola refresh di server */
