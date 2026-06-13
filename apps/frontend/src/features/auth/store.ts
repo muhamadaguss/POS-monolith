@@ -13,8 +13,13 @@ import type { OutletOption } from './api';
  * permukaan API yang sama tapi mengambil data dari `useSession()`.
  *
  * Method mutasi (setTokens/setUser/dst) jadi NO-OP — state dimiliki Auth.js.
- * Komponen ini dipensiunkan bertahap saat tiap halaman dikonversi ke RSC
- * (Tahap 2) dan akhirnya dihapus (Tahap 3).
+ *
+ * STATUS (model HYBRID): shim ini DIPERTAHANKAN, bukan kode mati. Halaman RSC
+ * (dashboard/laporan/dll) sudah tak memakainya, TAPI Client Component yang
+ * sengaja tetap client — terutama (pos)/* (offline-first untuk PWA), juga
+ * products/outlets/shift/billing/inventory/admin — masih membacanya untuk tahu
+ * user/outlet di sisi klien. Selama halaman-halaman itu client, shim ini tetap
+ * ada sebagai lapis tipis di atas useSession(). Lihat memory rsc-pwa-boundary.
  */
 
 interface AuthUser {

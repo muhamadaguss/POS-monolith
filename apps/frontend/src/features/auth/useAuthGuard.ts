@@ -10,8 +10,12 @@ import { useSession } from 'next-auth/react';
  * status sesi datang dari `useSession()` dan tidak pernah "stuck".
  *
  * Permukaan kembalian dipertahankan ({ ready, user, accessToken, hasRefresh })
- * agar layout lama tidak perlu diubah. Dipensiunkan saat layout dikonversi ke
- * pengecekan session server-side (lihat proxy.ts + layout async).
+ * agar layout lama tidak perlu diubah.
+ *
+ * STATUS (model HYBRID): dipakai oleh layout `(dashboard)` dan `(pos)` yang
+ * masih Client Component. Gating optimistic server-side ada di proxy.ts; hook ini
+ * adalah lapis gating di sisi klien untuk layout client. Dipertahankan selama
+ * layout-layout itu client (POS sengaja client untuk PWA). Bukan kode mati.
  */
 export function useAuthGuard() {
   const { data: session, status } = useSession();
