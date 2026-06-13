@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import type { ServerResponse } from 'http';
 
 import { appConfig, jwtConfig } from './config';
 import { PrismaModule } from './prisma/prisma.module';
@@ -47,6 +48,16 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
+      serveStaticOptions: {
+        // Helmet global menyetel `Cross-Origin-Resource-Policy: same-origin`,
+        // yang membuat browser MEMBLOKIR <img> gambar produk saat frontend
+        // (origin berbeda) memuatnya. Aset di /uploads bersifat publik &
+        // memang dimaksudkan dimuat lintas-origin → longgarkan CORP HANYA di
+        // sini (API tetap same-origin).
+        setHeaders: (res: ServerResponse) => {
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        },
+      },
     }),
 
     // Database
