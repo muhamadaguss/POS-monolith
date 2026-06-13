@@ -17,6 +17,10 @@ import { ROLE_DEFAULT_PERMISSIONS } from '../../common/rbac/permissions';
 import { Role, UserStatus, TenantStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import ms from 'ms';
+import type { StringValue } from 'ms';
+
+type Duration = StringValue;
 
 @Injectable()
 export class AuthService {
@@ -351,13 +355,16 @@ export class AuthService {
 
     // Buat refresh token dengan ID unik
     const tokenId = crypto.randomUUID();
+    const refreshExpiresIn = this.refreshExpiresIn();
     const refreshToken = this.jwtService.sign(
       { sub: data.userId, tokenId, currentOutletId: data.currentOutletId } as JwtRefreshPayload,
-      { secret: this.configService.get<string>('jwt.refreshSecret'), expiresIn: '7d' },
+      { secret: this.configService.get<string>('jwt.refreshSecret'), expiresIn: refreshExpiresIn },
     );
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // sinkron dengan refreshExpiresIn
+    // expiresAt baris DB dihitung dari durasi yang sama dengan JWT agar sinkron
+    // (mencegah token DB & klaim `exp` JWT kedaluwarsa di waktu berbeda).
+    const refreshTtlMs: number = ms(refreshExpiresIn);
+    const expiresAt = new Date(Date.now() + refreshTtlMs);
 
     await this.prisma.refreshToken.create({
       data: {
@@ -387,8 +394,18 @@ export class AuthService {
     };
     return this.jwtService.signAsync(payload as object, {
       secret: this.configService.get<string>('jwt.accessSecret'),
-      expiresIn: '15m',
+      expiresIn: this.accessExpiresIn(),
     });
+  }
+
+  /** Durasi access token dari config (env `JWT_ACCESS_EXPIRES_IN`, default `15m`). */
+  private accessExpiresIn(): Duration {
+    return (this.configService.get<string>('jwt.accessExpiresIn') ?? '15m') as Duration;
+  }
+
+  /** Durasi refresh token dari config (env `JWT_REFRESH_EXPIRES_IN`, default `7d`). */
+  private refreshExpiresIn(): Duration {
+    return (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as Duration;
   }
 
   private hashToken(token: string): string {
