@@ -8,7 +8,6 @@ import {
   Ban,
   Wallet,
   MoreVertical,
-  RefreshCw,
   Bell,
   Sparkles,
   Megaphone,
@@ -19,6 +18,7 @@ import { verifySession } from '@/lib/session';
 import { fetchPlatformStats, fetchTenants } from '@/features/admin/server';
 import { IDR } from '@/lib/format';
 import { TenantsView } from './TenantsView';
+import { RefreshButton } from './RefreshButton';
 
 /** Header konsol Super Admin: judul + badge console, tanggal & aksi dekoratif. */
 function AdminHeader() {
@@ -42,10 +42,8 @@ function AdminHeader() {
         SUPER ADMIN CONSOLE
       </span>
       <div className="ml-auto flex items-center gap-2 text-gray-400">
-        {/* Aksi dekoratif (refresh/notifikasi belum difungsikan). */}
-        <span className="p-2 rounded-lg" aria-hidden>
-          <RefreshCw className="w-4 h-4" />
-        </span>
+        <RefreshButton />
+        {/* Notifikasi dekoratif (belum difungsikan). */}
         <span className="relative p-2 rounded-lg" aria-hidden>
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
