@@ -37,17 +37,20 @@ export function AdminConsoleHeader({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // Acuan mulai: waktu login (lintas halaman/tab) bila tersedia; fallback ke mount.
-  const [start] = useState(() => loginAt ?? Date.now());
-  const [elapsed, setElapsed] = useState(() => Math.max(0, Math.floor((Date.now() - start) / 1000)));
+  // Fallback mount-time bila `loginAt` belum tersedia (mis. di hub yang membaca
+  // sesi via useSession secara asinkron). Begitu `loginAt` datang, dipakai sbg
+  // acuan sehingga timer melanjutkan, bukan reset.
+  const [mountAt] = useState(() => Date.now());
+  const start = loginAt ?? mountAt;
+  // `now` di-tick tiap detik; `elapsed` diturunkan dari (now - start) saat render
+  // → otomatis ikut saat `loginAt` berubah, tanpa setState sinkron di efek.
+  const [now, setNow] = useState(() => Date.now());
+  const elapsed = Math.max(0, Math.floor((now - start) / 1000));
 
   useEffect(() => {
-    const id = setInterval(
-      () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000))),
-      1000,
-    );
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [start]);
+  }, []);
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
