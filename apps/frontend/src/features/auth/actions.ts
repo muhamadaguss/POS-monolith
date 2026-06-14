@@ -62,6 +62,44 @@ export async function selectOutletAction(outletId: string): Promise<SelectOutlet
 }
 
 /**
+ * Server Action: ganti password sendiri (semua role).
+ *
+ * Berjalan di server → ambil backendAccessToken dari session Auth.js, panggil
+ * `PATCH /auth/change-password`. Lempar Error dgn pesan backend bila gagal
+ * (mis. "Password lama salah") agar form bisa menampilkannya.
+ */
+export async function changePasswordAction(
+  oldPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const session = await auth();
+  const accessToken = session?.backendAccessToken;
+  if (!accessToken) throw new Error('Sesi tidak valid');
+
+  const res = await fetch(`${API_URL}/auth/change-password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ oldPassword, newPassword }),
+  });
+
+  if (!res.ok) {
+    let message = 'Gagal mengubah password';
+    try {
+      const body = await res.json();
+      message = Array.isArray(body?.message) ? body.message[0] : (body?.message ?? message);
+    } catch {
+      /* abaikan */
+    }
+    throw new Error(message);
+  }
+
+  return unwrap<{ message: string }>(await res.json());
+}
+
+/**
  * Server Action: revoke refresh token backend saat logout.
  * Cookie sesi Auth.js dihapus terpisah lewat `signOut()` di klien.
  */

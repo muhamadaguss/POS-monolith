@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Patch,
   Body,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public, CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 
@@ -86,5 +88,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout dari semua perangkat' })
   logoutAll(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.logout(user.userId);
+  }
+
+  @Patch('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Ganti password sendiri (semua role)' })
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user, dto);
   }
 }

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Users, Building2, CreditCard, BarChart2, LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { ShieldCheck, Users, Building2, CreditCard, BarChart2, LogOut, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store';
 import { useLogout } from '@/features/auth/hooks';
 
@@ -68,6 +69,13 @@ export default function AdminPage() {
             <p className="text-sm font-medium text-gray-900">{user.name}</p>
             <p className="text-xs text-gray-400">{user.email}</p>
           </div>
+          <Link
+            href="/change-password"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+          >
+            <KeyRound className="w-4 h-4" />
+            <span className="hidden sm:inline">Ganti Password</span>
+          </Link>
           <button
             type="button"
             onClick={logout}

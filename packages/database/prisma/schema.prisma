@@ -157,6 +157,7 @@ model User {
   pin          String?    // 6-digit PIN untuk otorisasi aksi kasir (refund/void)
   role         Role       @default(CASHIER) // role default, bisa di-override per outlet
   status       UserStatus @default(ACTIVE)
+  mustChangePassword Boolean @default(false) // true → wajib ganti password saat login berikutnya (mis. setelah reset oleh Super Admin)
   avatarUrl    String?
   lastLoginAt  DateTime?
   createdAt    DateTime   @default(now())

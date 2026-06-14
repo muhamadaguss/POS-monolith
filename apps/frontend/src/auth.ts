@@ -235,6 +235,8 @@ declare module 'next-auth' {
       tenantId: string | null;
       currentOutletId: string | null;
       permissions: string[];
+      // Diisi pada PR2 (enforcement force-change); opsional di PR1.
+      mustChangePassword?: boolean;
     } & DefaultSession['user'];
     outlets: OutletOption[];
     backendAccessToken?: string;

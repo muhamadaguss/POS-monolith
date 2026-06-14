@@ -12,6 +12,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { LoginDto } from './dto/login.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import type { JwtPayload, JwtRefreshPayload, AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { ROLE_DEFAULT_PERMISSIONS } from '../../common/rbac/permissions';
 import { Role, UserStatus, TenantStatus } from '@prisma/client';
@@ -342,6 +343,33 @@ export class AuthService {
     });
 
     return { message: 'Berhasil logout' };
+  }
+
+  /**
+   * Ganti password mandiri (semua role). Verifikasi password lama, lalu set hash
+   * baru + clear `mustChangePassword`. Dipakai juga untuk menuntaskan alur
+   * force-change setelah Super Admin mereset password user.
+   */
+  async changePassword(currentUser: AuthenticatedUser, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.userId },
+    });
+    if (!user) throw new UnauthorizedException('User tidak ditemukan');
+
+    const isOldValid = await bcrypt.compare(dto.oldPassword, user.passwordHash);
+    if (!isOldValid) throw new UnauthorizedException('Password lama salah');
+
+    if (dto.oldPassword === dto.newPassword) {
+      throw new BadRequestException('Password baru harus berbeda dari password lama');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
+
+    return { message: 'Password berhasil diubah' };
   }
 
   // ---------- helpers ----------

@@ -1,12 +1,18 @@
 import { Test } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Role, UserStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { createMockPrisma, MockPrisma } from '../../../test/prisma-mock';
+import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
+
+// Mock bcrypt agar compare/hash deterministik di test changePassword (tanpa hashing nyata).
+jest.mock('bcrypt');
+const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 /**
  * Fokus: refresh-token rotation + reuse-detection + grace-window.
@@ -244,5 +250,78 @@ describe('AuthService — TTL token dari config', () => {
     // toleransi ±5 detik untuk waktu eksekusi
     expect(expiresAtMs).toBeGreaterThan(before + fourteenDays - 5_000);
     expect(expiresAtMs).toBeLessThan(before + fourteenDays + 5_000);
+  });
+});
+
+/**
+ * Fokus: ganti password mandiri — verifikasi password lama, set hash baru, clear
+ * mustChangePassword (menuntaskan alur force-change).
+ */
+describe('AuthService — changePassword', () => {
+  let service: AuthService;
+  let prisma: MockPrisma;
+
+  const currentUser = {
+    userId: 'user-1',
+    email: 'u@toko.com',
+    tenantId: 'tenant-1',
+    currentOutletId: null,
+    role: Role.CASHIER,
+    permissions: [],
+  } as AuthenticatedUser;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: { sign: jest.fn(), signAsync: jest.fn(), verify: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+      ],
+    }).compile();
+    service = moduleRef.get(AuthService);
+
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      passwordHash: 'hash-lama',
+      status: UserStatus.ACTIVE,
+    });
+    prisma.user.update.mockResolvedValue({ id: 'user-1' });
+  });
+
+  it('password lama salah → UnauthorizedException', async () => {
+    mockedBcrypt.compare.mockResolvedValue(false as never);
+    await expect(
+      service.changePassword(currentUser, { oldPassword: 'Salah123', newPassword: 'Baru12345' }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('password baru sama dgn lama → BadRequestException', async () => {
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+    await expect(
+      service.changePassword(currentUser, { oldPassword: 'Sama12345', newPassword: 'Sama12345' }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('sukses → set hash baru + clear mustChangePassword', async () => {
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+    mockedBcrypt.hash.mockResolvedValue('hash-baru' as never);
+
+    const res = await service.changePassword(currentUser, {
+      oldPassword: 'Lama12345',
+      newPassword: 'Baru12345',
+    });
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+        data: { passwordHash: 'hash-baru', mustChangePassword: false },
+      }),
+    );
+    expect(res).toHaveProperty('message');
   });
 });
