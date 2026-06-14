@@ -1,4 +1,14 @@
-import { IsEnum, IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsNotEmpty,
+  IsEmail,
+  MaxLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Role, UserStatus } from '@prisma/client';
 
@@ -49,6 +59,34 @@ export enum AssignableRole {
 }
 
 export class UpdateUserRoleDto {
+  @IsEnum(AssignableRole, {
+    message: 'Role harus salah satu dari TENANT_OWNER, STORE_MANAGER, CASHIER',
+  })
+  role: AssignableRole;
+}
+
+/**
+ * Buat user baru di sebuah tenant (Super Admin). Role dibatasi role tenant
+ * (AssignableRole — tanpa SUPER_ADMIN). Password di-generate backend.
+ */
+export class CreateUserDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  tenantId: string;
+
   @IsEnum(AssignableRole, {
     message: 'Role harus salah satu dari TENANT_OWNER, STORE_MANAGER, CASHIER',
   })

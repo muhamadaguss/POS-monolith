@@ -134,3 +134,30 @@ export interface ResetPasswordResult {
   password: string;
   message: string;
 }
+
+export interface AdminUserStats {
+  total: number;
+  active: number;
+  managers: number;
+  cashiers: number;
+}
+
+/** Opsi tenant ringkas untuk dropdown (form Tambah User). */
+export interface TenantOption {
+  id: string;
+  name: string;
+}
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  phone?: string;
+  tenantId: string;
+  role: AssignableRole;
+}
+
+export interface CreateUserResult {
+  user: AdminUser;
+  password: string;
+  message: string;
+}
