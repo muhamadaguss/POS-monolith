@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ShieldCheck, Users, Building2, CreditCard, BarChart2, LogOut, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store';
 import { useLogout } from '@/features/auth/hooks';
+import { AdminConsoleHeader } from './_components/AdminConsoleHeader';
 
 const ADMIN_CARDS: {
   icon: React.ElementType;
@@ -53,39 +54,29 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600">
-            <span className="text-white font-bold text-sm">K</span>
+      <AdminConsoleHeader
+        title="Dashboard"
+        adminName={user.name ?? 'Super Admin'}
+        extra={
+          <div className="flex items-center gap-1">
+            <Link
+              href="/change-password"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span className="hidden lg:inline">Ganti Password</span>
+            </Link>
+            <button
+              type="button"
+              onClick={logout}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Keluar
+            </button>
           </div>
-          <div>
-            <span className="font-bold text-gray-900 text-lg">Kasirku</span>
-            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Super Admin</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium text-gray-900">{user.name}</p>
-            <p className="text-xs text-gray-400">{user.email}</p>
-          </div>
-          <Link
-            href="/change-password"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          >
-            <KeyRound className="w-4 h-4" />
-            <span className="hidden sm:inline">Ganti Password</span>
-          </Link>
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Keluar
-          </button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Content */}
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
