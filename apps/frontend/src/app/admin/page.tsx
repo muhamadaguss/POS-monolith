@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ShieldCheck, Users, Building2, CreditCard, BarChart2, LogOut, KeyRound } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store';
@@ -28,6 +29,7 @@ export default function AdminPage() {
   // ulang tiap render oleh shim, jadi tak boleh jadi dependency (memicu loop).
   const userRole = useAuthStore((s) => s.user?.role ?? null);
   const isLoggedIn = useAuthStore((s) => s.user != null);
+  const { data: sessionData } = useSession();
   const { logout } = useLogout();
   const [hydrated, setHydrated] = useState(false);
 
@@ -57,6 +59,7 @@ export default function AdminPage() {
       <AdminConsoleHeader
         title="Dashboard"
         adminName={user.name ?? 'Super Admin'}
+        loginAt={sessionData?.loginAt}
         extra={
           <div className="flex items-center gap-1">
             <Link

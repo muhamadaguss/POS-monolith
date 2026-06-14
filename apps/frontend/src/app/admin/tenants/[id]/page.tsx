@@ -53,7 +53,12 @@ export default async function AdminTenantDetailPage({
   if (session.user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AdminConsoleHeader title="Detail Tenant" adminName={adminName} backHref="/admin/tenants" />
+        <AdminConsoleHeader
+          title="Detail Tenant"
+          adminName={adminName}
+          backHref="/admin/tenants"
+          loginAt={session.loginAt}
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -76,7 +81,12 @@ export default async function AdminTenantDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminConsoleHeader title="Detail Tenant" adminName={adminName} backHref="/admin/tenants" />
+      <AdminConsoleHeader
+          title="Detail Tenant"
+          adminName={adminName}
+          backHref="/admin/tenants"
+          loginAt={session.loginAt}
+        />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-5">
         {/* Profil */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6">

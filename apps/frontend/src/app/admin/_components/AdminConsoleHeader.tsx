@@ -25,22 +25,29 @@ export function AdminConsoleHeader({
   title,
   adminName,
   backHref,
+  loginAt,
   extra,
 }: {
   title: string;
   adminName: string;
   backHref?: string;
+  /** Epoch ms saat login. Bila ada, "Sesi Aktif" dihitung dari sini (lintas halaman). */
+  loginAt?: number;
   extra?: React.ReactNode;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [elapsed, setElapsed] = useState(0);
+  // Acuan mulai: waktu login (lintas halaman/tab) bila tersedia; fallback ke mount.
+  const [start] = useState(() => loginAt ?? Date.now());
+  const [elapsed, setElapsed] = useState(() => Math.max(0, Math.floor((Date.now() - start) / 1000)));
 
   useEffect(() => {
-    const start = Date.now();
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    const id = setInterval(
+      () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000))),
+      1000,
+    );
     return () => clearInterval(id);
-  }, []);
+  }, [start]);
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">

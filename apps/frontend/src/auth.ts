@@ -151,6 +151,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.backendAccessToken = u.backendAccessToken;
         token.backendRefreshToken = u.backendRefreshToken;
         token.accessTokenExpires = accessTokenExpiresAt(u.backendAccessToken);
+        // Stempel waktu login (epoch ms) untuk timer "Sesi Aktif" lintas halaman.
+        token.loginAt = Date.now();
         return token;
       }
 
@@ -217,6 +219,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       session.outlets = (token.outlets as OutletOption[]) ?? [];
       session.error = token.error as string | undefined;
+      session.loginAt = token.loginAt as number | undefined;
       // CATATAN KEAMANAN: backendRefreshToken TIDAK diekspos ke session (klien).
       // backendAccessToken diekspos hanya agar Client Component (POS) bisa
       // memanggil API; idealnya nanti dipindah ke route-handler proxy.
@@ -249,6 +252,8 @@ declare module 'next-auth' {
     outlets: OutletOption[];
     backendAccessToken?: string;
     error?: string;
+    /** Epoch ms saat login — acuan timer "Sesi Aktif" lintas halaman. */
+    loginAt?: number;
   }
 }
 
@@ -260,5 +265,7 @@ declare module '@auth/core/jwt' {
     backendRefreshToken?: string;
     accessTokenExpires?: number;
     error?: string;
+    /** Epoch ms saat login — acuan timer "Sesi Aktif". */
+    loginAt?: number;
   }
 }

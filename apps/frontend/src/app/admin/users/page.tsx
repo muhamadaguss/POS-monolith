@@ -67,7 +67,12 @@ export default async function AdminUsersPage({
   if (session.user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AdminConsoleHeader title="Manajemen User" adminName={adminName} backHref="/admin" />
+        <AdminConsoleHeader
+          title="Manajemen User"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
           <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
@@ -103,7 +108,12 @@ export default async function AdminUsersPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminConsoleHeader title="Manajemen User" adminName={adminName} backHref="/admin" />
+      <AdminConsoleHeader
+          title="Manajemen User"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
