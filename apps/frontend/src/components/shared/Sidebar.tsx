@@ -15,6 +15,7 @@ import {
   Clock,
   History,
   Store,
+  KeyRound,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OutletSwitcher } from './OutletSwitcher';
@@ -197,6 +198,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
           </div>
         </div>
+        <Link
+          href="/change-password"
+          className="mt-1 w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+        >
+          <KeyRound className="w-4 h-4 shrink-0" />
+          Ganti Password
+        </Link>
         <button
           type="button"
           onClick={logout}
