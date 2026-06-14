@@ -65,3 +65,34 @@ export interface TenantQuery {
   page?: number;
   limit?: number;
 }
+
+// ── Manajemen User (lintas-tenant, Super Admin) ─────────────────────────────
+
+export type UserRole = 'SUPER_ADMIN' | 'TENANT_OWNER' | 'STORE_MANAGER' | 'CASHIER';
+export type UserStatusValue = 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+/** Role yang boleh ditetapkan via UI (tanpa SUPER_ADMIN). */
+export type AssignableRole = 'TENANT_OWNER' | 'STORE_MANAGER' | 'CASHIER';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: UserRole;
+  status: UserStatusValue;
+  tenantId: string | null;
+  lastLoginAt: string | null;
+  mustChangePassword: boolean;
+  createdAt: string;
+  tenant: { id: string; name: string; slug: string } | null;
+}
+
+export interface AdminUserListResponse {
+  items: AdminUser[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+export interface ResetPasswordResult {
+  password: string;
+  message: string;
+}
