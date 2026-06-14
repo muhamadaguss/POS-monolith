@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Store, Users, Package, Receipt } from 'lucide-react';
+import { Store, Users, Package, Receipt } from 'lucide-react';
 import { verifySession, ServerFetchError } from '@/lib/session';
 import { fetchTenant } from '@/features/admin/server';
 import { IDR } from '@/lib/format';
 import { TenantDetailControls } from './TenantDetailControls';
+import { AdminConsoleHeader } from '../../_components/AdminConsoleHeader';
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '—';
@@ -37,24 +37,6 @@ function StatBox({
   );
 }
 
-function Header() {
-  return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
-      <Link
-        href="/admin/tenants"
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-        aria-label="Kembali"
-      >
-        <ArrowLeft className="w-4 h-4" />
-      </Link>
-      <span className="font-bold text-gray-900">Detail Tenant</span>
-      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-        Super Admin
-      </span>
-    </header>
-  );
-}
-
 /**
  * Detail Tenant — Server Component (khusus Super Admin). Profil, statistik, &
  * riwayat langganan dirender server-side; kontrol status & paket (mutasi via
@@ -66,11 +48,17 @@ export default async function AdminTenantDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await verifySession();
+  const adminName = session.user.name ?? 'Super Admin';
 
   if (session.user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <AdminConsoleHeader
+          title="Detail Tenant"
+          adminName={adminName}
+          backHref="/admin/tenants"
+          loginAt={session.loginAt}
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -93,7 +81,12 @@ export default async function AdminTenantDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <AdminConsoleHeader
+          title="Detail Tenant"
+          adminName={adminName}
+          backHref="/admin/tenants"
+          loginAt={session.loginAt}
+        />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-5">
         {/* Profil */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6">

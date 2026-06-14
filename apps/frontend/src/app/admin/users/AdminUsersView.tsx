@@ -120,28 +120,18 @@ export function AdminUsersView({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">Daftar Pengguna Seluruh Tenant</h1>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          Tambah User Baru
-        </button>
-      </div>
+      <h1 className="text-xl font-bold text-gray-900">Daftar Pengguna Seluruh Tenant</h1>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Toolbar: search + filter + Tambah dalam satu kartu (selaras Manajemen Tenant) */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-3 flex items-center gap-2 flex-wrap">
         <form onSubmit={submitSearch} className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
             aria-label="Cari user"
-            placeholder="Cari nama / email…"
+            placeholder="Cari nama, email, atau tenant…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10 h-10 rounded-xl"
+            className="pl-10 h-10 rounded-xl bg-gray-50 border-transparent"
           />
         </form>
         <select
@@ -167,6 +157,14 @@ export function AdminUsersView({
           <option value="INACTIVE">Nonaktif</option>
           <option value="LOCKED">Terkunci</option>
         </select>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Tambah User Baru
+        </button>
       </div>
 
       {/* Tabel */}

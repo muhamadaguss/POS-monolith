@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import {
   ShieldAlert,
-  ArrowLeft,
   Users,
   UserCheck,
   UserCog,
@@ -9,49 +7,12 @@ import {
 } from 'lucide-react';
 import { verifySession, serverFetch } from '@/lib/session';
 import { fetchUserStats, fetchTenants } from '@/features/admin/server';
-import { getInitials } from '@/lib/format';
 import type {
   AdminUserListResponse,
   TenantOption,
 } from '@/features/admin/types';
 import { AdminUsersView } from './AdminUsersView';
-import { UserHeaderActions } from './UserHeaderActions';
-
-/** Header konsol Super Admin untuk Manajemen User. */
-function AdminHeader({ adminName }: { adminName: string }) {
-  return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
-      <Link
-        href="/admin"
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-        aria-label="Kembali"
-      >
-        <ArrowLeft className="w-4 h-4" />
-      </Link>
-      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600">
-        <span className="text-white font-bold text-sm">K</span>
-      </div>
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-gray-900">Manajemen User</span>
-          <span className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
-            INTERNAL ONLY
-          </span>
-        </div>
-        <p className="text-xs text-gray-400">Super Admin Console</p>
-      </div>
-      <div className="ml-auto flex items-center gap-4">
-        <UserHeaderActions />
-        <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
-            {getInitials(adminName)}
-          </div>
-          <span className="hidden sm:block text-sm font-medium text-gray-700">{adminName}</span>
-        </div>
-      </div>
-    </header>
-  );
-}
+import { AdminConsoleHeader } from '../_components/AdminConsoleHeader';
 
 function StatCard({
   icon: Icon,
@@ -106,7 +67,12 @@ export default async function AdminUsersPage({
   if (session.user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AdminHeader adminName={adminName} />
+        <AdminConsoleHeader
+          title="Manajemen User"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
           <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
@@ -142,7 +108,12 @@ export default async function AdminUsersPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminHeader adminName={adminName} />
+      <AdminConsoleHeader
+          title="Manajemen User"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

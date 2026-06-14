@@ -1,14 +1,11 @@
-import Link from 'next/link';
 import {
   ShieldAlert,
-  ArrowLeft,
   Building2,
   CheckCircle2,
   Hourglass,
   Ban,
   Wallet,
   MoreVertical,
-  Bell,
   Sparkles,
   Megaphone,
   Mail,
@@ -18,43 +15,7 @@ import { verifySession } from '@/lib/session';
 import { fetchPlatformStats, fetchTenants } from '@/features/admin/server';
 import { IDR } from '@/lib/format';
 import { TenantsView } from './TenantsView';
-import { RefreshButton } from './RefreshButton';
-
-/** Header konsol Super Admin: judul + badge console, tanggal & aksi dekoratif. */
-function AdminHeader() {
-  const today = new Date().toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
-      <Link
-        href="/admin"
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-        aria-label="Kembali"
-      >
-        <ArrowLeft className="w-4 h-4" />
-      </Link>
-      <h1 className="text-xl font-bold text-gray-900">Manajemen Tenant</h1>
-      <span className="text-[11px] font-semibold tracking-wide px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
-        SUPER ADMIN CONSOLE
-      </span>
-      <div className="ml-auto flex items-center gap-2 text-gray-400">
-        <RefreshButton />
-        {/* Notifikasi dekoratif (belum difungsikan). */}
-        <span className="relative p-2 rounded-lg" aria-hidden>
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
-        </span>
-        <span className="hidden sm:block pl-2 ml-1 border-l border-gray-200 text-xs text-gray-500">
-          {today}
-        </span>
-      </div>
-    </header>
-  );
-}
+import { AdminConsoleHeader } from '../_components/AdminConsoleHeader';
 
 function StatCard({
   icon: Icon,
@@ -182,12 +143,18 @@ export default async function AdminTenantsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const session = await verifySession();
+  const adminName = session.user.name ?? 'Super Admin';
 
   // RBAC: hanya Super Admin (selaras backend @Roles(SUPER_ADMIN) & proxy).
   if (session.user.role !== 'SUPER_ADMIN') {
     return (
       <div className="min-h-screen bg-gray-50">
-        <AdminHeader />
+        <AdminConsoleHeader
+          title="Manajemen Tenant"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
           <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
@@ -221,7 +188,12 @@ export default async function AdminTenantsPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminHeader />
+      <AdminConsoleHeader
+          title="Manajemen Tenant"
+          adminName={adminName}
+          backHref="/admin"
+          loginAt={session.loginAt}
+        />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
