@@ -37,15 +37,13 @@ export function AdminConsoleHeader({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // Fallback mount-time bila `loginAt` belum tersedia (mis. di hub yang membaca
-  // sesi via useSession secara asinkron). Begitu `loginAt` datang, dipakai sbg
-  // acuan sehingga timer melanjutkan, bukan reset.
-  const [mountAt] = useState(() => Date.now());
-  const start = loginAt ?? mountAt;
-  // `now` di-tick tiap detik; `elapsed` diturunkan dari (now - start) saat render
-  // → otomatis ikut saat `loginAt` berubah, tanpa setState sinkron di efek.
+  // `now` di-tick tiap detik; `elapsed` diturunkan dari (now - loginAt) saat render.
+  // Bila `loginAt` belum tersedia (mis. di hub yang membaca sesi via useSession
+  // secara asinkron), JANGAN hitung dari mount (itu yang bikin timer "mulai 0"):
+  // tampilkan placeholder hingga loginAt tiba, lalu timer langsung benar.
   const [now, setNow] = useState(() => Date.now());
-  const elapsed = Math.max(0, Math.floor((now - start) / 1000));
+  const elapsed =
+    loginAt != null ? Math.max(0, Math.floor((now - loginAt) / 1000)) : null;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -87,7 +85,7 @@ export function AdminConsoleHeader({
             })}
           </p>
           <p className="text-[11px] text-gray-400 tabular-nums">
-            Sesi Aktif: {fmtDuration(elapsed)}
+            Sesi Aktif: {elapsed != null ? fmtDuration(elapsed) : '—:—:—'}
           </p>
         </div>
         <button
