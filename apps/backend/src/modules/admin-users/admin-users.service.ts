@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { generatePassword } from '../../common/utils/credential.util';
 import {
   AdminUserQueryDto,
   AssignableRole,
@@ -232,14 +232,4 @@ export class AdminUsersService {
     if (!user) throw new NotFoundException('User tidak ditemukan');
     return user;
   }
-}
-
-/**
- * Password acak kuat yang memenuhi kompleksitas (huruf besar+kecil+angka).
- * 12 byte → base64url, lalu jamin minimal satu dari tiap kelas.
- */
-function generatePassword(): string {
-  const base = crypto.randomBytes(12).toString('base64url'); // ~16 char
-  // Tempel suffix deterministik kelas-karakter agar selalu lolos validasi.
-  return `${base}Aa1`;
 }

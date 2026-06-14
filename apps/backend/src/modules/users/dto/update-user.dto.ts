@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { UserStatus } from '@prisma/client';
 
 export class UpdateUserDto {
@@ -10,16 +10,9 @@ export class UpdateUserDto {
   @IsString()
   phone?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(8)
-  password?: string;
-
-  @IsOptional()
-  @IsString()
-  @Length(6, 6)
-  @Matches(/^\d{6}$/, { message: 'PIN harus 6 digit angka' })
-  pin?: string;
+  // Password & PIN tidak lagi diubah lewat update — gunakan endpoint reset
+  // (POST /users/:id/reset-password, POST /users/:id/reset-pin) yang generate
+  // kredensial acak & menampilkannya sekali.
 
   @IsOptional()
   @IsEnum(UserStatus)

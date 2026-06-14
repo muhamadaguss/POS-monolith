@@ -31,8 +31,6 @@ export interface CreateStaffPayload {
 export interface UpdateStaffPayload {
   name?: string;
   phone?: string;
-  password?: string;
-  pin?: string;
   status?: 'ACTIVE' | 'INACTIVE';
 }
 
@@ -48,6 +46,24 @@ export async function createStaff(payload: CreateStaffPayload): Promise<StaffMem
 
 export async function updateStaff(id: string, payload: UpdateStaffPayload): Promise<StaffMember> {
   const { data } = await api.patch<StaffMember>(`/users/${id}`, payload);
+  return data;
+}
+
+export async function resetStaffPassword(
+  id: string,
+): Promise<{ password: string; message: string }> {
+  const { data } = await api.post<{ password: string; message: string }>(
+    `/users/${id}/reset-password`,
+  );
+  return data;
+}
+
+export async function resetStaffPin(
+  id: string,
+): Promise<{ pin: string; message: string }> {
+  const { data } = await api.post<{ pin: string; message: string }>(
+    `/users/${id}/reset-pin`,
+  );
   return data;
 }
 

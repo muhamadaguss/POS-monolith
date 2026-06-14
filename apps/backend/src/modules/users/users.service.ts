@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -10,6 +11,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import {
+  generatePassword,
+  generatePin,
+} from '../../common/utils/credential.util';
 
 const USER_SELECT = {
   id: true,
@@ -36,7 +41,8 @@ export class UsersService {
   async findAll(currentUser: AuthenticatedUser) {
     // Store Manager hanya bisa melihat staf di outletnya sendiri
     if (currentUser.role === Role.STORE_MANAGER) {
-      if (!currentUser.currentOutletId) throw new ForbiddenException('Pilih outlet terlebih dahulu');
+      if (!currentUser.currentOutletId)
+        throw new ForbiddenException('Pilih outlet terlebih dahulu');
 
       return this.prisma.user.findMany({
         where: {
@@ -80,7 +86,9 @@ export class UsersService {
     });
     if (!outlet) throw new NotFoundException('Outlet tidak ditemukan');
 
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existing) throw new ConflictException('Email sudah terdaftar');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -94,12 +102,12 @@ export class UsersService {
         phone: dto.phone,
         passwordHash,
         pin: pinHash,
-        role: dto.role as Role,
+        role: dto.role,
         outletRoles: {
           create: {
             outletId: dto.outletId,
             tenantId: currentUser.tenantId!,
-            role: dto.role as Role,
+            role: dto.role,
           },
         },
       },
@@ -116,14 +124,87 @@ export class UsersService {
     if (dto.name) updateData.name = dto.name;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.status) updateData.status = dto.status;
-    if (dto.password) updateData.passwordHash = await bcrypt.hash(dto.password, 12);
-    if (dto.pin) updateData.pin = await bcrypt.hash(dto.pin, 10);
 
     return this.prisma.user.update({
       where: { id: user.id },
       data: updateData,
       select: USER_SELECT,
     });
+  }
+
+  /**
+   * Reset password staf: generate password kuat acak, set hash +
+   * mustChangePassword=true, dan REVOKE semua refresh token user (agar sesi hidup
+   * tak bisa bypass force-change). Mengembalikan plaintext SEKALI untuk disampaikan
+   * owner/manager ke staf. Scope tenant/outlet ditegakkan via findOne.
+   */
+  async resetPassword(id: string, currentUser: AuthenticatedUser) {
+    if (id === currentUser.userId) {
+      throw new BadRequestException(
+        'Gunakan menu Ganti Password untuk akun Anda sendiri',
+      );
+    }
+    const user = await this.findOne(id, currentUser);
+    // Manager (tanpa staff.manage_global) tak boleh mereset password Owner.
+    if (
+      user.role === Role.TENANT_OWNER &&
+      currentUser.role !== Role.TENANT_OWNER
+    ) {
+      throw new ForbiddenException('Tidak dapat mereset password Owner');
+    }
+
+    const password = generatePassword();
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, mustChangePassword: true },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      password,
+      message:
+        'Password berhasil direset. Sampaikan password ini ke staf; staf wajib menggantinya saat login.',
+    };
+  }
+
+  /**
+   * Reset PIN staf: generate 6 digit acak, simpan ter-hash. Mengembalikan PIN
+   * plaintext SEKALI untuk disampaikan owner/manager ke staf. Scope ditegakkan via findOne.
+   */
+  async resetPin(id: string, currentUser: AuthenticatedUser) {
+    if (id === currentUser.userId) {
+      throw new BadRequestException(
+        'Gunakan menu akun Anda untuk mengubah PIN sendiri',
+      );
+    }
+    const user = await this.findOne(id, currentUser);
+    if (
+      user.role === Role.TENANT_OWNER &&
+      currentUser.role !== Role.TENANT_OWNER
+    ) {
+      throw new ForbiddenException('Tidak dapat mereset PIN Owner');
+    }
+
+    const pin = generatePin();
+    const pinHash = await bcrypt.hash(pin, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { pin: pinHash },
+    });
+
+    return {
+      pin,
+      message:
+        'PIN berhasil direset. Sampaikan PIN ini ke staf untuk otorisasi aksi kasir.',
+    };
   }
 
   async deactivate(id: string, currentUser: AuthenticatedUser) {

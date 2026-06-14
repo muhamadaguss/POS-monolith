@@ -48,8 +48,6 @@ export function EditDialog({ staff, onClose, onSaved }: EditDialogProps) {
         payload.phone = form.phone;
       if (form.status && form.status !== staff.status)
         payload.status = form.status;
-      if (form.password) payload.password = form.password;
-      if (form.pin && form.pin.length === 6) payload.pin = form.pin;
       await updateStaff(staff.id, payload);
       toastSuccess("Data karyawan berhasil diperbarui");
       onSaved();
@@ -87,43 +85,6 @@ export function EditDialog({ staff, onClose, onSaved }: EditDialogProps) {
                 setForm((f) => ({ ...f, phone: e.target.value }))
               }
               placeholder="081234567890"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              Password Baru{" "}
-              <span className="text-gray-400">
-                (kosongkan jika tidak diubah)
-              </span>
-            </Label>
-            <Input
-              type="password"
-              value={form.password ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, password: e.target.value }))
-              }
-              placeholder="Min. 8 karakter"
-              minLength={8}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              PIN Baru{" "}
-              <span className="text-gray-400">
-                (kosongkan jika tidak diubah)
-              </span>
-            </Label>
-            <Input
-              value={form.pin ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  pin: e.target.value.replace(/\D/g, "").slice(0, 6),
-                }))
-              }
-              placeholder="6 digit angka"
-              inputMode="numeric"
-              maxLength={6}
             />
           </div>
           <div className="space-y-1.5">
