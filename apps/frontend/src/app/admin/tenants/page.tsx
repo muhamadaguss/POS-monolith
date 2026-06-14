@@ -4,17 +4,30 @@ import {
   ArrowLeft,
   Building2,
   CheckCircle2,
-  Clock,
+  Hourglass,
   Ban,
   Wallet,
+  MoreVertical,
+  RefreshCw,
+  Bell,
+  Sparkles,
+  Megaphone,
+  Mail,
+  ChevronRight,
 } from 'lucide-react';
 import { verifySession } from '@/lib/session';
 import { fetchPlatformStats, fetchTenants } from '@/features/admin/server';
 import { IDR } from '@/lib/format';
 import { TenantsView } from './TenantsView';
 
-/** Header admin (selaras gaya halaman admin lain) dengan tombol kembali ke /admin. */
+/** Header konsol Super Admin: judul + badge console, tanggal & aksi dekoratif. */
 function AdminHeader() {
+  const today = new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
       <Link
@@ -24,13 +37,21 @@ function AdminHeader() {
       >
         <ArrowLeft className="w-4 h-4" />
       </Link>
-      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600">
-        <span className="text-white font-bold text-sm">K</span>
-      </div>
-      <div>
-        <span className="font-bold text-gray-900">Manajemen Tenant</span>
-        <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-          Super Admin
+      <h1 className="text-xl font-bold text-gray-900">Manajemen Tenant</h1>
+      <span className="text-[11px] font-semibold tracking-wide px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+        SUPER ADMIN CONSOLE
+      </span>
+      <div className="ml-auto flex items-center gap-2 text-gray-400">
+        {/* Aksi dekoratif (refresh/notifikasi belum difungsikan). */}
+        <span className="p-2 rounded-lg" aria-hidden>
+          <RefreshCw className="w-4 h-4" />
+        </span>
+        <span className="relative p-2 rounded-lg" aria-hidden>
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+        </span>
+        <span className="hidden sm:block pl-2 ml-1 border-l border-gray-200 text-xs text-gray-500">
+          {today}
         </span>
       </div>
     </header>
@@ -41,21 +62,101 @@ function StatCard({
   icon: Icon,
   label,
   value,
-  color,
+  subtext,
+  iconColor,
+  active,
+  accent,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
-  color: string;
+  subtext: string;
+  iconColor: string;
+  active?: boolean;
+  accent?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-        <Icon className="w-5 h-5" />
+    <div
+      className={`rounded-2xl border p-4 ${
+        active
+          ? 'border-emerald-500 ring-1 ring-emerald-500/20 bg-white'
+          : accent
+            ? 'border-emerald-100 bg-emerald-50/40'
+            : 'border-gray-200 bg-white'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <MoreVertical className="w-4 h-4 text-gray-300" aria-hidden />
       </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-lg font-bold text-gray-900 tabular-nums">{value}</p>
+      <p className="text-sm text-gray-500 mt-3">{label}</p>
+      <p
+        className={`font-bold tabular-nums ${accent ? 'text-2xl text-emerald-700' : 'text-3xl text-gray-900'}`}
+      >
+        {value}
+      </p>
+      <p className={`text-xs mt-1 ${accent ? 'text-emerald-600' : 'text-gray-400'}`}>{subtext}</p>
+    </div>
+  );
+}
+
+/** Panel placeholder (fitur belum tersedia) — dirender sesuai mockup, non-fungsional. */
+function GrowthPlaceholder() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col items-center text-center">
+      <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+        <Sparkles className="w-6 h-6 text-emerald-500" />
+      </div>
+      <p className="font-semibold text-gray-900">Statistik Pertumbuhan</p>
+      <p className="text-sm text-gray-500 mt-1 max-w-xs">
+        Grafik pertumbuhan tenant akan muncul di sini setelah Anda memiliki lebih dari 5 tenant
+        aktif dalam platform Anda.
+      </p>
+      <span className="mt-3 text-sm font-medium text-emerald-400 cursor-not-allowed select-none">
+        Pelajari Analitik Lanjut
+      </span>
+    </div>
+  );
+}
+
+function BroadcastPlaceholder() {
+  const items = [
+    {
+      icon: Megaphone,
+      title: 'Umumkan Pemeliharaan Sistem',
+      desc: 'Terjadwal untuk hari Minggu, 2:00 WIB',
+    },
+    {
+      icon: Mail,
+      title: 'Broadcast Email Marketing',
+      desc: 'Promosi upgrade paket untuk STARTER',
+    },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <p className="font-semibold text-gray-900">Promo &amp; Broadcast</p>
+      <p className="text-sm text-gray-500 mt-1">
+        Kirim notifikasi sistem atau email penagihan otomatis ke seluruh tenant dengan satu klik.
+      </p>
+      <span className="mt-3 inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+        Segera hadir
+      </span>
+      <div className="mt-3 space-y-2" aria-disabled>
+        {items.map((it) => (
+          <div
+            key={it.title}
+            className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 opacity-60 cursor-not-allowed select-none"
+          >
+            <it.icon className="w-5 h-5 text-gray-400 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-700 truncate">{it.title}</p>
+              <p className="text-xs text-gray-400 truncate">{it.desc}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -75,7 +176,7 @@ interface SearchParams {
 /**
  * Manajemen Tenant lintas-tenant — Server Component (khusus Super Admin).
  * KPI + daftar di-fetch di server (serverFetch) sesuai searchParams; interaktivitas
- * (filter/pagination/navigasi baris) di TenantsView (Client Component).
+ * (filter/pagination/navigasi baris/aksi) di TenantsView (Client Component).
  */
 export default async function AdminTenantsPage({
   searchParams,
@@ -117,45 +218,61 @@ export default async function AdminTenantsPage({
     }),
   ]);
 
+  const pct = (n: number) =>
+    stats.total > 0 ? `${Math.round((n / stats.total) * 100)}% dari total` : '0% dari total';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminHeader />
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-5">
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard
             icon={Building2}
             label="Total Tenant"
             value={String(stats.total)}
-            color="bg-gray-100 text-gray-600"
+            subtext="Baru didaftarkan"
+            iconColor="bg-blue-50 text-blue-600"
           />
           <StatCard
             icon={CheckCircle2}
             label="Aktif"
             value={String(stats.active)}
-            color="bg-emerald-100 text-emerald-600"
+            subtext={pct(stats.active)}
+            iconColor="bg-emerald-50 text-emerald-600"
+            active
           />
           <StatCard
-            icon={Clock}
-            label="Masa Coba"
+            icon={Hourglass}
+            label="Free Trial"
             value={String(stats.trial)}
-            color="bg-blue-100 text-blue-600"
+            subtext="Menunggu aktivasi"
+            iconColor="bg-orange-50 text-orange-500"
           />
           <StatCard
             icon={Ban}
-            label="Ditangguhkan"
+            label="Suspended"
             value={String(stats.suspended)}
-            color="bg-red-100 text-red-600"
+            subtext="Pelanggaran/Tunggakan"
+            iconColor="bg-red-50 text-red-500"
           />
           <StatCard
             icon={Wallet}
-            label="Estimasi MRR"
+            label="Estimated MRR"
             value={IDR.format(stats.mrr)}
-            color="bg-violet-100 text-violet-600"
+            subtext="Bulan berjalan"
+            iconColor="bg-emerald-100 text-emerald-600"
+            accent
           />
         </div>
 
         <TenantsView data={data} search={search} status={status} plan={plan} page={page} />
+
+        {/* Panel bawah (placeholder fitur mendatang). */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <GrowthPlaceholder />
+          <BroadcastPlaceholder />
+        </div>
       </main>
     </div>
   );
