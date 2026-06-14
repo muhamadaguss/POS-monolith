@@ -3,12 +3,17 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AdminUserQueryDto, AssignableRole } from './dto/admin-user.dto';
+import {
+  AdminUserQueryDto,
+  AssignableRole,
+  CreateUserDto,
+} from './dto/admin-user.dto';
 
 /** Field user yang aman diekspos (TANPA passwordHash/pin). */
 const USER_SELECT = {
@@ -28,6 +33,17 @@ const USER_SELECT = {
 @Injectable()
 export class AdminUsersService {
   constructor(private prisma: PrismaService) {}
+
+  /** Statistik user lintas-platform untuk KPI (Total/Aktif/Manajer/Kasir). */
+  async getStats() {
+    const [total, active, managers, cashiers] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
+      this.prisma.user.count({ where: { role: Role.STORE_MANAGER } }),
+      this.prisma.user.count({ where: { role: Role.CASHIER } }),
+    ]);
+    return { total, active, managers, cashiers };
+  }
 
   /** Daftar SEMUA user lintas-platform (khusus Super Admin) — tanpa filter tenantId. */
   async findAll(query: AdminUserQueryDto) {
@@ -81,7 +97,9 @@ export class AdminUsersService {
   /** Aktif/nonaktifkan user. Tak boleh menonaktifkan diri sendiri. */
   async updateStatus(adminId: string, id: string, status: UserStatus) {
     if (id === adminId) {
-      throw new BadRequestException('Tidak dapat mengubah status akun Anda sendiri');
+      throw new BadRequestException(
+        'Tidak dapat mengubah status akun Anda sendiri',
+      );
     }
     const target = await this.ensureExists(id);
     if (target.role === Role.SUPER_ADMIN) {
@@ -94,14 +112,19 @@ export class AdminUsersService {
   /** Ubah role tenant. Larang menyentuh/menjadikan SUPER_ADMIN & diri sendiri. */
   async updateRole(adminId: string, id: string, role: AssignableRole) {
     if (id === adminId) {
-      throw new BadRequestException('Tidak dapat mengubah role akun Anda sendiri');
+      throw new BadRequestException(
+        'Tidak dapat mengubah role akun Anda sendiri',
+      );
     }
     const target = await this.ensureExists(id);
     if (target.role === Role.SUPER_ADMIN) {
       throw new ForbiddenException('Tidak dapat mengubah Super Admin lain');
     }
     // role sudah dibatasi enum AssignableRole (tanpa SUPER_ADMIN) di DTO.
-    await this.prisma.user.update({ where: { id }, data: { role: role as Role } });
+    await this.prisma.user.update({
+      where: { id },
+      data: { role: role },
+    });
     return this.findOne(id);
   }
 
@@ -112,11 +135,15 @@ export class AdminUsersService {
    */
   async resetPassword(adminId: string, id: string) {
     if (id === adminId) {
-      throw new BadRequestException('Gunakan menu Ganti Password untuk akun Anda sendiri');
+      throw new BadRequestException(
+        'Gunakan menu Ganti Password untuk akun Anda sendiri',
+      );
     }
     const target = await this.ensureExists(id);
     if (target.role === Role.SUPER_ADMIN) {
-      throw new ForbiddenException('Tidak dapat mereset password Super Admin lain');
+      throw new ForbiddenException(
+        'Tidak dapat mereset password Super Admin lain',
+      );
     }
 
     const password = generatePassword();
@@ -135,7 +162,65 @@ export class AdminUsersService {
 
     return {
       password,
-      message: 'Password berhasil direset. Sampaikan password ini ke user; user wajib menggantinya saat login.',
+      message:
+        'Password berhasil direset. Sampaikan password ini ke user; user wajib menggantinya saat login.',
+    };
+  }
+
+  /**
+   * Buat user baru di sebuah tenant (Super Admin). Role dibatasi role tenant
+   * (AssignableRole — tanpa SUPER_ADMIN). Password di-generate & dikembalikan
+   * SEKALI; user wajib menggantinya saat login pertama (mustChangePassword=true).
+   * Memvalidasi tenant ada, email unik, dan batas staf paket tenant.
+   */
+  async createUser(dto: CreateUserDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: dto.tenantId },
+      select: { id: true, maxStaff: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant tidak ditemukan');
+
+    const emailTaken = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (emailTaken) throw new ConflictException('Email sudah terdaftar.');
+
+    // Batas staf paket tenant (hitung user non-INACTIVE).
+    const activeStaff = await this.prisma.user.count({
+      where: { tenantId: tenant.id, status: { not: UserStatus.INACTIVE } },
+    });
+    if (activeStaff >= tenant.maxStaff) {
+      throw new BadRequestException(
+        `Batas staf paket tenant tercapai (${tenant.maxStaff}). Tingkatkan paket untuk menambah staf.`,
+      );
+    }
+
+    const password = generatePassword();
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const user = await this.prisma.user.create({
+      data: {
+        tenantId: tenant.id,
+        name: dto.name.trim(),
+        email,
+        phone: dto.phone?.trim() || null,
+        passwordHash,
+        role: dto.role,
+        status: UserStatus.ACTIVE,
+        mustChangePassword: true,
+      },
+      select: USER_SELECT,
+    });
+
+    return {
+      user,
+      // Plaintext SEKALI untuk disampaikan; tak disimpan (audit tak menangkap body).
+      password,
+      message:
+        'User berhasil dibuat. Sampaikan password ini — user wajib menggantinya saat login pertama.',
     };
   }
 

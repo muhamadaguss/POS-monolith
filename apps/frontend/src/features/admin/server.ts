@@ -5,6 +5,7 @@ import type {
   TenantListResult,
   TenantDetail,
   TenantQuery,
+  AdminUserStats,
 } from './types';
 
 /**
@@ -35,4 +36,9 @@ export async function fetchTenants(query: TenantQuery): Promise<TenantListResult
 /** Detail satu tenant (profil, statistik, riwayat langganan). */
 export async function fetchTenant(id: string): Promise<TenantDetail> {
   return serverFetch<TenantDetail>(`/admin/tenants/${id}`);
+}
+
+/** Statistik user lintas-platform untuk KPI Manajemen User. */
+export async function fetchUserStats(): Promise<AdminUserStats> {
+  return serverFetch<AdminUserStats>('/admin/users/stats');
 }

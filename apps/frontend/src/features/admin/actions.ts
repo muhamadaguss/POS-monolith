@@ -12,6 +12,8 @@ import type {
   TenantStatusUpdateResult,
   CreateTenantInput,
   CreateTenantResult,
+  CreateUserInput,
+  CreateUserResult,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
@@ -72,6 +74,13 @@ export async function resetUserPasswordAction(id: string): Promise<ResetPassword
   return adminFetch<ResetPasswordResult>(`/admin/users/${id}/reset-password`, {
     method: 'POST',
     body: JSON.stringify({}),
+  });
+}
+
+export async function createUserAction(input: CreateUserInput): Promise<CreateUserResult> {
+  return adminFetch<CreateUserResult>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 

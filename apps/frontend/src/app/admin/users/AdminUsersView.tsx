@@ -9,6 +9,7 @@ import {
   KeyRound,
   UserX,
   UserCheck,
+  UserPlus,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -32,11 +33,16 @@ import {
   setUserStatusAction,
   setUserRoleAction,
   resetUserPasswordAction,
+  createUserAction,
 } from '@/features/admin/actions';
+import { getInitials } from '@/lib/format';
 import type {
   AdminUser,
   AdminUserListResponse,
   AssignableRole,
+  TenantOption,
+  CreateUserInput,
+  CreateUserResult,
 } from '@/features/admin/types';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -58,6 +64,7 @@ const ASSIGNABLE: AssignableRole[] = ['TENANT_OWNER', 'STORE_MANAGER', 'CASHIER'
 export function AdminUsersView({
   data,
   selfId,
+  tenantOptions,
   search,
   role,
   status,
@@ -65,6 +72,7 @@ export function AdminUsersView({
 }: {
   data: AdminUserListResponse;
   selfId: string;
+  tenantOptions: TenantOption[];
   search: string;
   role: string;
   status: string;
@@ -77,6 +85,7 @@ export function AdminUsersView({
 
   const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   function pushParams(patch: Record<string, string>, resetPage = true) {
     const params = new URLSearchParams(searchParams.toString());
@@ -111,11 +120,16 @@ export function AdminUsersView({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Manajemen User</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Kelola semua user lintas-tenant: role, status, dan reset password.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-gray-900">Daftar Pengguna Seluruh Tenant</h1>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Tambah User Baru
+        </button>
       </div>
 
       {/* Filter bar */}
@@ -184,11 +198,26 @@ export function AdminUsersView({
                   return (
                     <tr key={u.id} className="border-b border-gray-50">
                       <td className="px-5 py-3">
-                        <p className="font-medium text-gray-900">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isSuper
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                            }`}
+                          >
+                            {getInitials(u.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900">{u.name}</p>
+                            <p className="text-xs text-gray-400">{u.email}</p>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        {u.tenant?.name ?? <span className="text-gray-400">Platform</span>}
+                        {u.tenant?.name ?? (
+                          <span className="text-gray-400 italic">Platform (Global)</span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <span
@@ -285,6 +314,13 @@ export function AdminUsersView({
       )}
       {resetTarget && (
         <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />
+      )}
+      {createOpen && (
+        <CreateUserDialog
+          tenantOptions={tenantOptions}
+          onClose={() => setCreateOpen(false)}
+          onCreated={refresh}
+        />
       )}
     </div>
   );
@@ -475,6 +511,193 @@ function ResetPasswordDialog({ user, onClose }: { user: AdminUser; onClose: () =
               <Button onClick={onClose}>Selesai</Button>
             </DialogFooter>
           </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Form Tambah User Baru (Super Admin): pilih tenant + role tenant; password
+ * di-generate backend & ditampilkan SEKALI. user wajib ganti saat login pertama.
+ */
+function CreateUserDialog({
+  tenantOptions,
+  onClose,
+  onCreated,
+}: {
+  tenantOptions: TenantOption[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState<CreateUserInput>({
+    name: '',
+    email: '',
+    phone: '',
+    tenantId: tenantOptions[0]?.id ?? '',
+    role: 'CASHIER',
+  });
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<CreateUserResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function set<K extends keyof CreateUserInput>(key: K, value: CreateUserInput[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.tenantId) {
+      errorAlert('Pilih tenant terlebih dahulu');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await createUserAction({
+        ...form,
+        phone: form.phone?.trim() || undefined,
+      });
+      setResult(res);
+      toastSuccess('User berhasil dibuat');
+      onCreated();
+    } catch (err) {
+      errorAlert(err instanceof Error ? err.message : 'Gagal membuat user');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function copyPassword() {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result.password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* abaikan */
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{result ? 'User Dibuat' : 'Tambah User Baru'}</DialogTitle>
+        </DialogHeader>
+
+        {result ? (
+          <div className="space-y-3 py-2">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-semibold">{result.user.name}</p>
+              <p className="text-xs text-emerald-700 font-mono">{result.user.email}</p>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                Salin & sampaikan password ini. <b>Tidak ditampilkan lagi</b>. User wajib
+                menggantinya saat login pertama.
+              </span>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">Password sementara</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-lg bg-gray-100 px-3 py-2 text-sm font-mono break-all">
+                  {result.password}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  title="Salin"
+                  aria-label="Salin password"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={onClose}>Selesai</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">Nama lengkap *</Label>
+              <Input
+                required
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                className="h-10 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">Email *</Label>
+              <Input
+                required
+                type="email"
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+                className="h-10 rounded-xl"
+                placeholder="user@toko.com"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">Telepon</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => set('phone', e.target.value)}
+                className="h-10 rounded-xl"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Tenant *</Label>
+                <select
+                  required
+                  value={form.tenantId}
+                  onChange={(e) => set('tenantId', e.target.value)}
+                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm"
+                >
+                  {tenantOptions.length === 0 && <option value="">Tidak ada tenant</option>}
+                  {tenantOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Role *</Label>
+                <select
+                  value={form.role}
+                  onChange={(e) => set('role', e.target.value as AssignableRole)}
+                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm"
+                >
+                  {ASSIGNABLE.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400">
+              Password dibuat otomatis & ditampilkan sekali setelah user dibuat.
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving || !form.tenantId}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+                Buat User
+              </Button>
+            </DialogFooter>
+          </form>
         )}
       </DialogContent>
     </Dialog>

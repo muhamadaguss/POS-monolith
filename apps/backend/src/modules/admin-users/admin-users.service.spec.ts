@@ -1,10 +1,19 @@
 import { Test } from '@nestjs/testing';
-import { ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role, UserStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { AdminUsersService } from './admin-users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { createMockPrisma, MockPrisma } from '../../../test/prisma-mock';
-import { AssignableRole } from './dto/admin-user.dto';
+import { AssignableRole, CreateUserDto } from './dto/admin-user.dto';
+
+jest.mock('bcrypt');
+const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
 /**
  * Fokus: query lintas-tenant + self-protection (tak sentuh diri/Super Admin lain) +
@@ -24,6 +33,7 @@ describe('AdminUsersService', () => {
       ],
     }).compile();
     service = moduleRef.get(AdminUsersService);
+    mockedBcrypt.hash.mockResolvedValue('hashed' as never);
   });
 
   describe('findAll — lintas-tenant', () => {
@@ -36,7 +46,9 @@ describe('AdminUsersService', () => {
       expect(res.items).toHaveLength(2);
       expect(res.meta).toEqual({ total: 2, page: 1, limit: 20, totalPages: 1 });
       // where tak boleh mengandung tenantId saat filter tak diberikan
-      const arg = prisma.user.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+      const arg = prisma.user.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
       expect(arg.where.tenantId).toBeUndefined();
     });
 
@@ -44,7 +56,9 @@ describe('AdminUsersService', () => {
       prisma.user.findMany.mockResolvedValue([]);
       prisma.user.count.mockResolvedValue(0);
       await service.findAll({ tenantId: 't1', page: 1, limit: 20 });
-      const arg = prisma.user.findMany.mock.calls[0][0] as { where: Record<string, unknown> };
+      const arg = prisma.user.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
       expect(arg.where.tenantId).toBe('t1');
     });
   });
@@ -57,7 +71,10 @@ describe('AdminUsersService', () => {
     });
 
     it('tolak menyentuh SUPER_ADMIN lain', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'sa2', role: Role.SUPER_ADMIN });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'sa2',
+        role: Role.SUPER_ADMIN,
+      });
       await expect(
         service.updateStatus(ADMIN_ID, 'sa2', UserStatus.INACTIVE),
       ).rejects.toThrow(ForbiddenException);
@@ -85,7 +102,10 @@ describe('AdminUsersService', () => {
     });
 
     it('tolak menyentuh SUPER_ADMIN lain', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'sa2', role: Role.SUPER_ADMIN });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'sa2',
+        role: Role.SUPER_ADMIN,
+      });
       await expect(
         service.updateRole(ADMIN_ID, 'sa2', AssignableRole.STORE_MANAGER),
       ).rejects.toThrow(ForbiddenException);
@@ -112,12 +132,20 @@ describe('AdminUsersService', () => {
     });
 
     it('tolak reset SUPER_ADMIN lain', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'sa2', role: Role.SUPER_ADMIN });
-      await expect(service.resetPassword(ADMIN_ID, 'sa2')).rejects.toThrow(ForbiddenException);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'sa2',
+        role: Role.SUPER_ADMIN,
+      });
+      await expect(service.resetPassword(ADMIN_ID, 'sa2')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('sukses: set mustChangePassword + revoke token + balikan plaintext', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'u1', role: Role.CASHIER });
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        role: Role.CASHIER,
+      });
       prisma.user.update.mockResolvedValue({});
       prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
 
@@ -137,6 +165,82 @@ describe('AdminUsersService', () => {
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { userId: 'u1', revokedAt: null } }),
       );
+    });
+  });
+
+  describe('getStats', () => {
+    it('mengembalikan total/active/managers/cashiers dari count', async () => {
+      prisma.user.count
+        .mockResolvedValueOnce(10) // total
+        .mockResolvedValueOnce(8) // active
+        .mockResolvedValueOnce(2) // managers
+        .mockResolvedValueOnce(5); // cashiers
+      const res = await service.getStats();
+      expect(res).toEqual({ total: 10, active: 8, managers: 2, cashiers: 5 });
+    });
+  });
+
+  describe('createUser', () => {
+    const dto: CreateUserDto = {
+      name: 'Staf Baru',
+      email: 'staf@baru.com',
+      tenantId: 't1',
+      role: AssignableRole.CASHIER,
+    };
+
+    beforeEach(() => {
+      prisma.tenant.findUnique.mockResolvedValue({ id: 't1', maxStaff: 15 });
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.count.mockResolvedValue(3); // di bawah batas
+      prisma.user.create.mockResolvedValue({
+        id: 'u-new',
+        email: 'staf@baru.com',
+      });
+    });
+
+    it('membuat user + balikan password sekali; mustChangePassword=true', async () => {
+      const res = await service.createUser(dto);
+
+      const arg = prisma.user.create.mock.calls[0][0] as {
+        data: {
+          role: Role;
+          mustChangePassword: boolean;
+          status: UserStatus;
+          tenantId: string;
+        };
+      };
+      expect(arg.data.role).toBe(Role.CASHIER);
+      expect(arg.data.mustChangePassword).toBe(true);
+      expect(arg.data.status).toBe(UserStatus.ACTIVE);
+      expect(arg.data.tenantId).toBe('t1');
+
+      expect(typeof res.password).toBe('string');
+      expect(res.password.length).toBeGreaterThan(8);
+    });
+
+    it('tolak bila tenant tidak ada', async () => {
+      prisma.tenant.findUnique.mockResolvedValue(null);
+      await expect(service.createUser(dto)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('tolak bila email sudah terdaftar', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'exist' });
+      await expect(service.createUser(dto)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('tolak bila batas staf paket tercapai', async () => {
+      prisma.tenant.findUnique.mockResolvedValue({ id: 't1', maxStaff: 5 });
+      prisma.user.count.mockResolvedValue(5);
+      await expect(service.createUser(dto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.user.create).not.toHaveBeenCalled();
     });
   });
 });
