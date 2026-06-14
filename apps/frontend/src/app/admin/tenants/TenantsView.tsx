@@ -11,10 +11,33 @@ import {
   Eye,
   MoreVertical,
   Lock,
+  Loader2,
+  Copy,
+  Check,
+  Building2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { toastSuccess, errorAlert } from '@/lib/swal';
 import { getInitials } from '@/lib/format';
-import type { TenantListResult, TenantStatus, PlanCode } from '@/features/admin/types';
+import { createTenantAction } from '@/features/admin/actions';
+import type {
+  TenantListResult,
+  TenantStatus,
+  PlanCode,
+  CreateTenantInput,
+  CreateTenantResult,
+  InitialTenantStatus,
+} from '@/features/admin/types';
 
 const STATUS_BADGE: Record<TenantStatus, { label: string; cls: string }> = {
   ACTIVE: { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700' },
@@ -99,6 +122,7 @@ export function TenantsView({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [searchInput, setSearchInput] = useState(search);
+  const [createOpen, setCreateOpen] = useState(false);
 
   function pushParams(patch: Record<string, string>, resetPage = true) {
     const params = new URLSearchParams(searchParams.toString());
@@ -159,12 +183,10 @@ export function TenantsView({
           <option value="GROWTH">Growth</option>
           <option value="ENTERPRISE">Enterprise</option>
         </select>
-        {/* Placeholder: provisioning tenant belum tersedia. */}
         <button
           type="button"
-          disabled
-          title="Segera hadir"
-          className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white opacity-60 cursor-not-allowed"
+          onClick={() => setCreateOpen(true)}
+          className="h-10 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Tambah Tenant
@@ -308,6 +330,311 @@ export function TenantsView({
           </div>
         )}
       </div>
+
+      {createOpen && (
+        <CreateTenantDialog
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => startTransition(() => router.refresh())}
+        />
+      )}
     </div>
   );
+}
+
+const PLAN_OPTIONS: { value: PlanCode; label: string }[] = [
+  { value: 'FREE', label: 'Free' },
+  { value: 'STARTER', label: 'Starter' },
+  { value: 'GROWTH', label: 'Growth' },
+  { value: 'ENTERPRISE', label: 'Enterprise' },
+];
+
+function Field({
+  label,
+  children,
+  required,
+}: {
+  label: string;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-gray-500">
+        {label}
+        {required && <span className="text-red-500"> *</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Form provisioning tenant baru. Setelah sukses, menampilkan password owner
+ * SEKALI (tombol salin). Memanggil onCreated() agar daftar (RSC) di-refresh.
+ */
+function CreateTenantDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState<CreateTenantInput>({
+    name: '',
+    slug: '',
+    email: '',
+    phone: '',
+    billingEmail: '',
+    plan: 'STARTER',
+    status: 'TRIAL',
+    outletName: '',
+    ownerName: '',
+    ownerEmail: '',
+    ownerPhone: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<CreateTenantResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function set<K extends keyof CreateTenantInput>(key: K, value: CreateTenantInput[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // Auto-isi slug dari nama bila slug belum disentuh manual.
+  function onNameChange(value: string) {
+    setForm((f) => {
+      const autoSlug = f.slug === slugify(f.name);
+      return { ...f, name: value, slug: autoSlug ? slugify(value) : f.slug };
+    });
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload: CreateTenantInput = {
+        ...form,
+        slug: slugify(form.slug || form.name),
+        phone: form.phone?.trim() || undefined,
+        billingEmail: form.billingEmail?.trim() || undefined,
+        ownerPhone: form.ownerPhone?.trim() || undefined,
+      };
+      const res = await createTenantAction(payload);
+      setResult(res);
+      toastSuccess('Tenant berhasil dibuat');
+      onCreated();
+    } catch (err) {
+      errorAlert(err instanceof Error ? err.message : 'Gagal membuat tenant');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function copyPassword() {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result.ownerPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* abaikan */
+    }
+  }
+
+  const inputCls = 'h-10 rounded-xl';
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-emerald-600" />
+            {result ? 'Tenant Dibuat' : 'Tambah Tenant'}
+          </DialogTitle>
+        </DialogHeader>
+
+        {result ? (
+          <div className="space-y-4 py-1">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-semibold">{result.name}</p>
+              <p className="text-xs text-emerald-700 font-mono">{result.slug}</p>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-700">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                Salin & sampaikan kredensial ini ke owner. Password <b>tidak ditampilkan lagi</b>.
+                Owner wajib menggantinya saat login pertama.
+              </span>
+            </div>
+            <Field label="Email owner">
+              <code className="block rounded-lg bg-gray-100 px-3 py-2 text-sm font-mono break-all">
+                {result.ownerEmail}
+              </code>
+            </Field>
+            <Field label="Password sementara">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-lg bg-gray-100 px-3 py-2 text-sm font-mono break-all">
+                  {result.ownerPassword}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  title="Salin"
+                  aria-label="Salin password"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </Field>
+            <DialogFooter>
+              <Button onClick={onClose}>Selesai</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-4 py-1 max-h-[70vh] overflow-y-auto pr-1">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Bisnis</p>
+            <Field label="Nama bisnis" required>
+              <Input
+                required
+                value={form.name}
+                onChange={(e) => onNameChange(e.target.value)}
+                className={inputCls}
+                placeholder="Toko Maju Jaya"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Kode toko (slug)" required>
+                <Input
+                  required
+                  value={form.slug}
+                  onChange={(e) => set('slug', e.target.value)}
+                  className={`${inputCls} font-mono`}
+                  placeholder="toko-maju-jaya"
+                />
+              </Field>
+              <Field label="Email tenant" required>
+                <Input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => set('email', e.target.value)}
+                  className={inputCls}
+                  placeholder="info@toko.com"
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Telepon">
+                <Input
+                  value={form.phone}
+                  onChange={(e) => set('phone', e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Email billing">
+                <Input
+                  type="email"
+                  value={form.billingEmail}
+                  onChange={(e) => set('billingEmail', e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Paket" required>
+                <select
+                  value={form.plan}
+                  onChange={(e) => set('plan', e.target.value as PlanCode)}
+                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm"
+                >
+                  {PLAN_OPTIONS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Status awal" required>
+                <select
+                  value={form.status}
+                  onChange={(e) => set('status', e.target.value as InitialTenantStatus)}
+                  className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm"
+                >
+                  <option value="TRIAL">Masa Coba (Trial)</option>
+                  <option value="ACTIVE">Aktif</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Nama outlet pertama" required>
+              <Input
+                required
+                value={form.outletName}
+                onChange={(e) => set('outletName', e.target.value)}
+                className={inputCls}
+                placeholder="Outlet Pusat"
+              />
+            </Field>
+
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">
+              Owner
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Nama owner" required>
+                <Input
+                  required
+                  value={form.ownerName}
+                  onChange={(e) => set('ownerName', e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Telepon owner">
+                <Input
+                  value={form.ownerPhone}
+                  onChange={(e) => set('ownerPhone', e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <Field label="Email owner" required>
+              <Input
+                required
+                type="email"
+                value={form.ownerEmail}
+                onChange={(e) => set('ownerEmail', e.target.value)}
+                className={inputCls}
+                placeholder="owner@toko.com"
+              />
+            </Field>
+            <p className="text-xs text-gray-400">
+              Password owner dibuat otomatis & ditampilkan sekali setelah tenant dibuat.
+            </p>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                Buat Tenant
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Slugify ringan: lowercase, ganti non-alfanumerik dengan tanda hubung. */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
