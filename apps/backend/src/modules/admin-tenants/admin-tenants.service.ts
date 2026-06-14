@@ -1,8 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, SubscriptionPlan, TenantStatus, UserStatus } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import {
+  Prisma,
+  Role,
+  SubscriptionPlan,
+  TenantStatus,
+  UserStatus,
+} from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PLAN_CATALOG } from '../billing/plan-catalog';
-import { TenantQueryDto } from './dto/admin-tenant.dto';
+import { CreateTenantDto, TenantQueryDto } from './dto/admin-tenant.dto';
+
+/**
+ * Password acak kuat (huruf besar+kecil+angka) untuk owner tenant baru.
+ * Selaras gaya admin-users: base64url + suffix kelas-karakter.
+ */
+function generatePassword(): string {
+  return `${crypto.randomBytes(12).toString('base64url')}Aa1`;
+}
 
 @Injectable()
 export class AdminTenantsService {
@@ -163,13 +183,110 @@ export class AdminTenantsService {
       where: { status: TenantStatus.ACTIVE },
       select: { plan: true },
     });
-    const mrr = activeTenants.reduce((sum, t) => sum + PLAN_CATALOG[t.plan].price, 0);
+    const mrr = activeTenants.reduce(
+      (sum, t) => sum + PLAN_CATALOG[t.plan].price,
+      0,
+    );
 
     return { total, active, trial, suspended, cancelled, mrr };
   }
 
+  /**
+   * Provisioning tenant baru (Super Admin): Tenant + Owner + Outlet pertama +
+   * Subscription awal, atomik dalam satu transaksi. Password owner di-generate &
+   * dikembalikan SEKALI (owner wajib ganti saat login pertama). Limit & harga
+   * langganan mengikuti PLAN_CATALOG.
+   */
+  async createTenant(dto: CreateTenantDto) {
+    const slug = dto.slug.trim().toLowerCase();
+    const email = dto.email.trim().toLowerCase();
+    const ownerEmail = dto.ownerEmail.trim().toLowerCase();
+
+    // Pre-check unik (pesan ramah) — slug & email tenant, email owner.
+    const [slugTaken, tenantEmailTaken, ownerEmailTaken] = await Promise.all([
+      this.prisma.tenant.findUnique({ where: { slug }, select: { id: true } }),
+      this.prisma.tenant.findUnique({ where: { email }, select: { id: true } }),
+      this.prisma.user.findUnique({
+        where: { email: ownerEmail },
+        select: { id: true },
+      }),
+    ]);
+    if (slugTaken)
+      throw new ConflictException('Kode toko (slug) sudah dipakai.');
+    if (tenantEmailTaken)
+      throw new ConflictException('Email tenant sudah terdaftar.');
+    if (ownerEmailTaken)
+      throw new ConflictException('Email owner sudah terdaftar.');
+
+    const def = PLAN_CATALOG[dto.plan];
+    const password = generatePassword();
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const tenant = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.tenant.create({
+        data: {
+          name: dto.name.trim(),
+          slug,
+          email,
+          phone: dto.phone?.trim() || null,
+          billingEmail: dto.billingEmail?.trim().toLowerCase() || null,
+          plan: dto.plan,
+          status: dto.status,
+          maxOutlets: def.maxOutlets,
+          maxStaff: def.maxStaff,
+        },
+      });
+
+      // Owner: TENANT_OWNER lintas-outlet (tanpa binding outlet); wajib ganti pw.
+      await tx.user.create({
+        data: {
+          tenantId: created.id,
+          name: dto.ownerName.trim(),
+          email: ownerEmail,
+          phone: dto.ownerPhone?.trim() || null,
+          passwordHash,
+          role: Role.TENANT_OWNER,
+          status: UserStatus.ACTIVE,
+          mustChangePassword: true,
+        },
+      });
+
+      await tx.outlet.create({
+        data: { tenantId: created.id, name: dto.outletName.trim() },
+      });
+
+      // Langganan awal: harga dari katalog; plan berbayar default belum lunas.
+      await tx.subscription.create({
+        data: {
+          tenantId: created.id,
+          plan: dto.plan,
+          startDate: new Date(),
+          amount: def.price,
+          isPaid: def.price === 0,
+          paidAt: def.price === 0 ? new Date() : null,
+        },
+      });
+
+      return created;
+    });
+
+    return {
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      ownerEmail,
+      // Plaintext SEKALI untuk disampaikan ke owner (tak disimpan; audit tak menangkap body).
+      ownerPassword: password,
+      message:
+        'Tenant berhasil dibuat. Sampaikan password ini ke owner — tidak ditampilkan lagi.',
+    };
+  }
+
   private async ensureExists(id: string) {
-    const t = await this.prisma.tenant.findUnique({ where: { id }, select: { id: true } });
+    const t = await this.prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     if (!t) throw new NotFoundException('Tenant tidak ditemukan');
   }
 }

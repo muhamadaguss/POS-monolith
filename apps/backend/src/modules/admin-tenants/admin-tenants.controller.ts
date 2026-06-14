@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AdminTenantsService } from './admin-tenants.service';
@@ -6,6 +14,7 @@ import {
   TenantQueryDto,
   UpdateTenantStatusDto,
   UpdateTenantPlanDto,
+  CreateTenantDto,
 } from './dto/admin-tenant.dto';
 import { Roles } from '../../common/decorators';
 
@@ -23,9 +32,19 @@ export class AdminTenantsController {
   }
 
   @Get('tenants')
-  @ApiOperation({ summary: 'Daftar semua tenant (search + filter status/plan)' })
+  @ApiOperation({
+    summary: 'Daftar semua tenant (search + filter status/plan)',
+  })
   findAll(@Query() query: TenantQueryDto) {
     return this.adminTenantsService.findAll(query);
+  }
+
+  @Post('tenants')
+  @ApiOperation({
+    summary: 'Provisioning tenant baru (tenant + owner + outlet + langganan)',
+  })
+  create(@Body() dto: CreateTenantDto) {
+    return this.adminTenantsService.createTenant(dto);
   }
 
   @Get('tenants/:id')
@@ -41,7 +60,9 @@ export class AdminTenantsController {
   }
 
   @Patch('tenants/:id/plan')
-  @ApiOperation({ summary: 'Ganti paket tenant (override + warning bila melebihi batas)' })
+  @ApiOperation({
+    summary: 'Ganti paket tenant (override + warning bila melebihi batas)',
+  })
   updatePlan(@Param('id') id: string, @Body() dto: UpdateTenantPlanDto) {
     return this.adminTenantsService.updatePlan(id, dto.plan);
   }

@@ -78,6 +78,32 @@ export interface TenantPlanUpdateResult {
   warnings: string[];
 }
 
+/** Status awal yang boleh dipilih saat membuat tenant (subset). */
+export type InitialTenantStatus = 'TRIAL' | 'ACTIVE';
+
+export interface CreateTenantInput {
+  name: string;
+  slug: string;
+  email: string;
+  phone?: string;
+  billingEmail?: string;
+  plan: PlanCode;
+  status: InitialTenantStatus;
+  outletName: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone?: string;
+}
+
+export interface CreateTenantResult {
+  id: string;
+  name: string;
+  slug: string;
+  ownerEmail: string;
+  ownerPassword: string;
+  message: string;
+}
+
 // ── Manajemen User (lintas-tenant, Super Admin) ─────────────────────────────
 
 export type UserRole = 'SUPER_ADMIN' | 'TENANT_OWNER' | 'STORE_MANAGER' | 'CASHIER';

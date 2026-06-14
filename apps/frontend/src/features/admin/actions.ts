@@ -10,6 +10,8 @@ import type {
   TenantStatus,
   TenantPlanUpdateResult,
   TenantStatusUpdateResult,
+  CreateTenantInput,
+  CreateTenantResult,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
@@ -92,5 +94,12 @@ export async function setTenantPlanAction(
   return adminFetch<TenantPlanUpdateResult>(`/admin/tenants/${id}/plan`, {
     method: 'PATCH',
     body: JSON.stringify({ plan }),
+  });
+}
+
+export async function createTenantAction(input: CreateTenantInput): Promise<CreateTenantResult> {
+  return adminFetch<CreateTenantResult>('/admin/tenants', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
