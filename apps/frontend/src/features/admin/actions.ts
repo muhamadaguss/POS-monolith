@@ -6,6 +6,10 @@ import type {
   AssignableRole,
   ResetPasswordResult,
   UserStatusValue,
+  PlanCode,
+  TenantStatus,
+  TenantPlanUpdateResult,
+  TenantStatusUpdateResult,
 } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
@@ -66,5 +70,27 @@ export async function resetUserPasswordAction(id: string): Promise<ResetPassword
   return adminFetch<ResetPasswordResult>(`/admin/users/${id}/reset-password`, {
     method: 'POST',
     body: JSON.stringify({}),
+  });
+}
+
+// ── Manajemen Tenant ────────────────────────────────────────────────────────
+
+export async function setTenantStatusAction(
+  id: string,
+  status: TenantStatus,
+): Promise<TenantStatusUpdateResult> {
+  return adminFetch<TenantStatusUpdateResult>(`/admin/tenants/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function setTenantPlanAction(
+  id: string,
+  plan: PlanCode,
+): Promise<TenantPlanUpdateResult> {
+  return adminFetch<TenantPlanUpdateResult>(`/admin/tenants/${id}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ plan }),
   });
 }

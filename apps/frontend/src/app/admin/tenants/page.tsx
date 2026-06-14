@@ -1,36 +1,41 @@
-'use client';
-
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
+  ShieldAlert,
   ArrowLeft,
-  Search,
-  RefreshCw,
   Building2,
   CheckCircle2,
   Clock,
   Ban,
   Wallet,
-  ChevronRight,
 } from 'lucide-react';
-import { useAuthStore } from '@/features/auth/store';
-import { getPlatformStats, listTenants } from '@/features/admin/api';
-import type {
-  PlatformStats,
-  TenantListResult,
-  TenantStatus,
-  PlanCode,
-} from '@/features/admin/types';
+import { verifySession } from '@/lib/session';
+import { fetchPlatformStats, fetchTenants } from '@/features/admin/server';
 import { IDR } from '@/lib/format';
+import { TenantsView } from './TenantsView';
 
-const STATUS_BADGE: Record<TenantStatus, { label: string; cls: string }> = {
-  ACTIVE: { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700' },
-  TRIAL: { label: 'Masa Coba', cls: 'bg-blue-100 text-blue-700' },
-  SUSPENDED: { label: 'Ditangguhkan', cls: 'bg-red-100 text-red-700' },
-  CANCELLED: { label: 'Dibatalkan', cls: 'bg-gray-100 text-gray-600' },
-};
-
-const PAGE_SIZE = 20;
+/** Header admin (selaras gaya halaman admin lain) dengan tombol kembali ke /admin. */
+function AdminHeader() {
+  return (
+    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
+      <Link
+        href="/admin"
+        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+        aria-label="Kembali"
+      >
+        <ArrowLeft className="w-4 h-4" />
+      </Link>
+      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600">
+        <span className="text-white font-bold text-sm">K</span>
+      </div>
+      <div>
+        <span className="font-bold text-gray-900">Manajemen Tenant</span>
+        <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+          Super Admin
+        </span>
+      </div>
+    </header>
+  );
+}
 
 function StatCard({
   icon: Icon,
@@ -56,283 +61,101 @@ function StatCard({
   );
 }
 
-export default function AdminTenantsPage() {
-  const router = useRouter();
-  // Ambil PRIMITIF stabil dari shim, BUKAN objek user. Shim membangun objek user
-  // baru tiap render (lapis di atas useSession) → memakai `user` di dependency
-  // useEffect memicu loop fetch tak terbatas (429). role/isLoggedIn = string/bool stabil.
-  const userRole = useAuthStore((s) => s.user?.role ?? null);
-  const isLoggedIn = useAuthStore((s) => s.user != null);
-  const [hydrated, setHydrated] = useState(false);
+const PAGE_SIZE = 20;
+const VALID_STATUS = ['ACTIVE', 'TRIAL', 'SUSPENDED', 'CANCELLED'];
+const VALID_PLAN = ['FREE', 'STARTER', 'GROWTH', 'ENTERPRISE'];
 
-  const [stats, setStats] = useState<PlatformStats | null>(null);
-  const [data, setData] = useState<TenantListResult | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface SearchParams {
+  search?: string;
+  status?: string;
+  plan?: string;
+  page?: string;
+}
 
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TenantStatus | ''>('');
-  const [planFilter, setPlanFilter] = useState<PlanCode | ''>('');
-  const [page, setPage] = useState(1);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+/**
+ * Manajemen Tenant lintas-tenant — Server Component (khusus Super Admin).
+ * KPI + daftar di-fetch di server (serverFetch) sesuai searchParams; interaktivitas
+ * (filter/pagination/navigasi baris) di TenantsView (Client Component).
+ */
+export default async function AdminTenantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const session = await verifySession();
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  // Guard Super Admin.
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!isLoggedIn) router.replace('/login');
-    else if (userRole !== 'SUPER_ADMIN') router.replace('/dashboard');
-  }, [hydrated, isLoggedIn, userRole, router]);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [s, d] = await Promise.all([
-        getPlatformStats(),
-        listTenants({
-          search: search || undefined,
-          status: statusFilter || undefined,
-          plan: planFilter || undefined,
-          page,
-          limit: PAGE_SIZE,
-        }),
-      ]);
-      setStats(s);
-      setData(d);
-    } catch {
-      // 401 ditangani interceptor.
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, statusFilter, planFilter, page]);
-
-  useEffect(() => {
-    if (hydrated && userRole === 'SUPER_ADMIN') load();
-  }, [hydrated, userRole, load]);
-
-  function handleSearchInput(v: string) {
-    setSearchInput(v);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setSearch(v);
-      setPage(1);
-    }, 300);
-  }
-
-  if (!hydrated || !isLoggedIn || userRole !== 'SUPER_ADMIN') {
+  // RBAC: hanya Super Admin (selaras backend @Roles(SUPER_ADMIN) & proxy).
+  if (session.user.role !== 'SUPER_ADMIN') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-gray-50">
+        <AdminHeader />
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <ShieldAlert className="w-12 h-12 text-gray-200 mb-3" />
+          <h1 className="text-lg font-bold text-gray-900">Akses Ditolak</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Hanya Super Admin yang dapat mengelola tenant platform.
+          </p>
+        </div>
       </div>
     );
   }
 
-  const items = data?.items ?? [];
-  const meta = data?.meta;
+  const sp = await searchParams;
+  const search = sp.search?.trim() ?? '';
+  const status = VALID_STATUS.includes(sp.status ?? '') ? sp.status! : '';
+  const plan = VALID_PLAN.includes(sp.plan ?? '') ? sp.plan! : '';
+  const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1);
+
+  const [stats, data] = await Promise.all([
+    fetchPlatformStats(),
+    fetchTenants({
+      search: search || undefined,
+      status: (status || undefined) as never,
+      plan: (plan || undefined) as never,
+      page,
+      limit: PAGE_SIZE,
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push('/admin')}
-          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600">
-          <span className="text-white font-bold text-sm">K</span>
-        </div>
-        <div>
-          <span className="font-bold text-gray-900">Manajemen Tenant</span>
-          <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-            Super Admin
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={load}
-          disabled={isLoading}
-          className="ml-auto p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </button>
-      </header>
-
+      <AdminHeader />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-5">
         {/* KPI */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard
             icon={Building2}
             label="Total Tenant"
-            value={String(stats?.total ?? 0)}
+            value={String(stats.total)}
             color="bg-gray-100 text-gray-600"
           />
           <StatCard
             icon={CheckCircle2}
             label="Aktif"
-            value={String(stats?.active ?? 0)}
+            value={String(stats.active)}
             color="bg-emerald-100 text-emerald-600"
           />
           <StatCard
             icon={Clock}
             label="Masa Coba"
-            value={String(stats?.trial ?? 0)}
+            value={String(stats.trial)}
             color="bg-blue-100 text-blue-600"
           />
           <StatCard
             icon={Ban}
             label="Ditangguhkan"
-            value={String(stats?.suspended ?? 0)}
+            value={String(stats.suspended)}
             color="bg-red-100 text-red-600"
           />
           <StatCard
             icon={Wallet}
             label="Estimasi MRR"
-            value={IDR.format(stats?.mrr ?? 0)}
+            value={IDR.format(stats.mrr)}
             color="bg-violet-100 text-violet-600"
           />
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              placeholder="Cari nama / email / kode toko…"
-              value={searchInput}
-              onChange={(e) => handleSearchInput(e.target.value)}
-              className="w-full h-9 rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value as TenantStatus | '');
-              setPage(1);
-            }}
-            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
-          >
-            <option value="">Semua status</option>
-            <option value="ACTIVE">Aktif</option>
-            <option value="TRIAL">Masa Coba</option>
-            <option value="SUSPENDED">Ditangguhkan</option>
-            <option value="CANCELLED">Dibatalkan</option>
-          </select>
-          <select
-            value={planFilter}
-            onChange={(e) => {
-              setPlanFilter(e.target.value as PlanCode | '');
-              setPage(1);
-            }}
-            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
-          >
-            <option value="">Semua paket</option>
-            <option value="FREE">Free</option>
-            <option value="STARTER">Starter</option>
-            <option value="GROWTH">Growth</option>
-            <option value="ENTERPRISE">Enterprise</option>
-          </select>
-        </div>
-
-        {/* Tabel */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="px-5 py-3 font-medium">Bisnis</th>
-                  <th className="px-5 py-3 font-medium">Email</th>
-                  <th className="px-5 py-3 font-medium">Paket</th>
-                  <th className="px-5 py-3 font-medium text-right">Outlet</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && items.length === 0 ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      <td colSpan={6} className="px-5 py-4">
-                        <div className="h-5 bg-gray-100 rounded animate-pulse" />
-                      </td>
-                    </tr>
-                  ))
-                ) : items.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-gray-400">
-                      Tidak ada tenant.
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((t) => (
-                    <tr
-                      key={t.id}
-                      onClick={() => router.push(`/admin/tenants/${t.id}`)}
-                      className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-gray-900">{t.name}</p>
-                        <p className="text-xs text-gray-400 font-mono">{t.slug}</p>
-                      </td>
-                      <td className="px-5 py-3 text-gray-600">{t.email}</td>
-                      <td className="px-5 py-3 text-gray-700">{t.plan}</td>
-                      <td className="px-5 py-3 text-right tabular-nums text-gray-600">
-                        {t.outletCount}/{t.maxOutlets >= 999 ? '∞' : t.maxOutlets}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[t.status].cls}`}
-                        >
-                          {STATUS_BADGE[t.status].label}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <ChevronRight className="w-4 h-4 text-gray-300 inline" />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {meta && meta.total > 0 && (
-            <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-xs text-gray-500 bg-gray-50">
-              <span>
-                Menampilkan {(meta.page - 1) * meta.limit + 1}–
-                {Math.min(meta.page * meta.limit, meta.total)} dari {meta.total} tenant
-              </span>
-              {meta.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="px-2 py-1 rounded-lg border border-gray-200 bg-white disabled:opacity-40"
-                  >
-                    Sebelumnya
-                  </button>
-                  <span className="tabular-nums">
-                    {meta.page} / {meta.totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={page >= meta.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="px-2 py-1 rounded-lg border border-gray-200 bg-white disabled:opacity-40"
-                  >
-                    Berikutnya
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <TenantsView data={data} search={search} status={status} plan={plan} page={page} />
       </main>
     </div>
   );

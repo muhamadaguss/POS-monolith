@@ -66,6 +66,18 @@ export interface TenantQuery {
   limit?: number;
 }
 
+export interface TenantStatusUpdateResult {
+  id: string;
+  status: TenantStatus;
+}
+
+export interface TenantPlanUpdateResult {
+  id: string;
+  plan: PlanCode;
+  planName: string;
+  warnings: string[];
+}
+
 // ── Manajemen User (lintas-tenant, Super Admin) ─────────────────────────────
 
 export type UserRole = 'SUPER_ADMIN' | 'TENANT_OWNER' | 'STORE_MANAGER' | 'CASHIER';
