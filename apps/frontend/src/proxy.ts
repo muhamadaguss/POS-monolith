@@ -28,7 +28,14 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/login', nextUrl));
   }
 
-  // 2) Sudah login tapi di /login → arahkan ke beranda sesuai peran.
+  // 2) Wajib ganti password (force-change) → kunci ke /change-password sampai selesai.
+  //    Berlaku untuk SEMUA role & path (kecuali halaman itu sendiri). Logout tetap
+  //    bisa karena /api/auth/* di luar matcher.
+  if (isLoggedIn && user!.mustChangePassword && path !== '/change-password') {
+    return NextResponse.redirect(new URL('/change-password', nextUrl));
+  }
+
+  // 3) Sudah login tapi di /login → arahkan ke beranda sesuai peran.
   if (isLoggedIn && path === '/login') {
     return NextResponse.redirect(new URL(homeFor(user!), nextUrl));
   }

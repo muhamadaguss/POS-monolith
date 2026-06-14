@@ -325,3 +325,72 @@ describe('AuthService — changePassword', () => {
     expect(res).toHaveProperty('message');
   });
 });
+
+/**
+ * Fokus: respons login membawa `mustChangePassword` (dipakai frontend untuk
+ * memaksa /change-password). Pakai Super Admin agar lewat jalur paling ringkas
+ * (tanpa validasi tenant/outlet).
+ */
+describe('AuthService — login mengembalikan mustChangePassword', () => {
+  let service: AuthService;
+  let prisma: MockPrisma;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('refresh.jwt'),
+            signAsync: jest.fn().mockResolvedValue('access.jwt'),
+            verify: jest.fn(),
+          },
+        },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+      ],
+    }).compile();
+    service = moduleRef.get(AuthService);
+
+    prisma.user.update.mockResolvedValue({});
+    prisma.refreshToken.create.mockResolvedValue({ id: 'tok' });
+    mockedBcrypt.compare.mockResolvedValue(true as never);
+  });
+
+  it('user dgn mustChangePassword=true → response.user.mustChangePassword true', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'sa-1',
+      name: 'Super',
+      email: 'sa@kasirku.com',
+      passwordHash: 'hash',
+      role: Role.SUPER_ADMIN,
+      status: UserStatus.ACTIVE,
+      tenantId: null,
+      mustChangePassword: true,
+      tenant: null,
+    });
+
+    const res = await service.login({ email: 'sa@kasirku.com', password: 'x' });
+    expect(res.user.mustChangePassword).toBe(true);
+  });
+
+  it('user normal → response.user.mustChangePassword false', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'sa-2',
+      name: 'Super2',
+      email: 'sa2@kasirku.com',
+      passwordHash: 'hash',
+      role: Role.SUPER_ADMIN,
+      status: UserStatus.ACTIVE,
+      tenantId: null,
+      mustChangePassword: false,
+      tenant: null,
+    });
+
+    const res = await service.login({ email: 'sa2@kasirku.com', password: 'x' });
+    expect(res.user.mustChangePassword).toBe(false);
+  });
+});
