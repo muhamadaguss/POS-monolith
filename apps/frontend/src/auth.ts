@@ -25,6 +25,8 @@ export interface AuthUser {
   tenantId: string | null;
   currentOutletId: string | null;
   permissions: string[];
+  /** true → user wajib ganti password sebelum memakai aplikasi (force-change). */
+  mustChangePassword?: boolean;
 }
 
 export interface OutletOption {
@@ -159,6 +161,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           backendAccessToken: string;
           backendRefreshToken: string;
           outletUpdate: Pick<AuthUser, 'currentOutletId' | 'role' | 'permissions'>;
+          mustChangePassword: boolean;
         }>;
         if (s.backendAccessToken) {
           token.backendAccessToken = s.backendAccessToken;
@@ -168,6 +171,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Merge parsial ke appUser yang sudah ada (jangan timpa field lain).
         if (s.outletUpdate && token.appUser) {
           token.appUser = { ...token.appUser, ...s.outletUpdate };
+        }
+        // Clear flag force-change setelah user berhasil ganti password.
+        if (typeof s.mustChangePassword === 'boolean' && token.appUser) {
+          token.appUser = { ...token.appUser, mustChangePassword: s.mustChangePassword };
         }
         return token;
       }
@@ -205,6 +212,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           tenantId: appUser.tenantId,
           currentOutletId: appUser.currentOutletId,
           permissions: appUser.permissions,
+          mustChangePassword: appUser.mustChangePassword ?? false,
         };
       }
       session.outlets = (token.outlets as OutletOption[]) ?? [];

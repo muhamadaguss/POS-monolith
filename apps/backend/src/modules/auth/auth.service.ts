@@ -142,6 +142,9 @@ export class AuthService {
         tenantId: user.tenantId,
         currentOutletId: resolvedOutletId,
         permissions: permissions as string[],
+        // Wajib ganti password (mis. setelah reset oleh Super Admin) → frontend
+        // memaksa user ke /change-password sebelum bisa memakai aplikasi.
+        mustChangePassword: user.mustChangePassword,
       },
       outlets,
       accessToken,
