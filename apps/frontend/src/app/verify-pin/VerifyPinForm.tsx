@@ -7,11 +7,13 @@ import { Loader2, AlertTriangle, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { verifyPinAction } from '@/features/auth/actions';
 import { logoutAction } from '@/features/auth/actions';
+import { useSelectOutlet } from '@/features/auth/hooks';
 
 /** Verifikasi PIN kasir (gate login). Sukses → tandai sesi & masuk POS. */
 export function VerifyPinForm() {
   const router = useRouter();
-  const { update } = useSession();
+  const { update, data: session } = useSession();
+  const { selectOutlet } = useSelectOutlet();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -27,7 +29,14 @@ export function VerifyPinForm() {
     try {
       await verifyPinAction(pin);
       await update({ pinVerified: true });
-      router.replace('/pos');
+      // Kasir umumnya 1 outlet → auto-pilih agar tak perlu layar select-outlet.
+      // Bila >1 outlet (diizinkan sistem), tampilkan layar pilih.
+      const outlets = session?.outlets ?? [];
+      if (outlets.length === 1) {
+        await selectOutlet(outlets[0].id, '/pos');
+      } else {
+        router.replace('/pos');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'PIN salah';
       setError(msg);
