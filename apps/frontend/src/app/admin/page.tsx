@@ -61,10 +61,11 @@ export default function AdminPage() {
         adminName={user.name ?? 'Super Admin'}
         loginAt={sessionData?.loginAt}
         extra={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Link
               href="/change-password"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              aria-label="Ganti Password"
             >
               <KeyRound className="w-4 h-4" />
               <span className="hidden lg:inline">Ganti Password</span>
@@ -72,10 +73,11 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={logout}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              aria-label="Keluar"
             >
               <LogOut className="w-4 h-4" />
-              Keluar
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         }

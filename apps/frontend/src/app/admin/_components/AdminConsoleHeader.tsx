@@ -51,11 +51,11 @@ export function AdminConsoleHeader({
   }, []);
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
+    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center gap-2 sm:gap-3">
       {backHref && (
         <Link
           href={backHref}
-          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors shrink-0"
           aria-label="Kembali"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -67,15 +67,15 @@ export function AdminConsoleHeader({
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-bold text-gray-900 truncate">{title}</span>
-          <span className="text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
+          <span className="hidden sm:inline text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100 shrink-0">
             INTERNAL ONLY
           </span>
         </div>
-        <p className="text-xs text-gray-400">Super Admin Console</p>
+        <p className="text-xs text-gray-400 truncate">Super Admin Console</p>
       </div>
 
-      <div className="ml-auto flex items-center gap-4">
-        <div className="hidden md:block text-right leading-tight">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="hidden lg:block text-right leading-tight">
           <p className="text-xs font-medium text-gray-700">
             {new Date().toLocaleDateString('id-ID', {
               weekday: 'long',
@@ -99,15 +99,17 @@ export function AdminConsoleHeader({
           <RefreshCw className={`w-4 h-4 ${isPending ? 'animate-spin' : ''}`} />
         </button>
         {/* Notifikasi dekoratif (belum difungsikan). */}
-        <span className="relative p-2 rounded-lg text-gray-400" aria-hidden>
+        <span className="relative hidden sm:inline-flex p-2 rounded-lg text-gray-400" aria-hidden>
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
         </span>
-        <div className="flex items-center gap-2 pl-4 border-l border-gray-200">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+        <div className="flex items-center gap-2 pl-2 sm:pl-3 sm:border-l sm:border-gray-200 shrink-0">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
             {getInitials(adminName)}
           </div>
-          <span className="hidden sm:block text-sm font-medium text-gray-700">{adminName}</span>
+          <span className="hidden md:block text-sm font-medium text-gray-700 truncate max-w-40">
+            {adminName}
+          </span>
         </div>
         {extra}
       </div>
