@@ -1,6 +1,6 @@
 # PRD — Kasirku POS Platform v1.0
 
-**Versi:** 1.0 | **Target MVP:** Q3 2026 | **Status:** Phase 2 Backend ✅ Selesai | **Phase 3:** Frontend Next.js 🔄 In Progress
+**Versi:** 1.0 | **Target MVP:** Q3 2026 | **Status:** Phase 2 Backend ✅ Selesai | **Phase 3:** Frontend Next.js 🔄 Hampir Selesai (sisa: UI Transfer Order)
 
 ---
 
@@ -157,7 +157,7 @@ UMKM yang berkembang menjadi multi-cabang kesulitan:
 - Sales summary per outlet/tanggal
 - Top products by revenue/quantity
 - Shift summary (pendapatan, transaksi, metode bayar)
-- Export CSV
+- Export laporan penjualan ke Excel (.xlsx) — `GET /reports/sales/export` ✅
 
 ### 6.10 Audit Log
 
@@ -190,7 +190,7 @@ UMKM yang berkembang menjadi multi-cabang kesulitan:
 | Inventory    | `/inventory`    | stok, opname, transfer                |
 | Shifts       | `/shifts`       | buka, tutup, list                     |
 | Transactions | `/transactions` | checkout, void, list                  |
-| Reports      | `/reports`      | sales, products, shifts, CSV          |
+| Reports      | `/reports`      | sales, products, shifts, export Excel |
 | Audit Logs   | `/audit-logs`   | list dengan filter                    |
 
 Dokumentasi lengkap: `http://localhost:3001/api/docs`
@@ -237,7 +237,7 @@ ERD lengkap: [packages/database/ERD.md](packages/database/ERD.md)
 | ----------- | -------------------------------------------------------------- | ------------------- |
 | **Phase 1** | Setup monorepo, database schema, Prisma migration              | ✅ Selesai          |
 | **Phase 2** | NestJS Backend — semua API endpoint + AuditLog                 | ✅ Selesai          |
-| **Phase 3** | Next.js Frontend — Auth, POS Screen, Manager & Owner Dashboard | 🔄 In Progress      |
+| **Phase 3** | Next.js Frontend — Auth, POS Screen, Manager/Owner Dashboard, Konsol Super Admin | 🔄 Hampir Selesai (sisa: UI Transfer Order antar-outlet) |
 | **Phase 4** | Deployment, CI/CD, monitoring                                  | 🔲 Belum            |
 
 ---
@@ -299,10 +299,10 @@ _Dashboard menggunakan tata letak standar Web Desktop untuk mempermudah peninjau
   - ✅ Shadcn DropdownMenu di atas sidebar menampilkan outlet aktif + role.
   - ✅ Hanya TENANT_OWNER dan SUPER_ADMIN bisa buka dropdown.
   - ✅ Klik item → call `selectOutletApi` → update `currentOutletId` real-time di store.
-- ✅ **Dashboard placeholder** (`/dashboard`): halaman kosong siap diisi KPI cards.
-- 🔲 **Halaman Analytics & Keuangan**: KPI Cards (omset, transaksi, HPP, margin), line/bar chart tren penjualan.
-- 🔲 **Halaman Inventaris & Mutasi**: Datatable stok, filter kategori, sort low stock, form Stock Opname, Transfer Order dengan flow status `PENDING → APPROVED/REJECTED`.
-- 🔲 **Halaman Audit Log Viewer**: Tabel kronologis, modal JSON Diff `old_value` vs `new_value`.
+- ✅ **Halaman Analytics & Keuangan** (`/dashboard`): KPI Cards (omset, transaksi, HPP, margin), bar chart tren penjualan. _(detail di 11.5)_
+- ✅ **Halaman Inventaris & Mutasi** (`/inventory`): Datatable stok, filter kategori, sort low stock, form Stock Opname. _(detail di 11.5)_
+- 🔲 **UI Transfer Order antar-outlet**: backend sudah lengkap (`/inventory/transfers` POST/GET + flow status `PENDING → APPROVED/REJECTED`); **halaman frontend belum dibuat** — satu-satunya fitur Phase 3 yang tersisa.
+- ✅ **Halaman Audit Log Viewer** (`/audit-log`): Tabel kronologis, modal JSON Diff `old_value` vs `new_value`. _(detail di 11.5)_
 
 ### 11.5 Fitur Lanjutan
 
@@ -311,8 +311,15 @@ _Dashboard menggunakan tata letak standar Web Desktop untuk mempermudah peninjau
 - ✅ **Inventaris** (`/inventory`): Datatable stok dengan search + filter kategori + sort (nama/stok/status). Row highlight merah/kuning untuk stok habis/rendah. Summary footer (total produk, jumlah habis, jumlah stok rendah). Modal Stock Opname — input stok fisik per produk, submit update ke API.
 - ✅ **Audit Log Viewer** (`/audit-log`): Tabel kronologis semua aktivitas sensitif. Filter per tipe aksi. Badge warna per action type. Tombol "Lihat Detail" tiap baris → modal JSON Diff menampilkan `old_value` dan `new_value` dalam format code block.
 - ✅ **Sidebar diperbarui**: Tambah link Shift Management, fix semua href ke path aktual (`/inventory`, `/audit-log`, `/shift`), tambah ikon `Clock` dan `Boxes`.
-- 🔲 **Manajemen Staf**: CRUD user, assign role per outlet.
-- 🔲 **Void Transaksi**: Input `voidReason` + modal PIN 6-digit Manager.
-- 🔲 **Integrasi Diskon**: Apply `discountId` di keranjang, tampilkan baris diskon di summary.
-- 🔲 **Billing & Subscription**: Halaman paket langganan.
-- 🔲 **Export CSV** laporan penjualan.
+- ✅ **Manajemen Staf** (`/users`): CRUD user, assign role per outlet, reset password & PIN sebagai aksi tersendiri (Owner/Manager).
+- ✅ **Void & Refund Transaksi** (`/pos/transactions`): Input alasan + modal PIN manager; stok dikembalikan & status `VOIDED`/`REFUNDED` di server.
+- ✅ **Integrasi Diskon**: Apply `discountId` di keranjang, baris diskon tampil di summary keranjang.
+- ✅ **Billing & Subscription** (`/billing`): Halaman paket langganan, daftar invoice, bayar invoice.
+- ✅ **Export laporan penjualan ke Excel** (`/reports`): tombol "Export Excel" memicu unduhan `.xlsx` dari `/reports/sales/export`.
+
+### 11.6 Konsol Super Admin ✅ Selesai
+
+- ✅ **Manajemen Tenant** (`/admin/tenants`): daftar + filter + detail tenant, provisioning tenant baru, ubah status & paket.
+- ✅ **Manajemen User lintas-tenant** (`/admin/users`): KPI + daftar user semua tenant, tambah user, reset kredensial.
+- ✅ **Laporan Platform** (`/admin/reports`): pendapatan SaaS, tren bulanan, distribusi paket, pertumbuhan nyata, aktivitas terkini, ekspor Excel.
+- ✅ **Gate PIN kasir**: wajib verifikasi PIN setelah login (kasir); kunci akun 3× gagal + auto-unlock 15 menit; paksa set PIN bila belum ada.
