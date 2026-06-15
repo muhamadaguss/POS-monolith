@@ -1,5 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Role, UserStatus } from '@prisma/client';
@@ -392,5 +396,193 @@ describe('AuthService — login mengembalikan mustChangePassword', () => {
 
     const res = await service.login({ email: 'sa2@kasirku.com', password: 'x' });
     expect(res.user.mustChangePassword).toBe(false);
+  });
+});
+
+/**
+ * Fokus: gate PIN setelah login (kasir) — setup, verifikasi, lock 3× gagal,
+ * dan auto-unlock saat login setelah masa kunci lewat.
+ */
+describe('AuthService — PIN gate (setup/verify/lock/auto-unlock)', () => {
+  let service: AuthService;
+  let prisma: MockPrisma;
+
+  const cashier = {
+    userId: 'user-1',
+    email: 'kasir@toko.com',
+    tenantId: 'tenant-1',
+    currentOutletId: 'outlet-1',
+    role: Role.CASHIER,
+    permissions: [],
+  } as AuthenticatedUser;
+
+  beforeEach(async () => {
+    prisma = createMockPrisma();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('refresh.jwt'),
+            signAsync: jest.fn().mockResolvedValue('access.jwt'),
+            verify: jest.fn(),
+          },
+        },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
+        { provide: AuditLogsService, useValue: { log: jest.fn() } },
+      ],
+    }).compile();
+    service = moduleRef.get(AuthService);
+    prisma.user.update.mockResolvedValue({});
+  });
+
+  describe('setupPin', () => {
+    it('menolak bila user sudah punya PIN', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', pin: 'hash-pin' });
+      await expect(service.setupPin(cashier, '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('membuat PIN ter-hash saat belum ada PIN', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', pin: null });
+      mockedBcrypt.hash.mockResolvedValue('hash-baru' as never);
+
+      const res = await service.setupPin(cashier, '123456');
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: { pin: 'hash-baru', pinAttempts: 0 },
+        }),
+      );
+      expect(res).toHaveProperty('message');
+    });
+  });
+
+  describe('verifyPin', () => {
+    it('PIN benar → verified true + reset counter', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        tenantId: 'tenant-1',
+        pin: 'hash-pin',
+        pinAttempts: 2,
+      });
+      mockedBcrypt.compare.mockResolvedValue(true as never);
+
+      const res = await service.verifyPin(cashier, '123456');
+
+      expect(res).toEqual({ verified: true });
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { pinAttempts: 0 } }),
+      );
+    });
+
+    it('PIN salah (<batas) → Unauthorized + increment counter', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        tenantId: 'tenant-1',
+        pin: 'hash-pin',
+        pinAttempts: 0,
+      });
+      mockedBcrypt.compare.mockResolvedValue(false as never);
+
+      await expect(service.verifyPin(cashier, '000000')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { pinAttempts: 1 } }),
+      );
+    });
+
+    it('PIN salah ke-3 → akun LOCKED + revoke token + Forbidden', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        tenantId: 'tenant-1',
+        pin: 'hash-pin',
+        pinAttempts: 2, // percobaan ini jadi yang ke-3
+      });
+      mockedBcrypt.compare.mockResolvedValue(false as never);
+
+      await expect(service.verifyPin(cashier, '000000')).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      const lockUpdate = prisma.user.update.mock.calls.find(
+        (c: any) => c[0].data?.status === UserStatus.LOCKED,
+      );
+      expect(lockUpdate).toBeDefined();
+      expect(lockUpdate[0].data.pinLockedUntil).toBeInstanceOf(Date);
+      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1', revokedAt: null },
+          data: { revokedAt: expect.any(Date) },
+        }),
+      );
+    });
+  });
+
+  describe('login auto-unlock', () => {
+    const lockedUser = (pinLockedUntil: Date | null) => ({
+      id: 'user-1',
+      name: 'Kasir',
+      email: 'kasir@toko.com',
+      passwordHash: 'hash',
+      role: Role.CASHIER,
+      status: UserStatus.LOCKED,
+      tenantId: 'tenant-1',
+      pin: 'hash-pin',
+      pinAttempts: 3,
+      pinLockedUntil,
+      mustChangePassword: false,
+      tenant: { id: 'tenant-1', status: 'ACTIVE', slug: 'demo' },
+    });
+
+    it('akun terkunci & masa kunci BELUM lewat → tolak login', async () => {
+      prisma.user.findUnique.mockResolvedValue(
+        lockedUser(new Date(Date.now() + 5 * 60 * 1000)),
+      );
+      mockedBcrypt.compare.mockResolvedValue(true as never);
+
+      await expect(
+        service.login({ email: 'kasir@toko.com', password: 'x', tenantSlug: 'demo' }),
+      ).rejects.toThrow(UnauthorizedException);
+      // tidak ada update auto-unlock
+      const unlock = prisma.user.update.mock.calls.find(
+        (c: any) => c[0].data?.status === UserStatus.ACTIVE,
+      );
+      expect(unlock).toBeUndefined();
+    });
+
+    it('akun terkunci & masa kunci SUDAH lewat → auto-unlock lalu lanjut', async () => {
+      prisma.user.findUnique.mockResolvedValue(
+        lockedUser(new Date(Date.now() - 60 * 1000)),
+      );
+      prisma.userOutletRole.findUnique.mockResolvedValue({
+        role: Role.CASHIER,
+        outlet: { tenantId: 'tenant-1', isActive: true },
+      });
+      prisma.userOutletRole.findMany.mockResolvedValue([]);
+      prisma.refreshToken.create.mockResolvedValue({ id: 'tok' });
+      mockedBcrypt.compare.mockResolvedValue(true as never);
+
+      const res = await service.login({
+        email: 'kasir@toko.com',
+        password: 'x',
+        tenantSlug: 'demo',
+        outletId: 'outlet-1',
+      });
+
+      const unlock = prisma.user.update.mock.calls.find(
+        (c: any) => c[0].data?.status === UserStatus.ACTIVE,
+      );
+      expect(unlock).toBeDefined();
+      expect(unlock[0].data).toMatchObject({ pinAttempts: 0, pinLockedUntil: null });
+      expect(res.user.requiresPinVerification).toBe(true);
+      expect(res.user.hasPin).toBe(true);
+    });
   });
 });

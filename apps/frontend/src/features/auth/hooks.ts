@@ -55,6 +55,13 @@ export function useLogin() {
         window.location.href = '/dashboard';
         return;
       }
+      // Gate PIN: kasir yang belum verifikasi PIN harus ke /verify-pin (atau
+      // /setup-pin bila belum punya PIN) SEBELUM select-outlet — jika tidak,
+      // rotasi token select-outlet bertabrakan dengan redirect PIN-gate.
+      if (user.requiresPinVerification && !session.pinVerified) {
+        window.location.href = user.hasPin ? '/verify-pin' : '/setup-pin';
+        return;
+      }
       if (outlets.length === 0) {
         setError('Akun Anda belum memiliki akses ke outlet manapun. Hubungi administrator.');
         await signOut({ redirect: false });
