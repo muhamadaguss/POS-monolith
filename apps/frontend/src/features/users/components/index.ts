@@ -3,3 +3,4 @@ export { CreateDialog } from './CreateDialog';
 export { EditDialog } from './EditDialog';
 export { AssignRoleDialog } from './AssignRoleDialog';
 export { DeactivateDialog } from './DeactivateDialog';
+export { ResetCredentialDialog } from './ResetCredentialDialog';

@@ -10,21 +10,34 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiProperty } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiProperty,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CurrentUser, Roles, RequirePermissions, RequireAnyPermission } from '../../common/decorators';
+import {
+  CurrentUser,
+  Roles,
+  RequirePermissions,
+  RequireAnyPermission,
+} from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { PERMISSIONS } from '../../common/rbac/permissions';
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
 class AssignRoleDto {
   @ApiProperty({ example: 'outlet-cuid', description: 'ID outlet tujuan' })
-  @IsString() @IsNotEmpty() outletId: string;
+  @IsString()
+  @IsNotEmpty()
+  outletId: string;
 
   @ApiProperty({ enum: [Role.STORE_MANAGER, Role.CASHIER] })
-  @IsEnum([Role.STORE_MANAGER, Role.CASHIER]) role: Role;
+  @IsEnum([Role.STORE_MANAGER, Role.CASHIER])
+  role: Role;
 }
 
 @ApiTags('Users')
@@ -35,14 +48,22 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @RequireAnyPermission(PERMISSIONS.STAFF_VIEW_LOCAL, PERMISSIONS.STAFF_MANAGE_LOCAL, PERMISSIONS.STAFF_MANAGE_GLOBAL)
+  @RequireAnyPermission(
+    PERMISSIONS.STAFF_VIEW_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_GLOBAL,
+  )
   @ApiOperation({ summary: 'Daftar semua staf di tenant' })
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.findAll(user);
   }
 
   @Get(':id')
-  @RequireAnyPermission(PERMISSIONS.STAFF_VIEW_LOCAL, PERMISSIONS.STAFF_MANAGE_LOCAL, PERMISSIONS.STAFF_MANAGE_GLOBAL)
+  @RequireAnyPermission(
+    PERMISSIONS.STAFF_VIEW_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_GLOBAL,
+  )
   @ApiOperation({ summary: 'Detail staf berdasarkan ID' })
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.usersService.findOne(id, user);
@@ -57,7 +78,10 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @RequireAnyPermission(PERMISSIONS.STAFF_MANAGE_LOCAL, PERMISSIONS.STAFF_MANAGE_GLOBAL)
+  @RequireAnyPermission(
+    PERMISSIONS.STAFF_MANAGE_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_GLOBAL,
+  )
   @ApiOperation({ summary: 'Update data staf' })
   update(
     @Param('id') id: string,
@@ -65,6 +89,33 @@ export class UsersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.usersService.update(id, dto, user);
+  }
+
+  @Post(':id/reset-password')
+  @RequireAnyPermission(
+    PERMISSIONS.STAFF_MANAGE_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_GLOBAL,
+  )
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset password staf — generate sementara, tampil sekali',
+  })
+  resetPassword(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.resetPassword(id, user);
+  }
+
+  @Post(':id/reset-pin')
+  @RequireAnyPermission(
+    PERMISSIONS.STAFF_MANAGE_LOCAL,
+    PERMISSIONS.STAFF_MANAGE_GLOBAL,
+  )
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset PIN staf — generate 6 digit, tampil sekali' })
+  resetPin(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.resetPin(id, user);
   }
 
   @Delete(':id')

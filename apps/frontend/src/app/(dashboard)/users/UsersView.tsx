@@ -10,6 +10,8 @@ import {
   UserCheck,
   RefreshCw,
   ShieldCheck,
+  KeyRound,
+  Hash,
   Users,
   Store,
   Zap,
@@ -24,6 +26,7 @@ import {
   EditDialog,
   AssignRoleDialog,
   DeactivateDialog,
+  ResetCredentialDialog,
 } from '@/features/users/components';
 
 const AVATAR_CLASS: Record<string, string> = {
@@ -73,6 +76,8 @@ export function UsersView({
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [assignTarget, setAssignTarget] = useState<StaffMember | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<StaffMember | null>(null);
+  const [resetPwTarget, setResetPwTarget] = useState<StaffMember | null>(null);
+  const [resetPinTarget, setResetPinTarget] = useState<StaffMember | null>(null);
 
   const filtered = staff.filter((s) => {
     if (!canManageGlobal && s.role === 'TENANT_OWNER') return false;
@@ -222,6 +227,26 @@ export function UsersView({
                             <Pencil className="w-4 h-4" />
                           </button>
                         )}
+                        {canEdit && (canManageGlobal || s.role !== 'TENANT_OWNER') && (
+                          <button
+                            type="button"
+                            title="Reset Password"
+                            onClick={() => setResetPwTarget(s)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canEdit && (canManageGlobal || s.role !== 'TENANT_OWNER') && (
+                          <button
+                            type="button"
+                            title="Reset PIN"
+                            onClick={() => setResetPinTarget(s)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+                          >
+                            <Hash className="w-4 h-4" />
+                          </button>
+                        )}
                         {canManageGlobal && (
                           <>
                             <button
@@ -358,6 +383,20 @@ export function UsersView({
         onClose={() => setDeactivateTarget(null)}
         onConfirmed={refresh}
       />
+      {resetPwTarget && (
+        <ResetCredentialDialog
+          staff={resetPwTarget}
+          kind="password"
+          onClose={() => setResetPwTarget(null)}
+        />
+      )}
+      {resetPinTarget && (
+        <ResetCredentialDialog
+          staff={resetPinTarget}
+          kind="pin"
+          onClose={() => setResetPinTarget(null)}
+        />
+      )}
     </div>
   );
 }
