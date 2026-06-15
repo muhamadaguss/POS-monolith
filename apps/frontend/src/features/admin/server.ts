@@ -6,6 +6,10 @@ import type {
   TenantDetail,
   TenantQuery,
   AdminUserStats,
+  PlatformReportQuery,
+  PlatformReportSummary,
+  RevenueTrendPoint,
+  PlanDistributionItem,
 } from './types';
 
 /**
@@ -41,4 +45,32 @@ export async function fetchTenant(id: string): Promise<TenantDetail> {
 /** Statistik user lintas-platform untuk KPI Manajemen User. */
 export async function fetchUserStats(): Promise<AdminUserStats> {
   return serverFetch<AdminUserStats>('/admin/users/stats');
+}
+
+/** Query-string dari filter periode laporan platform. */
+function reportParams(q: PlatformReportQuery): string {
+  const params = new URLSearchParams();
+  if (q.period) params.set('period', q.period);
+  if (q.startDate) params.set('startDate', q.startDate);
+  if (q.endDate) params.set('endDate', q.endDate);
+  return params.toString();
+}
+
+/** Ringkasan pendapatan & pertumbuhan platform (KPI Laporan Platform). */
+export async function fetchPlatformReportSummary(
+  q: PlatformReportQuery,
+): Promise<PlatformReportSummary> {
+  return serverFetch<PlatformReportSummary>(`/admin/reports/summary?${reportParams(q)}`);
+}
+
+/** Tren pendapatan lunas & tenant baru per bulan. */
+export async function fetchPlatformRevenueTrend(
+  q: PlatformReportQuery,
+): Promise<RevenueTrendPoint[]> {
+  return serverFetch<RevenueTrendPoint[]>(`/admin/reports/revenue-trend?${reportParams(q)}`);
+}
+
+/** Distribusi tenant aktif per paket + kontribusi MRR. */
+export async function fetchPlatformPlanDistribution(): Promise<PlanDistributionItem[]> {
+  return serverFetch<PlanDistributionItem[]>('/admin/reports/plan-distribution');
 }
