@@ -154,7 +154,9 @@ model User {
   email        String     @unique
   phone        String?
   passwordHash String
-  pin          String?    // 6-digit PIN untuk otorisasi aksi kasir (refund/void)
+  pin          String?    // 6-digit PIN untuk otorisasi aksi kasir (refund/void) & gate login kasir
+  pinAttempts  Int        @default(0) // jumlah percobaan PIN gagal beruntun saat gate login
+  pinLockedUntil DateTime? // jika diisi, akun terkunci sampai waktu ini (auto-unlock saat login)
   role         Role       @default(CASHIER) // role default, bisa di-override per outlet
   status       UserStatus @default(ACTIVE)
   mustChangePassword Boolean @default(false) // true → wajib ganti password saat login berikutnya (mis. setelah reset oleh Super Admin)

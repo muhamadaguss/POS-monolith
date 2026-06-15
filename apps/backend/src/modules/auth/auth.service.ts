@@ -13,7 +13,11 @@ import { LoginDto } from './dto/login.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import type { JwtPayload, JwtRefreshPayload, AuthenticatedUser } from '../../common/types/jwt-payload.type';
+import type {
+  JwtPayload,
+  JwtRefreshPayload,
+  AuthenticatedUser,
+} from '../../common/types/jwt-payload.type';
 import { ROLE_DEFAULT_PERMISSIONS } from '../../common/rbac/permissions';
 import { Role, UserStatus, TenantStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -42,8 +46,32 @@ export class AuthService {
     });
 
     if (!user) throw new UnauthorizedException('Email atau password salah');
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Akun Anda tidak aktif atau telah dikunci');
+
+    // Akun LOCKED karena 3× PIN salah → auto-unlock bila masa kunci sudah lewat.
+    if (user.status === UserStatus.LOCKED) {
+      const until = user.pinLockedUntil;
+      if (until && until.getTime() > Date.now()) {
+        const mins = Math.ceil((until.getTime() - Date.now()) / 60000);
+        throw new UnauthorizedException(
+          `Akun terkunci karena PIN salah berulang. Coba lagi dalam ${mins} menit.`,
+        );
+      }
+      // Masa kunci lewat (atau tak berbatas waktu) → buka kunci & lanjut login.
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: UserStatus.ACTIVE,
+          pinAttempts: 0,
+          pinLockedUntil: null,
+        },
+      });
+      user.status = UserStatus.ACTIVE;
+      user.pinAttempts = 0;
+      user.pinLockedUntil = null;
+    } else if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException(
+        'Akun Anda tidak aktif atau telah dikunci',
+      );
     }
 
     // 2. Verifikasi password
@@ -69,23 +97,29 @@ export class AuthService {
         throw new UnauthorizedException('Tenant tidak valid untuk akun ini');
       }
       if (user.tenant.status === TenantStatus.SUSPENDED) {
-        throw new ForbiddenException('Akun bisnis Anda sedang ditangguhkan. Hubungi support.');
+        throw new ForbiddenException(
+          'Akun bisnis Anda sedang ditangguhkan. Hubungi support.',
+        );
       }
     }
 
     // 4. Resolve role & permissions untuk outlet yang dipilih
     let resolvedRole = user.role;
-    let resolvedOutletId: string | null = outletId ?? null;
+    const resolvedOutletId: string | null = outletId ?? null;
     let permissions = ROLE_DEFAULT_PERMISSIONS[user.role];
 
     if (resolvedOutletId && user.tenantId) {
       const outletRole = await this.prisma.userOutletRole.findUnique({
-        where: { userId_outletId: { userId: user.id, outletId: resolvedOutletId } },
+        where: {
+          userId_outletId: { userId: user.id, outletId: resolvedOutletId },
+        },
         include: { outlet: { select: { tenantId: true, isActive: true } } },
       });
 
-      if (!outletRole) throw new ForbiddenException('Anda tidak memiliki akses ke outlet ini');
-      if (!outletRole.outlet.isActive) throw new ForbiddenException('Outlet ini sudah tidak aktif');
+      if (!outletRole)
+        throw new ForbiddenException('Anda tidak memiliki akses ke outlet ini');
+      if (!outletRole.outlet.isActive)
+        throw new ForbiddenException('Outlet ini sudah tidak aktif');
       if (outletRole.outlet.tenantId !== user.tenantId) {
         throw new ForbiddenException('Outlet tidak ditemukan di tenant ini');
       }
@@ -113,7 +147,14 @@ export class AuthService {
 
     // 6. Terbitkan token
     const { accessToken, refreshToken } = await this.generateTokens(
-      { userId: user.id, email: user.email, tenantId: user.tenantId, currentOutletId: resolvedOutletId, role: resolvedRole, permissions: permissions as string[] },
+      {
+        userId: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+        currentOutletId: resolvedOutletId,
+        role: resolvedRole,
+        permissions: permissions,
+      },
       ipAddress,
       userAgent,
     );
@@ -130,7 +171,7 @@ export class AuthService {
       id: uor.outlet.id,
       name: uor.outlet.name,
       role: uor.role,
-      permissions: ROLE_DEFAULT_PERMISSIONS[uor.role] as string[],
+      permissions: ROLE_DEFAULT_PERMISSIONS[uor.role],
     }));
 
     return {
@@ -145,6 +186,10 @@ export class AuthService {
         // Wajib ganti password (mis. setelah reset oleh Super Admin) → frontend
         // memaksa user ke /change-password sebelum bisa memakai aplikasi.
         mustChangePassword: user.mustChangePassword,
+        // Gate PIN setelah login: hanya kasir yang wajib verifikasi PIN per sesi.
+        // hasPin=false → frontend arahkan ke /setup-pin; lalu /verify-pin.
+        requiresPinVerification: resolvedRole === Role.CASHIER,
+        hasPin: user.pin != null,
       },
       outlets,
       accessToken,
@@ -152,9 +197,105 @@ export class AuthService {
     };
   }
 
+  /**
+   * Set PIN pertama kali (kasir yang belum punya PIN). 6 digit numerik, hash salt 10.
+   * Tolak bila user sudah punya PIN (gunakan Reset PIN oleh Owner/Manager).
+   */
+  async setupPin(currentUser: AuthenticatedUser, pin: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { id: true, pin: true },
+    });
+    if (!user) throw new UnauthorizedException('User tidak ditemukan');
+    if (user.pin) {
+      throw new BadRequestException(
+        'PIN sudah ada. Hubungi Owner/Manager untuk reset PIN.',
+      );
+    }
+    const pinHash = await bcrypt.hash(pin, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { pin: pinHash, pinAttempts: 0 },
+    });
+    return { message: 'PIN berhasil dibuat.' };
+  }
+
+  // Maksimum percobaan PIN gagal beruntun sebelum akun dikunci.
+  private static readonly PIN_MAX_ATTEMPTS = 3;
+  // Lama akun terkunci setelah PIN salah berulang (auto-unlock saat login).
+  private static readonly PIN_LOCK_DURATION_MS = 15 * 60 * 1000;
+
+  /**
+   * Verifikasi PIN milik sendiri (gate login kasir). Benar → reset counter.
+   * Salah → counter+1; mencapai batas → kunci akun + revoke semua refresh token.
+   */
+  async verifyPin(currentUser: AuthenticatedUser, pin: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { id: true, tenantId: true, pin: true, pinAttempts: true },
+    });
+    if (!user) throw new UnauthorizedException('User tidak ditemukan');
+    if (!user.pin) throw new BadRequestException('Akun belum memiliki PIN.');
+
+    const isValid = await bcrypt.compare(pin, user.pin);
+    if (isValid) {
+      if (user.pinAttempts > 0) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { pinAttempts: 0 },
+        });
+      }
+      return { verified: true };
+    }
+
+    const attempts = user.pinAttempts + 1;
+    const reachedLimit = attempts >= AuthService.PIN_MAX_ATTEMPTS;
+
+    if (reachedLimit) {
+      const lockedUntil = new Date(
+        Date.now() + AuthService.PIN_LOCK_DURATION_MS,
+      );
+      await this.prisma.$transaction([
+        this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            pinAttempts: attempts,
+            status: UserStatus.LOCKED,
+            pinLockedUntil: lockedUntil,
+          },
+        }),
+        this.prisma.refreshToken.updateMany({
+          where: { userId: user.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        }),
+      ]);
+      void this.auditLogsService.log({
+        tenantId: user.tenantId,
+        userId: user.id,
+        action: 'USER_LOCKED_PIN',
+        resource: 'User',
+        resourceId: user.id,
+        newValue: { reason: 'pin_max_attempts', lockedUntil },
+        ipAddress: undefined,
+        userAgent: undefined,
+      });
+      throw new ForbiddenException(
+        'PIN salah 3 kali. Akun dikunci selama 15 menit.',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { pinAttempts: attempts },
+    });
+    const remaining = AuthService.PIN_MAX_ATTEMPTS - attempts;
+    throw new UnauthorizedException(`PIN salah. Sisa percobaan: ${remaining}.`);
+  }
+
   // Dipakai saat user sudah login tapi ingin berpindah outlet aktif
   async selectOutlet(currentUser: AuthenticatedUser, dto: SelectOutletDto) {
-    if (!currentUser.tenantId) throw new ForbiddenException('Super Admin tidak perlu memilih outlet');
+    if (!currentUser.tenantId)
+      throw new ForbiddenException('Super Admin tidak perlu memilih outlet');
 
     // TENANT_OWNER: boleh memilih outlet mana pun di tenant-nya TANPA harus punya
     // userOutletRole, dan TETAP mempertahankan role/permissions global Owner
@@ -168,24 +309,32 @@ export class AuthService {
         select: { isActive: true },
       });
       if (!outlet) throw new NotFoundException('Outlet tidak ditemukan');
-      if (!outlet.isActive) throw new ForbiddenException('Outlet ini sudah tidak aktif');
+      if (!outlet.isActive)
+        throw new ForbiddenException('Outlet ini sudah tidak aktif');
 
       resolvedRole = Role.TENANT_OWNER;
-      resolvedPermissions = ROLE_DEFAULT_PERMISSIONS[Role.TENANT_OWNER] as string[];
+      resolvedPermissions = ROLE_DEFAULT_PERMISSIONS[Role.TENANT_OWNER];
     } else {
       const outletRole = await this.prisma.userOutletRole.findUnique({
-        where: { userId_outletId: { userId: currentUser.userId, outletId: dto.outletId } },
+        where: {
+          userId_outletId: {
+            userId: currentUser.userId,
+            outletId: dto.outletId,
+          },
+        },
         include: { outlet: { select: { tenantId: true, isActive: true } } },
       });
 
-      if (!outletRole) throw new ForbiddenException('Anda tidak memiliki akses ke outlet ini');
-      if (!outletRole.outlet.isActive) throw new ForbiddenException('Outlet ini sudah tidak aktif');
+      if (!outletRole)
+        throw new ForbiddenException('Anda tidak memiliki akses ke outlet ini');
+      if (!outletRole.outlet.isActive)
+        throw new ForbiddenException('Outlet ini sudah tidak aktif');
       if (outletRole.outlet.tenantId !== currentUser.tenantId) {
         throw new ForbiddenException('Outlet tidak ditemukan di tenant ini');
       }
 
       resolvedRole = outletRole.role;
-      resolvedPermissions = ROLE_DEFAULT_PERMISSIONS[outletRole.role] as string[];
+      resolvedPermissions = ROLE_DEFAULT_PERMISSIONS[outletRole.role];
     }
 
     // Terbitkan PASANGAN token baru (access + refresh) dengan currentOutletId yang
@@ -206,7 +355,11 @@ export class AuthService {
     if (dto.refreshToken) {
       const oldHash = this.hashToken(dto.refreshToken);
       await this.prisma.refreshToken.updateMany({
-        where: { userId: currentUser.userId, tokenHash: oldHash, revokedAt: null },
+        where: {
+          userId: currentUser.userId,
+          tokenHash: oldHash,
+          revokedAt: null,
+        },
         data: { revokedAt: new Date(), replacedByTokenId: tokens.tokenId },
       });
     }
@@ -227,7 +380,9 @@ export class AuthService {
         secret: this.configService.get<string>('jwt.refreshSecret'),
       });
     } catch {
-      throw new UnauthorizedException('Refresh token tidak valid atau sudah kedaluwarsa');
+      throw new UnauthorizedException(
+        'Refresh token tidak valid atau sudah kedaluwarsa',
+      );
     }
 
     const tokenHash = this.hashToken(dto.refreshToken);
@@ -238,7 +393,9 @@ export class AuthService {
 
     // Token tidak ditemukan sama sekali atau benar-benar kedaluwarsa → tolak.
     if (!storedToken || storedToken.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token tidak valid. Silakan login kembali.');
+      throw new UnauthorizedException(
+        'Refresh token tidak valid. Silakan login kembali.',
+      );
     }
 
     const { user } = storedToken;
@@ -260,7 +417,11 @@ export class AuthService {
         });
         if (child) {
           // Anak masih aktif: rotasi dari anak ini agar klien tetap sinkron.
-          return this.rotateFrom(child.id, user, payload.currentOutletId ?? null);
+          return this.rotateFrom(
+            child.id,
+            user,
+            payload.currentOutletId ?? null,
+          );
         }
       }
 
@@ -270,10 +431,16 @@ export class AuthService {
         where: { userId: payload.sub },
         data: { revokedAt: new Date() },
       });
-      throw new UnauthorizedException('Refresh token tidak valid. Silakan login kembali.');
+      throw new UnauthorizedException(
+        'Refresh token tidak valid. Silakan login kembali.',
+      );
     }
 
-    return this.rotateFrom(storedToken.id, user, payload.currentOutletId ?? null);
+    return this.rotateFrom(
+      storedToken.id,
+      user,
+      payload.currentOutletId ?? null,
+    );
   }
 
   // Rotasi: revoke token `parentTokenId`, terbitkan token baru, dan tautkan
@@ -291,7 +458,8 @@ export class AuthService {
     // Owner beroperasi lintas-outlet dengan permissions global; memilih outlet
     // hanya menyetel outlet aktif. Tanpa guard ini, Owner yang kebetulan punya
     // baris userOutletRole akan ter-demote jadi STORE_MANAGER saat token dirotasi.
-    const keepsGlobalRole = user.role === Role.TENANT_OWNER || user.role === Role.SUPER_ADMIN;
+    const keepsGlobalRole =
+      user.role === Role.TENANT_OWNER || user.role === Role.SUPER_ADMIN;
 
     if (!keepsGlobalRole && outletId && user.tenantId) {
       const outletRole = await this.prisma.userOutletRole.findUnique({
@@ -310,7 +478,7 @@ export class AuthService {
       tenantId: user.tenantId,
       currentOutletId: outletId,
       role: resolvedRole,
-      permissions: resolvedPermissions as string[],
+      permissions: resolvedPermissions,
     });
 
     // Cabut parent dan tautkan ke anak yang baru dibuat.
@@ -319,7 +487,10 @@ export class AuthService {
       data: { revokedAt: new Date(), replacedByTokenId: tokens.tokenId },
     });
 
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   async logout(userId: string, refreshToken?: string) {
@@ -363,7 +534,9 @@ export class AuthService {
     if (!isOldValid) throw new UnauthorizedException('Password lama salah');
 
     if (dto.oldPassword === dto.newPassword) {
-      throw new BadRequestException('Password baru harus berbeda dari password lama');
+      throw new BadRequestException(
+        'Password baru harus berbeda dari password lama',
+      );
     }
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 12);
@@ -378,7 +551,14 @@ export class AuthService {
   // ---------- helpers ----------
 
   private async generateTokens(
-    data: { userId: string; email: string; tenantId: string | null; currentOutletId: string | null; role: Role; permissions: string[] },
+    data: {
+      userId: string;
+      email: string;
+      tenantId: string | null;
+      currentOutletId: string | null;
+      role: Role;
+      permissions: string[];
+    },
     ipAddress?: string,
     userAgent?: string,
   ) {
@@ -388,8 +568,15 @@ export class AuthService {
     const tokenId = crypto.randomUUID();
     const refreshExpiresIn = this.refreshExpiresIn();
     const refreshToken = this.jwtService.sign(
-      { sub: data.userId, tokenId, currentOutletId: data.currentOutletId } as JwtRefreshPayload,
-      { secret: this.configService.get<string>('jwt.refreshSecret'), expiresIn: refreshExpiresIn },
+      {
+        sub: data.userId,
+        tokenId,
+        currentOutletId: data.currentOutletId,
+      } as JwtRefreshPayload,
+      {
+        secret: this.configService.get<string>('jwt.refreshSecret'),
+        expiresIn: refreshExpiresIn,
+      },
     );
 
     // expiresAt baris DB dihitung dari durasi yang sama dengan JWT agar sinkron
@@ -412,8 +599,12 @@ export class AuthService {
   }
 
   private signAccessToken(data: {
-    userId: string; email: string; tenantId: string | null;
-    currentOutletId: string | null; role: Role; permissions: string[];
+    userId: string;
+    email: string;
+    tenantId: string | null;
+    currentOutletId: string | null;
+    role: Role;
+    permissions: string[];
   }) {
     const payload: JwtPayload = {
       sub: data.userId,
@@ -431,12 +622,14 @@ export class AuthService {
 
   /** Durasi access token dari config (env `JWT_ACCESS_EXPIRES_IN`, default `15m`). */
   private accessExpiresIn(): Duration {
-    return (this.configService.get<string>('jwt.accessExpiresIn') ?? '15m') as Duration;
+    return (this.configService.get<string>('jwt.accessExpiresIn') ??
+      '15m') as Duration;
   }
 
   /** Durasi refresh token dari config (env `JWT_REFRESH_EXPIRES_IN`, default `7d`). */
   private refreshExpiresIn(): Duration {
-    return (this.configService.get<string>('jwt.refreshExpiresIn') ?? '7d') as Duration;
+    return (this.configService.get<string>('jwt.refreshExpiresIn') ??
+      '7d') as Duration;
   }
 
   private hashToken(token: string): string {

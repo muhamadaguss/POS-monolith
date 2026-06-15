@@ -100,6 +100,70 @@ export async function changePasswordAction(
 }
 
 /**
+ * Server Action: buat PIN pertama kali (kasir yang belum punya PIN).
+ * `POST /auth/setup-pin`. Lempar Error dgn pesan backend bila gagal.
+ */
+export async function setupPinAction(pin: string): Promise<{ message: string }> {
+  const session = await auth();
+  const accessToken = session?.backendAccessToken;
+  if (!accessToken) throw new Error('Sesi tidak valid');
+
+  const res = await fetch(`${API_URL}/auth/setup-pin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ pin }),
+  });
+
+  if (!res.ok) {
+    let message = 'Gagal membuat PIN';
+    try {
+      const body = await res.json();
+      message = Array.isArray(body?.message) ? body.message[0] : (body?.message ?? message);
+    } catch {
+      /* abaikan */
+    }
+    throw new Error(message);
+  }
+
+  return unwrap<{ message: string }>(await res.json());
+}
+
+/**
+ * Server Action: verifikasi PIN setelah login (gate kasir).
+ * `POST /auth/verify-pin`. Backend mengunci akun setelah 3× gagal (lempar Error).
+ */
+export async function verifyPinAction(pin: string): Promise<{ verified: boolean }> {
+  const session = await auth();
+  const accessToken = session?.backendAccessToken;
+  if (!accessToken) throw new Error('Sesi tidak valid');
+
+  const res = await fetch(`${API_URL}/auth/verify-pin`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ pin }),
+  });
+
+  if (!res.ok) {
+    let message = 'PIN salah';
+    try {
+      const body = await res.json();
+      message = Array.isArray(body?.message) ? body.message[0] : (body?.message ?? message);
+    } catch {
+      /* abaikan */
+    }
+    throw new Error(message);
+  }
+
+  return unwrap<{ verified: boolean }>(await res.json());
+}
+
+/**
  * Server Action: revoke refresh token backend saat logout.
  * Cookie sesi Auth.js dihapus terpisah lewat `signOut()` di klien.
  */

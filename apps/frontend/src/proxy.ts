@@ -35,6 +35,18 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/change-password', nextUrl));
   }
 
+  // 2b) Gate PIN untuk kasir: setelah login wajib verifikasi PIN sekali per sesi.
+  //     Kasir tanpa PIN → buat dulu (/setup-pin); lalu verifikasi (/verify-pin).
+  //     Berjalan setelah force-change selesai (urutan: password → PIN).
+  if (isLoggedIn && user!.requiresPinVerification && !user!.mustChangePassword) {
+    if (!user!.hasPin && path !== '/setup-pin') {
+      return NextResponse.redirect(new URL('/setup-pin', nextUrl));
+    }
+    if (user!.hasPin && !session!.pinVerified && path !== '/verify-pin') {
+      return NextResponse.redirect(new URL('/verify-pin', nextUrl));
+    }
+  }
+
   // 3) Sudah login tapi di /login → arahkan ke beranda sesuai peran.
   if (isLoggedIn && path === '/login') {
     return NextResponse.redirect(new URL(homeFor(user!), nextUrl));

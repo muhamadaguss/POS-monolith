@@ -27,6 +27,10 @@ export interface AuthUser {
   permissions: string[];
   /** true → user wajib ganti password sebelum memakai aplikasi (force-change). */
   mustChangePassword?: boolean;
+  /** true → role yang wajib verifikasi PIN setelah login (kasir). */
+  requiresPinVerification?: boolean;
+  /** true → user sudah punya PIN (false → arahkan ke /setup-pin). */
+  hasPin?: boolean;
 }
 
 export interface OutletOption {
@@ -153,6 +157,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessTokenExpires = accessTokenExpiresAt(u.backendAccessToken);
         // Stempel waktu login (epoch ms) untuk timer "Sesi Aktif" lintas halaman.
         token.loginAt = Date.now();
+        // Gate PIN: kasir wajib verifikasi PIN sekali per sesi. Mulai belum
+        // terverifikasi; selain kasir dianggap langsung terverifikasi.
+        token.pinVerified = !u.appUser.requiresPinVerification;
         return token;
       }
 
@@ -164,6 +171,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           backendRefreshToken: string;
           outletUpdate: Pick<AuthUser, 'currentOutletId' | 'role' | 'permissions'>;
           mustChangePassword: boolean;
+          pinVerified: boolean;
+          hasPin: boolean;
         }>;
         if (s.backendAccessToken) {
           token.backendAccessToken = s.backendAccessToken;
@@ -177,6 +186,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Clear flag force-change setelah user berhasil ganti password.
         if (typeof s.mustChangePassword === 'boolean' && token.appUser) {
           token.appUser = { ...token.appUser, mustChangePassword: s.mustChangePassword };
+        }
+        // Tandai PIN terverifikasi (gate login) — disimpan di token, tidak persist ke DB.
+        if (typeof s.pinVerified === 'boolean') {
+          token.pinVerified = s.pinVerified;
+        }
+        // Tandai PIN sudah dibuat setelah /setup-pin berhasil.
+        if (typeof s.hasPin === 'boolean' && token.appUser) {
+          token.appUser = { ...token.appUser, hasPin: s.hasPin };
         }
         return token;
       }
@@ -215,11 +232,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           currentOutletId: appUser.currentOutletId,
           permissions: appUser.permissions,
           mustChangePassword: appUser.mustChangePassword ?? false,
+          requiresPinVerification: appUser.requiresPinVerification ?? false,
+          hasPin: appUser.hasPin ?? false,
         };
       }
       session.outlets = (token.outlets as OutletOption[]) ?? [];
       session.error = token.error as string | undefined;
       session.loginAt = token.loginAt as number | undefined;
+      session.pinVerified = (token.pinVerified as boolean | undefined) ?? true;
       // CATATAN KEAMANAN: backendRefreshToken TIDAK diekspos ke session (klien).
       // backendAccessToken diekspos hanya agar Client Component (POS) bisa
       // memanggil API; idealnya nanti dipindah ke route-handler proxy.
@@ -248,12 +268,18 @@ declare module 'next-auth' {
       permissions: string[];
       // Diisi pada PR2 (enforcement force-change); opsional di PR1.
       mustChangePassword?: boolean;
+      /** true → kasir yang wajib verifikasi PIN setelah login. */
+      requiresPinVerification?: boolean;
+      /** true → user sudah punya PIN (false → /setup-pin). */
+      hasPin?: boolean;
     } & DefaultSession['user'];
     outlets: OutletOption[];
     backendAccessToken?: string;
     error?: string;
     /** Epoch ms saat login — acuan timer "Sesi Aktif" lintas halaman. */
     loginAt?: number;
+    /** Gate PIN: true bila PIN sudah diverifikasi pada sesi ini (atau tak diperlukan). */
+    pinVerified?: boolean;
   }
 }
 
@@ -267,5 +293,7 @@ declare module '@auth/core/jwt' {
     error?: string;
     /** Epoch ms saat login — acuan timer "Sesi Aktif". */
     loginAt?: number;
+    /** Gate PIN: true bila PIN sudah diverifikasi pada sesi ini (atau tak diperlukan). */
+    pinVerified?: boolean;
   }
 }

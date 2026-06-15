@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { PinDto } from './dto/pin.dto';
 import { Public, CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 
@@ -63,7 +64,9 @@ export class AuthController {
   @Post('select-outlet')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Pilih outlet aktif — generate token baru dengan currentOutletId' })
+  @ApiOperation({
+    summary: 'Pilih outlet aktif — generate token baru dengan currentOutletId',
+  })
   selectOutlet(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SelectOutletDto,
@@ -99,5 +102,23 @@ export class AuthController {
     @Body() dto: ChangePasswordDto,
   ) {
     return this.authService.changePassword(user, dto);
+  }
+
+  @Post('setup-pin')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Buat PIN pertama kali (gate login kasir)' })
+  setupPin(@CurrentUser() user: AuthenticatedUser, @Body() dto: PinDto) {
+    return this.authService.setupPin(user, dto.pin);
+  }
+
+  @Post('verify-pin')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Verifikasi PIN setelah login (kunci akun bila 3× gagal)',
+  })
+  verifyPin(@CurrentUser() user: AuthenticatedUser, @Body() dto: PinDto) {
+    return this.authService.verifyPin(user, dto.pin);
   }
 }
