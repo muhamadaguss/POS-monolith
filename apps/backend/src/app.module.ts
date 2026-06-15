@@ -20,6 +20,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminTenantsModule } from './modules/admin-tenants/admin-tenants.module';
 import { AdminUsersModule } from './modules/admin-users/admin-users.module';
+import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -77,6 +78,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     BillingModule,
     AdminTenantsModule,
     AdminUsersModule,
+    AdminReportsModule,
   ],
 
   providers: [

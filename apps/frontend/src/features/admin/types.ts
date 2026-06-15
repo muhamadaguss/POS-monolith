@@ -161,3 +161,37 @@ export interface CreateUserResult {
   password: string;
   message: string;
 }
+
+// ── Laporan Platform ────────────────────────────────────────────────────────
+export type ReportPeriod = '30d' | '90d' | 'ytd' | 'custom';
+
+export interface PlatformReportQuery {
+  period?: ReportPeriod;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PlatformReportSummary {
+  mrr: number;
+  paidRevenue: number;
+  unpaidRevenue: number;
+  newTenants: number;
+  totalTenants: number;
+  activeTenants: number;
+  trialTenants: number;
+  suspendedTenants: number;
+  churnedTenants: number;
+}
+
+export interface RevenueTrendPoint {
+  month: string; // YYYY-MM
+  paidRevenue: number;
+  newTenants: number;
+}
+
+export interface PlanDistributionItem {
+  plan: PlanCode;
+  name: string;
+  count: number;
+  mrr: number;
+}

@@ -19,7 +19,7 @@ const ADMIN_CARDS: {
   { icon: Building2, label: 'Manajemen Tenant', desc: 'Kelola tenant, status, dan paket langganan', color: 'text-blue-600 bg-blue-50', href: '/admin/tenants' },
   { icon: Users, label: 'Manajemen User', desc: 'Lihat dan kelola semua user di platform', color: 'text-emerald-600 bg-emerald-50', href: '/admin/users' },
   { icon: CreditCard, label: 'Billing & Paket', desc: 'Monitor pembayaran dan upgrade paket tenant', color: 'text-violet-600 bg-violet-50' },
-  { icon: BarChart2, label: 'Laporan Platform', desc: 'Statistik penggunaan dan pendapatan platform', color: 'text-amber-600 bg-amber-50' },
+  { icon: BarChart2, label: 'Laporan Platform', desc: 'Statistik penggunaan dan pendapatan platform', color: 'text-amber-600 bg-amber-50', href: '/admin/reports' },
 ];
 
 export default function AdminPage() {
