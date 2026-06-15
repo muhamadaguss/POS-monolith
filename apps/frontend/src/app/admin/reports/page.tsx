@@ -4,12 +4,15 @@ import {
   TrendingUp,
   Building2,
   AlertCircle,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { verifySession } from '@/lib/session';
 import {
   fetchPlatformReportSummary,
   fetchPlatformRevenueTrend,
   fetchPlatformPlanDistribution,
+  fetchPlatformRecentSubscriptions,
 } from '@/features/admin/server';
 import type { ReportPeriod } from '@/features/admin/types';
 import { IDR } from '@/lib/format';
@@ -17,23 +20,46 @@ import { AdminConsoleHeader } from '../_components/AdminConsoleHeader';
 import { ReportControls } from './ReportControls';
 import { RevenueTrendChart, PlanDistributionChart } from './ReportCharts';
 
+/** Badge tren persentase (hijau bila ≥0, merah bila <0). null → tak tampil. */
+function TrendBadge({ pct }: { pct: number | null }) {
+  if (pct == null) return null;
+  const up = pct >= 0;
+  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+        up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+      }`}
+    >
+      <Icon className="w-3 h-3" />
+      {up ? '+' : ''}
+      {pct.toFixed(1)}%
+    </span>
+  );
+}
+
 function StatCard({
   icon: Icon,
   label,
   value,
   subtext,
   iconColor,
+  trend,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
   subtext: string;
   iconColor: string;
+  trend?: number | null;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>
-        <Icon className="w-5 h-5" />
+      <div className="flex items-start justify-between">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        {trend !== undefined && <TrendBadge pct={trend} />}
       </div>
       <p className="text-sm text-gray-500 mt-3">{label}</p>
       <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
@@ -92,10 +118,11 @@ export default async function AdminReportsPage({
 
   const query = { period, startDate: startDate || undefined, endDate: endDate || undefined };
 
-  const [summary, trend, distribution] = await Promise.all([
+  const [summary, trend, distribution, recent] = await Promise.all([
     fetchPlatformReportSummary(query),
     fetchPlatformRevenueTrend(query),
     fetchPlatformPlanDistribution(),
+    fetchPlatformRecentSubscriptions(),
   ]);
 
   return (
@@ -117,6 +144,7 @@ export default async function AdminReportsPage({
             value={IDR.format(summary.mrr)}
             subtext={`${summary.activeTenants} tenant aktif`}
             iconColor="bg-emerald-50 text-emerald-600"
+            trend={summary.revenueGrowthPct}
           />
           <StatCard
             icon={TrendingUp}
@@ -124,6 +152,7 @@ export default async function AdminReportsPage({
             value={IDR.format(summary.paidRevenue)}
             subtext="Pada periode terpilih"
             iconColor="bg-amber-50 text-amber-600"
+            trend={summary.revenueGrowthPct}
           />
           <StatCard
             icon={AlertCircle}
@@ -186,6 +215,71 @@ export default async function AdminReportsPage({
             iconColor="bg-gray-100 text-gray-500"
           />
         </div>
+
+        {/* Aktivitas Terkini — langganan/invoice terbaru lintas-tenant */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <p className="text-sm font-semibold text-gray-900 px-5 py-4 border-b border-gray-100">
+            Aktivitas Terkini
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+                  <th className="px-5 py-3 font-medium">ID Transaksi</th>
+                  <th className="px-5 py-3 font-medium">Tenant</th>
+                  <th className="px-5 py-3 font-medium">Paket</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium text-right">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-10 text-center text-gray-400">
+                      Belum ada aktivitas langganan.
+                    </td>
+                  </tr>
+                ) : (
+                  recent.map((s) => (
+                    <tr key={s.id} className="border-b border-gray-50">
+                      <td className="px-5 py-3 font-mono text-xs text-gray-400">
+                        {s.invoiceRef ?? '—'}
+                      </td>
+                      <td className="px-5 py-3 font-medium text-gray-900">{s.tenantName}</td>
+                      <td className="px-5 py-3 text-gray-600">{s.planName}</td>
+                      <td className="px-5 py-3">
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            s.isPaid
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {s.isPaid ? 'Lunas' : 'Belum bayar'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right tabular-nums font-semibold text-gray-900">
+                        {IDR.format(s.amount)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="pt-2 pb-6 text-center">
+          <p className="text-sm text-gray-400">
+            © 2026 Kasirku SaaS Platform. Hak Cipta Dilindungi.
+          </p>
+          <div className="mt-1 flex items-center justify-center gap-4 text-sm text-emerald-600">
+            <span className="cursor-default">Ketentuan Layanan</span>
+            <span className="cursor-default">Kebijakan Privasi</span>
+            <span className="cursor-default">Pusat Bantuan</span>
+          </div>
+        </footer>
       </main>
     </div>
   );

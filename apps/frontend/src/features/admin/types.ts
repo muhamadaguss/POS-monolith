@@ -181,6 +181,18 @@ export interface PlatformReportSummary {
   trialTenants: number;
   suspendedTenants: number;
   churnedTenants: number;
+  revenueGrowthPct: number | null;
+  tenantGrowthPct: number | null;
+}
+
+export interface RecentSubscription {
+  id: string;
+  invoiceRef: string | null;
+  tenantName: string;
+  planName: string;
+  amount: number;
+  isPaid: boolean;
+  createdAt: string;
 }
 
 export interface RevenueTrendPoint {

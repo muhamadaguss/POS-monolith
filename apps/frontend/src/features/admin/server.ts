@@ -10,6 +10,7 @@ import type {
   PlatformReportSummary,
   RevenueTrendPoint,
   PlanDistributionItem,
+  RecentSubscription,
 } from './types';
 
 /**
@@ -73,4 +74,9 @@ export async function fetchPlatformRevenueTrend(
 /** Distribusi tenant aktif per paket + kontribusi MRR. */
 export async function fetchPlatformPlanDistribution(): Promise<PlanDistributionItem[]> {
   return serverFetch<PlanDistributionItem[]>('/admin/reports/plan-distribution');
+}
+
+/** Langganan/invoice terbaru lintas-tenant (panel Aktivitas Terkini). */
+export async function fetchPlatformRecentSubscriptions(): Promise<RecentSubscription[]> {
+  return serverFetch<RecentSubscription[]>('/admin/reports/recent-subscriptions');
 }

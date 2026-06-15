@@ -75,7 +75,7 @@ export function ReportControls({
             disabled={isPending}
             className={`px-3 h-9 rounded-lg text-sm font-medium transition-colors ${
               period === p.value
-                ? 'bg-amber-500 text-white'
+                ? 'bg-emerald-500 text-white'
                 : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
             }`}
           >
