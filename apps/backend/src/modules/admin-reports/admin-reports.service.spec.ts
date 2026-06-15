@@ -44,21 +44,24 @@ describe('AdminReportsService', () => {
   });
 
   describe('getSummary', () => {
-    it('menjumlahkan amount paid/unpaid & hitung tenant per status + MRR', async () => {
-      prisma.subscription.findMany.mockResolvedValue([
-        { amount: '99000', isPaid: true },
-        { amount: '299000', isPaid: true },
-        { amount: '99000', isPaid: false },
-      ]);
-      // urutan count: newTenants, total, active, trial, suspended, churned
+    it('menjumlahkan amount paid/unpaid, hitung tenant per status, MRR, & growth', async () => {
+      // subscription.findMany dipanggil 2×: periode ini lalu periode sebelumnya (paid).
+      prisma.subscription.findMany
+        .mockResolvedValueOnce([
+          { amount: '99000', isPaid: true },
+          { amount: '299000', isPaid: true },
+          { amount: '99000', isPaid: false },
+        ])
+        .mockResolvedValueOnce([{ amount: '199000' }]); // prevPaidRevenue
+      // urutan count: newTenants, prevNewTenants, total, active, trial, suspended, churned
       prisma.tenant.count
         .mockResolvedValueOnce(4) // newTenants
+        .mockResolvedValueOnce(2) // prevNewTenants
         .mockResolvedValueOnce(10) // total
         .mockResolvedValueOnce(6) // active
         .mockResolvedValueOnce(2) // trial
         .mockResolvedValueOnce(1) // suspended
         .mockResolvedValueOnce(1); // churned
-      // computeMrr: tenant ACTIVE
       prisma.tenant.findMany.mockResolvedValue([
         { plan: 'STARTER' },
         { plan: 'GROWTH' },
@@ -73,6 +76,52 @@ describe('AdminReportsService', () => {
       expect(res.activeTenants).toBe(6);
       expect(res.churnedTenants).toBe(1);
       expect(res.mrr).toBe(99000 + 299000); // STARTER + GROWTH
+      // growth: revenue 398000 vs 199000 → +100%; tenant 4 vs 2 → +100%
+      expect(res.revenueGrowthPct).toBeCloseTo(100);
+      expect(res.tenantGrowthPct).toBeCloseTo(100);
+    });
+
+    it('growth null bila periode sebelumnya 0 (tak ada basis)', async () => {
+      prisma.subscription.findMany
+        .mockResolvedValueOnce([{ amount: '99000', isPaid: true }])
+        .mockResolvedValueOnce([]); // prev kosong
+      prisma.tenant.count.mockResolvedValue(0);
+      prisma.tenant.findMany.mockResolvedValue([]);
+
+      const res = await service.getSummary({ period: ReportPeriod.LAST_30D });
+      expect(res.revenueGrowthPct).toBeNull();
+      expect(res.tenantGrowthPct).toBeNull();
+    });
+  });
+
+  describe('getRecentSubscriptions', () => {
+    it('memetakan langganan terbaru (tenant, paket, amount number)', async () => {
+      prisma.subscription.findMany.mockResolvedValue([
+        {
+          id: 'sub-1',
+          invoiceRef: 'INV-1',
+          plan: 'STARTER',
+          amount: '99000',
+          isPaid: true,
+          createdAt: new Date('2026-06-10'),
+          tenant: { name: 'Toko A' },
+        },
+      ]);
+
+      const res = await service.getRecentSubscriptions();
+
+      expect(res).toHaveLength(1);
+      expect(res[0]).toMatchObject({
+        invoiceRef: 'INV-1',
+        tenantName: 'Toko A',
+        planName: 'Starter',
+        amount: 99000,
+        isPaid: true,
+      });
+      // dipanggil dengan orderBy desc + take
+      const arg = prisma.subscription.findMany.mock.calls[0][0];
+      expect(arg.orderBy).toEqual({ createdAt: 'desc' });
+      expect(arg.take).toBeGreaterThan(0);
     });
   });
 

@@ -23,6 +23,20 @@ export interface PlatformSummary {
   trialTenants: number;
   suspendedTenants: number;
   churnedTenants: number;
+  /** Pertumbuhan pendapatan lunas vs periode sebelumnya (persen). null bila tak ada basis. */
+  revenueGrowthPct: number | null;
+  /** Pertumbuhan tenant baru vs periode sebelumnya (persen). null bila tak ada basis. */
+  tenantGrowthPct: number | null;
+}
+
+export interface RecentSubscription {
+  id: string;
+  invoiceRef: string | null;
+  tenantName: string;
+  planName: string;
+  amount: number;
+  isPaid: boolean;
+  createdAt: Date;
 }
 
 export interface RevenueTrendPoint {
@@ -44,6 +58,12 @@ function toNum(
 ): number {
   if (v == null) return 0;
   return typeof v === 'number' ? v : Number(v.toString());
+}
+
+/** Persentase pertumbuhan curr vs prev. null bila basis 0 (tak bermakna). */
+function growthPct(curr: number, prev: number): number | null {
+  if (prev <= 0) return null;
+  return ((curr - prev) / prev) * 100;
 }
 
 /** Resolusi periode laporan → rentang tanggal [from, to]. */
@@ -90,10 +110,16 @@ export class AdminReportsService {
 
   async getSummary(query: PlatformReportQueryDto): Promise<PlatformSummary> {
     const { from, to } = resolveRange(query);
+    // Periode sebelumnya yang sama panjang (untuk hitung pertumbuhan).
+    const span = to.getTime() - from.getTime();
+    const prevFrom = new Date(from.getTime() - span);
+    const prevTo = from;
 
     const [
       subs,
+      prevSubs,
       newTenants,
+      prevNewTenants,
       totalTenants,
       activeTenants,
       trialTenants,
@@ -105,8 +131,15 @@ export class AdminReportsService {
         where: { createdAt: { gte: from, lte: to } },
         select: { amount: true, isPaid: true },
       }),
+      this.prisma.subscription.findMany({
+        where: { isPaid: true, createdAt: { gte: prevFrom, lt: prevTo } },
+        select: { amount: true },
+      }),
       this.prisma.tenant.count({
         where: { createdAt: { gte: from, lte: to } },
+      }),
+      this.prisma.tenant.count({
+        where: { createdAt: { gte: prevFrom, lt: prevTo } },
       }),
       this.prisma.tenant.count(),
       this.prisma.tenant.count({ where: { status: TenantStatus.ACTIVE } }),
@@ -123,6 +156,10 @@ export class AdminReportsService {
       if (s.isPaid) paidRevenue += amt;
       else unpaidRevenue += amt;
     }
+    const prevPaidRevenue = prevSubs.reduce(
+      (sum, s) => sum + toNum(s.amount),
+      0,
+    );
 
     return {
       mrr,
@@ -134,7 +171,27 @@ export class AdminReportsService {
       trialTenants,
       suspendedTenants,
       churnedTenants,
+      revenueGrowthPct: growthPct(paidRevenue, prevPaidRevenue),
+      tenantGrowthPct: growthPct(newTenants, prevNewTenants),
     };
+  }
+
+  /** Langganan/invoice terbaru lintas-tenant untuk panel Aktivitas Terkini. */
+  async getRecentSubscriptions(limit = 8): Promise<RecentSubscription[]> {
+    const rows = await this.prisma.subscription.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { tenant: { select: { name: true } } },
+    });
+    return rows.map((s) => ({
+      id: s.id,
+      invoiceRef: s.invoiceRef,
+      tenantName: s.tenant.name,
+      planName: PLAN_CATALOG[s.plan].name,
+      amount: toNum(s.amount),
+      isPaid: s.isPaid,
+      createdAt: s.createdAt,
+    }));
   }
 
   async getRevenueTrend(

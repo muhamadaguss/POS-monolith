@@ -33,6 +33,12 @@ export class AdminReportsController {
     return this.adminReportsService.getPlanDistribution();
   }
 
+  @Get('recent-subscriptions')
+  @ApiOperation({ summary: 'Langganan/invoice terbaru lintas-tenant' })
+  getRecentSubscriptions() {
+    return this.adminReportsService.getRecentSubscriptions();
+  }
+
   @Get('export')
   @ApiOperation({
     summary: 'Unduh laporan platform dalam format Excel (.xlsx)',
