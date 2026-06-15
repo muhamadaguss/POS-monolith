@@ -36,7 +36,7 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-4 ${
+      className={`min-w-0 rounded-2xl border p-3 sm:p-4 ${
         active
           ? 'border-emerald-500 ring-1 ring-emerald-500/20 bg-white'
           : accent
@@ -44,19 +44,23 @@ function StatCard({
             : 'border-gray-200 bg-white'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconColor}`}
+        >
           <Icon className="w-5 h-5" />
         </div>
-        <MoreVertical className="w-4 h-4 text-gray-300" aria-hidden />
+        <MoreVertical className="w-4 h-4 text-gray-300 shrink-0" aria-hidden />
       </div>
-      <p className="text-sm text-gray-500 mt-3">{label}</p>
+      <p className="text-sm text-gray-500 mt-3 wrap-break-word">{label}</p>
       <p
-        className={`font-bold tabular-nums ${accent ? 'text-2xl text-emerald-700' : 'text-3xl text-gray-900'}`}
+        className={`font-bold tabular-nums wrap-break-word ${accent ? 'text-2xl text-emerald-700' : 'text-3xl text-gray-900'}`}
       >
         {value}
       </p>
-      <p className={`text-xs mt-1 ${accent ? 'text-emerald-600' : 'text-gray-400'}`}>{subtext}</p>
+      <p className={`text-xs mt-1 wrap-break-word ${accent ? 'text-emerald-600' : 'text-gray-400'}`}>
+        {subtext}
+      </p>
     </div>
   );
 }
