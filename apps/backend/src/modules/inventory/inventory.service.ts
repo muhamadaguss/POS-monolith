@@ -11,6 +11,7 @@ import { CreateStockAdjustmentDto } from './dto/stock-adjustment.dto';
 import { CreateStockTransferDto, UpdateTransferStatusDto } from './dto/stock-transfer.dto';
 import { InventoryQueryDto } from './dto/inventory-query.dto';
 import { MutationQueryDto } from './dto/mutation-query.dto';
+import { TransferQueryDto } from './dto/transfer-query.dto';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { Prisma, Role, StockMutationType, TransferStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -438,27 +439,55 @@ export class InventoryService {
     });
   }
 
-  async getTransfers(currentUser: AuthenticatedUser, outletId?: string) {
-    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, outletId);
+  async getTransfers(currentUser: AuthenticatedUser, query: TransferQueryDto = {}) {
+    const allowedOutletIds = await this.resolveAllowedOutlets(currentUser, query.outletId);
 
-    return this.prisma.stockTransfer.findMany({
-      where: {
-        tenantId: currentUser.tenantId!,
-        OR: [
-          { fromOutletId: { in: allowedOutletIds } },
-          { toOutletId: { in: allowedOutletIds } },
-        ],
-      },
-      include: {
-        fromOutlet: { select: { id: true, name: true } },
-        toOutlet: { select: { id: true, name: true } },
-        requestedBy: { select: { id: true, name: true } },
-        approvedBy: { select: { id: true, name: true } },
-        items: true,
-      },
-      orderBy: { requestedAt: 'desc' },
-      take: 50,
-    });
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const where: Prisma.StockTransferWhereInput = {
+      tenantId: currentUser.tenantId!,
+      OR: [
+        { fromOutletId: { in: allowedOutletIds } },
+        { toOutletId: { in: allowedOutletIds } },
+      ],
+    };
+    if (query.status) where.status = query.status;
+    if (query.search) {
+      // Cari pada nama outlet asal/tujuan, nama pengaju, atau potongan id transfer.
+      where.AND = [
+        {
+          OR: [
+            { fromOutlet: { name: { contains: query.search, mode: 'insensitive' } } },
+            { toOutlet: { name: { contains: query.search, mode: 'insensitive' } } },
+            { requestedBy: { name: { contains: query.search, mode: 'insensitive' } } },
+            { id: { contains: query.search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.stockTransfer.findMany({
+        where,
+        include: {
+          fromOutlet: { select: { id: true, name: true } },
+          toOutlet: { select: { id: true, name: true } },
+          requestedBy: { select: { id: true, name: true, role: true } },
+          approvedBy: { select: { id: true, name: true, role: true } },
+          items: true,
+        },
+        orderBy: { requestedAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.stockTransfer.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   // ---- Helpers ----
