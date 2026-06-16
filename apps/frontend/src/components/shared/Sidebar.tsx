@@ -16,6 +16,7 @@ import {
   History,
   Store,
   KeyRound,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OutletSwitcher } from './OutletSwitcher';
@@ -66,6 +67,12 @@ const NAV_GROUPS: { heading: string; items: NavItem[] }[] = [
         href: '/inventory',
         icon: Boxes,
         permissions: ['inventory.view_local', 'inventory.view_all'],
+      },
+      {
+        label: 'Transfer Stok',
+        href: '/transfers',
+        icon: ArrowLeftRight,
+        permissions: ['inventory.transfer'],
       },
       {
         label: 'Karyawan',

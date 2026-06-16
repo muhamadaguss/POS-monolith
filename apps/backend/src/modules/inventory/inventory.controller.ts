@@ -6,6 +6,7 @@ import { CreateStockAdjustmentDto } from './dto/stock-adjustment.dto';
 import { CreateStockTransferDto, UpdateTransferStatusDto } from './dto/stock-transfer.dto';
 import { InventoryQueryDto } from './dto/inventory-query.dto';
 import { MutationQueryDto } from './dto/mutation-query.dto';
+import { TransferQueryDto } from './dto/transfer-query.dto';
 import { CurrentUser, Roles, RequirePermissions, RequireAnyPermission } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 import { PERMISSIONS } from '../../common/rbac/permissions';
@@ -54,13 +55,12 @@ export class InventoryController {
 
   @Get('transfers')
   @RequirePermissions(PERMISSIONS.INVENTORY_TRANSFER)
-  @ApiOperation({ summary: 'Daftar transfer stok antar cabang' })
-  @ApiQuery({ name: 'outletId', required: false })
+  @ApiOperation({ summary: 'Daftar transfer stok antar cabang (filter + paginasi)' })
   getTransfers(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('outletId') outletId?: string,
+    @Query() query: TransferQueryDto,
   ) {
-    return this.inventoryService.getTransfers(user, outletId);
+    return this.inventoryService.getTransfers(user, query);
   }
 
   @Post('transfers')
