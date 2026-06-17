@@ -93,3 +93,19 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Smoke test: boot app hasil build, lalu pastikan endpoint health hidup.
+      # /health = liveness (proses); /health/ready = readiness (DB tersambung,
+      # schema sudah di-deploy di step "Apply migrations" → harus 200).
+      - name: Health endpoint smoke test
+        run: |
+          node dist/main &
+          APP_PID=$!
+          npx wait-on -t 60000 http://localhost:3001/api/v1/health
+          echo "Liveness:"
+          curl -fsS http://localhost:3001/api/v1/health
+          echo ""
+          echo "Readiness:"
+          curl -fsS http://localhost:3001/api/v1/health/ready
+          echo ""
+          kill $APP_PID

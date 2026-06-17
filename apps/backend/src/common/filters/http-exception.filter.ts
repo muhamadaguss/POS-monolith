@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import * as Sentry from '@sentry/node';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -34,6 +35,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     } else {
       this.logger.error(exception instanceof Error ? exception.stack : String(exception));
+      // Lapor ke Sentry HANYA untuk error tak-terduga (5xx / non-HttpException),
+      // bukan 4xx (validasi/auth) agar tak bising. No-op bila DSN kosong.
+      Sentry.captureException(exception);
     }
 
     response.status(status).json({
