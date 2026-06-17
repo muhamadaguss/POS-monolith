@@ -70,12 +70,23 @@ function accessTokenExpiresAt(accessToken: string): number {
   }
 }
 
-/** Panggil `/auth/refresh` backend; kembalikan token baru + waktu kedaluwarsa. */
+/**
+ * Panggil `/auth/refresh` backend; kembalikan token baru + waktu kedaluwarsa.
+ *
+ * WAJIB pakai timeout: callback `jwt` dipanggil oleh `GET /api/auth/session`,
+ * yang ditunggu `useSession` di klien. Tanpa timeout, koneksi backend yang
+ * basi/lambat setelah idle membuat fetch ini menggantung → /api/auth/session
+ * menggantung → useSession terjebak status 'loading' → layout client (gate
+ * `!ready`) menampilkan spinner selamanya ("stuck loading, baru muncul saat
+ * refresh manual"). Dengan timeout, kegagalan jadi cepat → token.error =
+ * RefreshTokenError → SessionErrorGuard menendang ke /login.
+ */
 async function refreshBackendTokens(refreshToken: string): Promise<BackendRefreshData> {
   const res = await fetch(`${API_URL}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error('refresh_failed');
   return unwrap<BackendRefreshData>(await res.json());
