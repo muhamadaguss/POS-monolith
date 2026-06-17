@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { OutletSwitcher } from './OutletSwitcher';
+import { InstallButton } from '@/features/pwa/InstallButton';
 import { useAuthStore } from '@/features/auth/store';
 import { useLogout } from '@/features/auth/hooks';
 
@@ -205,6 +206,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
           </div>
         </div>
+        <InstallButton />
         <Link
           href="/change-password"
           className="mt-1 w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"

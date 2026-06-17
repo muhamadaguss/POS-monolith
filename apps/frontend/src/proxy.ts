@@ -91,6 +91,11 @@ function homeFor(user: { role: string; currentOutletId: string | null }): string
 }
 
 export const config = {
-  // Jalankan di semua route kecuali api, aset statis, dan file gambar.
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  // Jalankan di semua route kecuali api, route tunnel Sentry (/monitoring),
+  // aset statis, file gambar, dan artefak PWA yang HARUS publik (service worker,
+  // manifest, ikon, halaman offline) — kalau ikut digerbang auth, SW gagal
+  // register / tunnel ke-redirect ke /login & app tak installable.
+  matcher: [
+    '/((?!api|monitoring|_next/static|_next/image|favicon.ico|sw.js|swe-worker-.*|manifest.webmanifest|icons/|offline).*)',
+  ],
 };
