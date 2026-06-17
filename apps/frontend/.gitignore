@@ -17,6 +17,16 @@
 /.next/
 /out/
 
+# PWA — service worker hasil build Serwist (di-generate saat build, jangan commit)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+
+# PWA — ikon aplikasi WAJIB di-commit (root .gitignore meng-ignore *.png global,
+# jadi negasikan khusus folder ini agar ikut versi).
+!public/icons/
+!public/icons/*.png
+
 # production
 /build
 
