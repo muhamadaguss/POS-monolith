@@ -1,0 +1,55 @@
+name: Lighthouse PWA
+
+# Audit Lighthouse untuk frontend — fokus menjaga fondasi PWA tak regresi
+# (manifest installable, theme-color, viewport, apple-touch-icon) plus skor
+# performa/aksesibilitas sebagai advisory (warn).
+#
+# Mengaudit halaman PUBLIK /login: hampir semua route lain butuh sesi Auth.js
+# dan akan redirect ke /login bila anonim, jadi /login adalah target stabil yang
+# tetap memuat manifest + service worker (SW aktif di production build).
+#
+# Service worker hanya ter-generate di production build (Serwist `disable` saat
+# bukan production) → workflow ini build lalu `next start`, bukan dev server.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - '.github/workflows/lighthouse.yml'
+
+defaults:
+  run:
+    working-directory: apps/frontend
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (production → SW ter-generate)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+
+      - name: Run Lighthouse CI
+        # @lhci/cli: jalankan `next start`, audit /login, assert sesuai lighthouserc.json.
+        # `autorun` otomatis start server (startServerCommand) lalu collect+assert.
+        run: |
+          npx --yes @lhci/cli@0.14.x autorun \
+            --collect.startServerCommand="npm run start" \
+            --collect.startServerReadyPattern="Ready in"
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
