@@ -1,6 +1,6 @@
 # PRD — Kasirku POS Platform v1.0
 
-**Versi:** 1.0 | **Target MVP:** Q3 2026 | **Status:** Phase 2 Backend ✅ Selesai | **Phase 3:** Frontend Next.js 🔄 Hampir Selesai (sisa: UI Transfer Order)
+**Versi:** 1.0 | **Target MVP:** Q3 2026 | **Status:** Phase 2 Backend ✅ Selesai | **Phase 3:** Frontend Next.js ✅ Selesai | **Phase 4:** Deploy/CI/PWA 🔲 Belum
 
 ---
 
@@ -237,8 +237,8 @@ ERD lengkap: [packages/database/ERD.md](packages/database/ERD.md)
 | ----------- | -------------------------------------------------------------- | ------------------- |
 | **Phase 1** | Setup monorepo, database schema, Prisma migration              | ✅ Selesai          |
 | **Phase 2** | NestJS Backend — semua API endpoint + AuditLog                 | ✅ Selesai          |
-| **Phase 3** | Next.js Frontend — Auth, POS Screen, Manager/Owner Dashboard, Konsol Super Admin | 🔄 Hampir Selesai (sisa: UI Transfer Order antar-outlet) |
-| **Phase 4** | Deployment, CI/CD, monitoring                                  | 🔲 Belum            |
+| **Phase 3** | Next.js Frontend — Auth, POS Screen, Manager/Owner Dashboard, Konsol Super Admin | ✅ Selesai |
+| **Phase 4** | Deployment, CI/CD, monitoring, PWA                             | 🔲 Belum            |
 
 ---
 
@@ -301,7 +301,7 @@ _Dashboard menggunakan tata letak standar Web Desktop untuk mempermudah peninjau
   - ✅ Klik item → call `selectOutletApi` → update `currentOutletId` real-time di store.
 - ✅ **Halaman Analytics & Keuangan** (`/dashboard`): KPI Cards (omset, transaksi, HPP, margin), bar chart tren penjualan. _(detail di 11.5)_
 - ✅ **Halaman Inventaris & Mutasi** (`/inventory`): Datatable stok, filter kategori, sort low stock, form Stock Opname. _(detail di 11.5)_
-- 🔲 **UI Transfer Order antar-outlet**: backend sudah lengkap (`/inventory/transfers` POST/GET + flow status `PENDING → APPROVED/REJECTED`); **halaman frontend belum dibuat** — satu-satunya fitur Phase 3 yang tersisa.
+- ✅ **UI Transfer Order antar-outlet** (`/transfers`): tabel transfer (RSC) — ID transfer, rute asal→tujuan, ringkasan produk, badge status, pemohon+peran; filter status/cabang, pencarian, paginasi; ajukan/terima/tolak/batalkan via Server Actions sesuai flow `PENDING → APPROVED/REJECTED/CANCELLED`.
 - ✅ **Halaman Audit Log Viewer** (`/audit-log`): Tabel kronologis, modal JSON Diff `old_value` vs `new_value`. _(detail di 11.5)_
 
 ### 11.5 Fitur Lanjutan
