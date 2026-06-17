@@ -1,15 +1,25 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { createValidationPipe } from './common/pipes/validation.pipe';
+import { initSentry } from './observability/sentry';
 
 async function bootstrap() {
+  // Error tracking dipasang sebelum app dibuat (no-op bila SENTRY_DSN kosong).
+  initSentry();
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    // Buffer log sampai logger pino siap (lihat useLogger di bawah).
+    bufferLogs: true,
   });
+
+  // Alihkan semua Logger Nest ke pino (structured logging).
+  const logger = app.get(Logger);
+  app.useLogger(logger);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port') ?? 3001;
@@ -80,14 +90,14 @@ async function bootstrap() {
       },
     });
 
-    console.log(`Swagger UI: http://localhost:${port}/api/docs`);
+    logger.log(`Swagger UI: http://localhost:${port}/api/docs`);
   }
 
   // Graceful shutdown
   app.enableShutdownHooks();
 
   await app.listen(port);
-  console.log(`Kasirku API running on: http://localhost:${port}/api/v1`);
+  logger.log(`Kasirku API running on: http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

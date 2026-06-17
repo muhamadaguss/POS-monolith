@@ -3,10 +3,12 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { LoggerModule } from 'nestjs-pino';
+import { randomUUID } from 'crypto';
 import { join } from 'path';
-import type { ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
 
-import { appConfig, jwtConfig } from './config';
+import { appConfig, jwtConfig, sentryConfig } from './config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -21,6 +23,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { AdminTenantsModule } from './modules/admin-tenants/admin-tenants.module';
 import { AdminUsersModule } from './modules/admin-users/admin-users.module';
 import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
+import { HealthModule } from './modules/health/health.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -34,8 +37,45 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     // Config — tersedia global di seluruh aplikasi
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, jwtConfig],
+      load: [appConfig, jwtConfig, sentryConfig],
       envFilePath: '.env',
+    }),
+
+    // Structured logging (pino) — log JSON 1-baris di production (siap dikonsumsi
+    // log shipper/agregator), pretty-print di non-production. Setiap request
+    // dapat `reqId`. Field sensitif di-redact agar token/secret tak bocor ke log.
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL ?? 'info',
+        genReqId: (req: IncomingMessage) =>
+          (req.headers['x-request-id'] as string) ?? randomUUID(),
+        autoLogging: true,
+        redact: {
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'res.headers["set-cookie"]',
+            '*.password',
+            '*.refreshToken',
+            '*.accessToken',
+          ],
+          censor: '[redacted]',
+        },
+        serializers: {
+          req: (req: { id: unknown; method: unknown; url: unknown }) => ({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+          }),
+          res: (res: { statusCode: unknown }) => ({
+            statusCode: res.statusCode,
+          }),
+        },
+        transport:
+          process.env.NODE_ENV === 'production'
+            ? undefined
+            : { target: 'pino-pretty', options: { singleLine: true } },
+      },
     }),
 
     // Rate limiting — 100 req per 60 detik per IP
@@ -79,6 +119,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     AdminTenantsModule,
     AdminUsersModule,
     AdminReportsModule,
+    HealthModule,
   ],
 
   providers: [
