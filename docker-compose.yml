@@ -1,24 +1,6 @@
 version: "3.8"
 
 services:
-  # PostgreSQL database (trust auth - no password, internal Docker network only)
-  db:
-    image: postgres:16
-    container_name: kasirku-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: kasirku
-      POSTGRES_DB: kasirku
-      POSTGRES_HOST_AUTH_METHOD: trust
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kasirku"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   # Backend API (NestJS)
   backend:
     image: docker.io/muhamadaguss/kasirku-backend:latest
@@ -32,7 +14,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
     environment:
-      - DATABASE_URL=postgresql://kasirku@db:5432/kasirku?schema=public
+      - DATABASE_URL=postgresql://postgres:Oren030897@192.168.0.200:5432/kasirku_db?schema=public
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - JWT_ACCESS_EXPIRES_IN=15m
