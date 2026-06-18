@@ -1,12 +1,10 @@
 name: Security
 
 # Pemindaian keamanan untuk seluruh monorepo:
-#   1. npm audit (ADVISORY) — laporkan kerentanan dependency high/critical per
-#      paket. Non-blocking untuk saat ini karena ada utang high pre-existing
-#      (rantai multer → @nestjs/platform-express). Begitu utang itu beres,
-#      hapus `continue-on-error` agar jadi gate keras.
-#   2. CodeQL (SAST) — analisis kode JS/TS untuk pola kerentanan; hasil tampil
-#      di tab Security → Code scanning.
+#   1. npm audit (GATE KERAS) — gagalkan CI bila ada kerentanan high/critical
+#      pada dependency PRODUKSI per paket. Utang high pre-existing sudah ditutup.
+#   2. CodeQL (SAST, GATE PENUH) — analisis kode JS/TS untuk pola kerentanan;
+#      hasil tampil di tab Security → Code scanning (gratis krn repo public).
 # Jalan di PR & push ke main, plus terjadwal mingguan (tangkap CVE baru pada
 # dependency yang tak berubah).
 
@@ -45,20 +43,17 @@ jobs:
         run: npm ci
 
       # Hanya audit dependency PRODUKSI (--omit=dev): devDeps tak ikut ter-ship.
-      # Advisory dulu (continue-on-error) — lihat catatan di header.
+      # GATE KERAS: high/critical pada dependency produksi menggagalkan CI.
+      # (Utang high pre-existing sudah ditutup: multer→^2.2.0 backend,
+      #  form-data→^4.0.6 frontend, shadcn dipindah ke devDependencies.)
       - name: npm audit (production deps, high+)
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
 
   codeql:
     name: CodeQL
     runs-on: ubuntu-latest
-    # NON-BLOCKING: repo ini PRIVATE → upload hasil CodeQL butuh GitHub Advanced
-    # Security (berbayar). Tanpa GHAS, step analyze gagal saat upload
-    # ("Code scanning is not enabled"). continue-on-error agar tak menggagalkan
-    # PR. CodeQL tetap berjalan & meng-analisis; begitu repo jadi public ATAU
-    # GHAS diaktifkan, hapus baris ini agar jadi gate penuh.
-    continue-on-error: true
+    # GATE PENUH: repo public → Code scanning aktif gratis, hasil CodeQL bisa
+    # di-upload ke tab Security. Temuan security-extended menggagalkan CI.
     permissions:
       actions: read
       contents: read
