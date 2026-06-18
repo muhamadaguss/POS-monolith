@@ -83,3 +83,5 @@ export function logWarn(message: string, context?: Record<string, unknown>) {
     }),
   }).catch(() => {});
 }
+
+// frontend trigger
