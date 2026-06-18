@@ -36,14 +36,12 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
 # Copy seluruh standalone output dari build stage ke /app
+# (Note: Next.js monorepo menaruh server.js di apps/frontend/server.js)
 COPY --from=build /app/apps/frontend/.next/standalone/ /app/
 
 # Copy static assets & public (harus di-serve oleh Next.js server)
-COPY --from=build /app/apps/frontend/.next/static /app/.next/static
-COPY --from=build /app/apps/frontend/public /app/public
-
-# Pastikan server.js ada sebelum lanjut
-RUN ls -la /app/server.js
+COPY --from=build /app/apps/frontend/.next/static /app/apps/frontend/.next/static
+COPY --from=build /app/apps/frontend/public /app/apps/frontend/public
 
 # Port 3000
 EXPOSE 3000
@@ -51,4 +49,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+CMD ["node", "apps/frontend/server.js"]
