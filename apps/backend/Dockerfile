@@ -4,11 +4,10 @@ WORKDIR /app
 
 # Copy package files
 COPY apps/backend/package*.json ./
-COPY apps/backend/next.config.ts ./  # Untuk monorepo root config (tidak dipakai backend, tapi aman)
 COPY packages/database/package*.json ./database/
 
-# Install backend deps (termasuk prisma CLI & @prisma/client)
-RUN npm ci --omit=dev
+# Install backend deps (termasuk prisma CLI, TypeScript, NestJS — butuh dev deps untuk build)
+RUN npm ci
 
 # Install database deps untuk prisma generate (type dependencies)
 RUN cd database && npm ci
