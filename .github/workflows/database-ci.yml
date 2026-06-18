@@ -1,0 +1,101 @@
+name: Database CI
+
+# CI untuk paket packages/database (skema Prisma + migrations).
+# Tujuan: tangkap schema invalid & migration drift SEBELUM lolos ke backend CI.
+#   1. prisma validate       — skema syntactically/semantically benar.
+#   2. migrate diff (drift)   — migrations menghasilkan skema yang SAMA dengan
+#                               schema.prisma. Drift (lupa bikin migration setelah
+#                               ubah model) → exit code 2 → job gagal.
+#   3. migrate deploy         — semua migration apply mulus ke Postgres bersih.
+# Hanya terpicu bila packages/database atau workflow ini berubah.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/database/**'
+      - '.github/workflows/database-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/database/**'
+      - '.github/workflows/database-ci.yml'
+
+defaults:
+  run:
+    working-directory: packages/database
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        # trust auth → tak butuh password sama sekali (DB throwaway, hanya
+        # reachable di jaringan job ini). Sengaja TANPA nilai password literal
+        # di repo agar tak ke-flag pemindai secret (false-positive).
+        env:
+          POSTGRES_USER: kasirku
+          POSTGRES_DB: kasirku_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kasirku"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGUSER: kasirku
+      PGDATABASE: kasirku_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Compose DB URLs
+        # Postgres pakai trust auth, jadi password di-ignore — bangkitkan nilai
+        # acak saat runtime hanya agar komponen URI tak kosong (Prisma butuh).
+        # Tak ada kredensial literal yang tersimpan di repo.
+        # SHADOW_DATABASE_URL: DB TERPISAH khusus `migrate diff` agar tak
+        # mengotori DB utama (kalau pakai DB sama → P3005 "schema not empty"
+        # saat `migrate deploy` berikutnya).
+        run: |
+          PW="$(openssl rand -hex 16)"
+          echo "::add-mask::$PW"
+          echo "DATABASE_URL=postgresql://${PGUSER}:${PW}@localhost:5432/${PGDATABASE}?schema=public" >> "$GITHUB_ENV"
+          echo "SHADOW_DATABASE_URL=postgresql://${PGUSER}:${PW}@localhost:5432/kasirku_shadow?schema=public" >> "$GITHUB_ENV"
+
+      - name: Create shadow database
+        # DB kosong terpisah untuk migrate diff (trust auth → tanpa password).
+        run: createdb -h localhost -U "$PGUSER" kasirku_shadow
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: packages/database/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate schema
+        run: npx prisma validate
+
+      - name: Check for migration drift
+        # Bandingkan state hasil semua migration vs schema.prisma.
+        # --exit-code: 0 = tak ada diff (sinkron), 2 = ADA diff (drift) → gagal.
+        # Artinya: kalau model diubah tapi lupa `prisma migrate dev`, CI menangkapnya.
+        run: |
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code
+
+      - name: Apply migrations (smoke)
+        # Pastikan seluruh rantai migration apply mulus ke DB bersih.
+        run: npx prisma migrate deploy

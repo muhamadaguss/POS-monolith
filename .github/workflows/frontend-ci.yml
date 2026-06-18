@@ -58,3 +58,14 @@ jobs:
         env:
           # Build Next butuh URL API; nilai dummy cukup untuk static build.
           NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+
+      # Guard PWA: build (next build → NODE_ENV=production) HARUS meng-generate
+      # service worker Serwist ke public/sw.js. Kalau hilang/kosong, PWA diam-diam
+      # rusak (tak installable / tak ada offline cache) → gagalkan CI.
+      - name: Verify PWA service worker generated
+        run: |
+          if [ ! -s public/sw.js ]; then
+            echo "::error::public/sw.js tidak ter-generate atau kosong — build PWA rusak."
+            exit 1
+          fi
+          echo "public/sw.js OK ($(wc -c < public/sw.js) bytes)"
