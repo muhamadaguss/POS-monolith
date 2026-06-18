@@ -6,7 +6,9 @@ cd /app
 npx prisma migrate deploy --schema /app/prisma/schema.prisma
 
 echo "Seeding database with demo data..."
-npx prisma db seed --schema /app/prisma/schema.prisma
+cd /app/packages/database
+npm run db:seed
 
 echo "Starting backend server..."
+cd /app
 exec "$@"
