@@ -9,10 +9,6 @@ name: Backend CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'apps/backend/**'
-      - 'packages/database/**'
-      - '.github/workflows/backend-ci.yml'
 
 defaults:
   run:

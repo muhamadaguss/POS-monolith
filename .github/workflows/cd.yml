@@ -14,7 +14,7 @@ name: CD — Build & Push Docker Images
 
 on:
   workflow_run:
-    workflows: ["Backend CI", "Frontend CI"]
+    workflows: ["Backend CI"]
     types: [completed]
     branches: [main]
 
