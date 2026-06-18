@@ -26,7 +26,8 @@ COPY apps/backend/ ./apps/backend/
 COPY packages/database/ ./packages/database/
 
 # Generate Prisma client (dari schema database, hoist ke root node_modules)
-RUN npx prisma generate --schema packages/database/prisma/schema.prisma
+# Generate Prisma client — pin versi 5.x (npx tanpa pin akan auto-install v7 yg breaking)
+RUN npx prisma@5 generate --schema packages/database/prisma/schema.prisma
 
 # Build backend
 RUN cd apps/backend && npm run build

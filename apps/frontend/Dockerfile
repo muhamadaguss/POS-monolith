@@ -17,8 +17,8 @@ RUN cd database && npm ci
 COPY apps/frontend/ ./apps/frontend/
 COPY packages/database/ ./packages/database/
 
-# Generate Prisma client (untuk backend, tidak dipakai frontend tapi aman)
-RUN npx prisma generate --schema packages/database/prisma/schema.prisma
+# Generate Prisma client — pin versi 5.x (npx tanpa pin akan auto-install v7 yg breaking)
+RUN npx prisma@5 generate --schema packages/database/prisma/schema.prisma
 
 # Build frontend (dengan NEXT_PUBLIC_API_URL build-arg)
 ARG NEXT_PUBLIC_API_URL
