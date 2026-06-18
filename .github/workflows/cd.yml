@@ -69,18 +69,9 @@ jobs:
               echo "frontend=false" >> "$GITHUB_OUTPUT"
             fi
           else
-            # Auto-detect dari workflow_run mana yang trigger
-            WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
-            if [ "$WORKFLOW_NAME" = "Backend CI" ]; then
-              echo "backend=true" >> "$GITHUB_OUTPUT"
-              echo "frontend=false" >> "$GITHUB_OUTPUT"
-            elif [ "$WORKFLOW_NAME" = "Frontend CI" ]; then
-              echo "backend=false" >> "$GITHUB_OUTPUT"
-              echo "frontend=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "backend=true" >> "$GITHUB_OUTPUT"
-              echo "frontend=true" >> "$GITHUB_OUTPUT"
-            fi
+            # Auto-triggered oleh CI → selalu build backend + frontend bareng
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
           fi
 
   # ─────────────────────────────────────────────────────
