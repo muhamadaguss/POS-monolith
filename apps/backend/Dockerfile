@@ -34,11 +34,11 @@ RUN npx prisma@5 generate --schema packages/database/prisma/schema.prisma
 RUN cd apps/backend && npm run build
 
 # Stage 3: Runtime
-FROM node:22-slim AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
-# Install ca-certificates untuk HTTPS (Prisma/Postgres) — Debian-slim uses apt-get
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install ca-certificates & openssl untuk HTTPS/Prisma — Alpine uses apk
+RUN apk add --no-cache ca-certificates openssl
 
 # Create uploads directory dengan proper permissions
 RUN mkdir -p /app/uploads && chown -R node:node /app

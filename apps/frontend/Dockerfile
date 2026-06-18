@@ -29,11 +29,11 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 RUN cd apps/frontend && npm run build
 
 # Stage 2: Runtime (next start)
-FROM node:22-slim AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
-# Install ca-certificates (Debian-slim uses apt-get, not apk)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install ca-certificates (Alpine uses apk)
+RUN apk add --no-cache ca-certificates
 
 # Copy dari build stage (standalone output)
 COPY --from=build --chown=node:node /app/apps/frontend/.next/standalone ./
