@@ -1,0 +1,13 @@
+# Grafana provisioning — Datasources
+# Auto-configure Loki datasource saat container pertama kali start.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    editable: false
+    jsonData:
+      maxLines: 1000

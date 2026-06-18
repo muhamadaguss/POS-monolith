@@ -4,6 +4,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 import withSerwistInit from "@serwist/next";
 
 const nextConfig: NextConfig = {
+  // Output standalone: hasil build menyertakan server minimal + node_modules
+  // yang dibutuhkan saja (.next/standalone) → image Docker ramping. Dipakai
+  // runtime container via `node server.js`. Tak berpengaruh untuk `next dev`.
+  output: "standalone",
   turbopack: {
     // process.cwd() akan mengarah ke folder 'apps/frontend'
     // kita naik 2 tingkat ke atas untuk mencapai root 'Point-of-sales'

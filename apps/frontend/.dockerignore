@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+
+# Build artifacts
+.next
+coverage
+.nyc_output
+
+# Source control
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Test files
+*.test.ts
+*.spec.ts
+test/
+__tests__/
+
+# Dev tools
+jest.config.js
+vitest.config.ts
+tsconfig.build.json
+
+# Docker
+Dockerfile*
+.dockerignore

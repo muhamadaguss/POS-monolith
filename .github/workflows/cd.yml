@@ -1,0 +1,178 @@
+name: CD — Build & Push Docker Images
+
+# CD pipeline: otomatis build dan push Docker image ke Docker Hub
+# setelah CI selesai dan sukses pada branch `main`.
+#
+# Trigger:
+#   - Dipicu oleh workflow_run dari Backend CI atau Frontend CI yang sukses.
+#   - Juga bisa dipicu manual via workflow_dispatch.
+#
+# Prerequisites (GitHub Secrets):
+#   - DOCKERHUB_USERNAME: username Docker Hub (e.g. muhamadaguss)
+#   - DOCKERHUB_TOKEN: access token Docker Hub (bukan password)
+#   - NEXT_PUBLIC_API_URL: URL API production untuk frontend build-arg
+
+on:
+  workflow_run:
+    workflows: ["Backend CI", "Frontend CI"]
+    types: [completed]
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Pilih image yang akan di-build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────
+  # Determine mana yang perlu di-build
+  # ─────────────────────────────────────────────────────
+  detect-changes:
+    runs-on: ubuntu-latest
+    # Hanya jalan kalau CI sukses, atau manual dispatch
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      build_backend: ${{ steps.check.outputs.backend }}
+      build_frontend: ${{ steps.check.outputs.frontend }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Detect what to build
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET="${{ inputs.build_target }}"
+            if [ "$TARGET" = "backend" ] || [ "$TARGET" = "both" ]; then
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "backend=false" >> "$GITHUB_OUTPUT"
+            fi
+            if [ "$TARGET" = "frontend" ] || [ "$TARGET" = "both" ]; then
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "frontend=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # Auto-detect dari workflow_run mana yang trigger
+            WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+            if [ "$WORKFLOW_NAME" = "Backend CI" ]; then
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+              echo "frontend=false" >> "$GITHUB_OUTPUT"
+            elif [ "$WORKFLOW_NAME" = "Frontend CI" ]; then
+              echo "backend=false" >> "$GITHUB_OUTPUT"
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "backend=true" >> "$GITHUB_OUTPUT"
+              echo "frontend=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  # ─────────────────────────────────────────────────────
+  # Build & Push Backend
+  # ─────────────────────────────────────────────────────
+  build-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.build_backend == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────
+  # Build & Push Frontend
+  # ─────────────────────────────────────────────────────
+  build-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.build_frontend == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-frontend:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────
+  # Summary
+  # ─────────────────────────────────────────────────────
+  summary:
+    needs: [build-backend, build-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment summary
+        run: |
+          echo "## CD Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.build-backend.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.build-frontend.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** SSH ke STB dan jalankan:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo 'cd ~/kasirku && docker compose pull && docker compose up -d' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

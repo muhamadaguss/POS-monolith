@@ -1,0 +1,10 @@
+# Grafana provisioning — Dashboard provider
+# Load dashboard JSON files dari /etc/grafana/provisioning/dashboards
+apiVersion: 1
+
+providers:
+  - name: 'Kasirku'
+    folder: ''
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards

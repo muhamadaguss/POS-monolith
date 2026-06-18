@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { createValidationPipe } from './common/pipes/validation.pipe';
+import { RequestIdHeaderMiddleware } from './common/middleware/request-id-header.middleware';
 import { initSentry } from './observability/sentry';
 
 async function bootstrap() {
@@ -25,6 +26,10 @@ async function bootstrap() {
   const port = configService.get<number>('app.port') ?? 3001;
   const frontendUrl = configService.get<string>('app.frontendUrl') ?? 'http://localhost:3000';
   const isProduction = process.env.NODE_ENV === 'production';
+
+  // Propagate pino reqId ke response header X-Request-Id untuk trace correlation.
+  // Dipasang SEBELUM helmet agar header tidak terblokir kebijakan CORP/CSP.
+  app.use(new RequestIdHeaderMiddleware().use);
 
   // Security headers (helmet) — dipasang paling awal, sebelum route.
   // CSP dimatikan di non-production agar Swagger UI tetap berfungsi; di
@@ -79,6 +84,7 @@ async function bootstrap() {
       .addTag('Shifts', 'Manajemen shift kasir')
       .addTag('Transactions', 'Transaksi POS — checkout & void')
       .addTag('Reports', 'Laporan penjualan, top produk, dan rekap shift')
+      .addTag('Logs', 'Ingestion log dari client-side dan forwarding')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

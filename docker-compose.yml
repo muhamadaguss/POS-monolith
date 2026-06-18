@@ -1,0 +1,98 @@
+version: "3.8"
+
+services:
+  # Backend API (NestJS)
+  backend:
+    image: docker.io/muhamadaguss/kasirku-backend:latest
+    container_name: kasirku-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./uploads:/app/uploads
+    env_file:
+      - .env
+    networks:
+      - kasirku-network
+
+  # Frontend (Next.js)
+  frontend:
+    image: docker.io/muhamadaguss/kasirku-frontend:latest
+    container_name: kasirku-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3004:3000"
+    env_file:
+      - .env
+    networks:
+      - kasirku-network
+
+  # === LOG AGGREGATION ===
+
+  # Loki — log storage & query engine
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: kasirku-loki
+    restart: unless-stopped
+    mem_limit: 64m
+    mem_reservation: 48m
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    command:
+      - -config.file=/etc/loki/loki-config.yaml
+      - -target=all
+    networks:
+      - kasirku-network
+
+  # Fluent Bit — log shipper (docker logs → Loki)
+  fluent-bit:
+    image: fluent/fluent-bit:3.2.10
+    container_name: kasirku-fluent-bit
+    restart: unless-stopped
+    mem_limit: 32m
+    mem_reservation: 20m
+    volumes:
+      - ./infra/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./infra/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - kasirku-network
+
+  # Grafana — visualization & dashboards
+  grafana:
+    image: grafana/grafana-oss:11.5.2
+    container_name: kasirku-grafana
+    restart: unless-stopped
+    mem_limit: 80m
+    mem_reservation: 56m
+    ports:
+      - "3200:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    env_file:
+      - .env
+    networks:
+      - kasirku-network
+
+networks:
+  kasirku-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    name: kasirku-pgdata
+  loki-data:
+    name: kasirku-loki-data
+  grafana-data:
+    name: kasirku-grafana-data

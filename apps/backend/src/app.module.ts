@@ -24,6 +24,7 @@ import { AdminTenantsModule } from './modules/admin-tenants/admin-tenants.module
 import { AdminUsersModule } from './modules/admin-users/admin-users.module';
 import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
 import { HealthModule } from './modules/health/health.module';
+import { LogsModule } from './modules/logs/logs.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -75,6 +76,10 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
           process.env.NODE_ENV === 'production'
             ? undefined
             : { target: 'pino-pretty', options: { singleLine: true } },
+        customProps: () => ({
+          service: 'backend',
+          environment: process.env.NODE_ENV ?? 'development',
+        }),
       },
     }),
 
@@ -120,6 +125,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     AdminUsersModule,
     AdminReportsModule,
     HealthModule,
+    LogsModule,
   ],
 
   providers: [
