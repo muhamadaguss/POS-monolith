@@ -12,7 +12,7 @@ name: Lighthouse PWA
 # bukan production) → workflow ini build lalu `next start`, bukan dev server.
 
 on:
-  pull_request:
+  push:
     branches: [main]
     paths:
       - 'apps/frontend/**'

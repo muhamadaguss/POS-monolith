@@ -13,12 +13,6 @@ on:
       - 'apps/backend/**'
       - 'packages/database/**'
       - '.github/workflows/backend-ci.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/backend/**'
-      - 'packages/database/**'
-      - '.github/workflows/backend-ci.yml'
 
 defaults:
   run:

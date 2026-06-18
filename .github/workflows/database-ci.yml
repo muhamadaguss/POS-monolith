@@ -15,11 +15,6 @@ on:
     paths:
       - 'packages/database/**'
       - '.github/workflows/database-ci.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'packages/database/**'
-      - '.github/workflows/database-ci.yml'
 
 defaults:
   run:

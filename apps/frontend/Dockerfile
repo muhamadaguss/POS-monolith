@@ -2,9 +2,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy package files
+# Copy package files (root + frontend)
+COPY package.json package-lock.json ./
 COPY apps/frontend/package*.json ./
-COPY package.json ./
 COPY packages/database/package*.json ./database/
 
 # Install all deps (termasuk prisma CLI di root untuk schema)
