@@ -86,6 +86,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -100,7 +103,7 @@ jobs:
         with:
           context: .
           file: apps/backend/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-backend:latest
@@ -120,6 +123,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -134,7 +140,7 @@ jobs:
         with:
           context: .
           file: apps/frontend/Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/kasirku-frontend:latest
