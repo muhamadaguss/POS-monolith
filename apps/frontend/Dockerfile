@@ -35,15 +35,20 @@ WORKDIR /app
 # Install ca-certificates (Alpine uses apk)
 RUN apk add --no-cache ca-certificates
 
-# Copy dari build stage (standalone output)
-COPY --from=build --chown=node:node /app/apps/frontend/.next/standalone ./
-COPY --from=build --chown=node:node /app/apps/frontend/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/apps/frontend/public ./public
-COPY --from=build --chown=node:node /app/node_modules ./node_modules
+# Copy seluruh standalone output dari build stage ke /app
+COPY --from=build /app/apps/frontend/.next/standalone/ /app/
+
+# Copy static assets & public (harus di-serve oleh Next.js server)
+COPY --from=build /app/apps/frontend/.next/static /app/.next/static
+COPY --from=build /app/apps/frontend/public /app/public
+
+# Pastikan server.js ada sebelum lanjut
+RUN ls -la /app/server.js
 
 # Port 3000
 EXPOSE 3000
 
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
 CMD ["node", "server.js"]
