@@ -50,8 +50,11 @@ COPY --from=build --chown=node:node /app/apps/backend/dist ./apps/backend/dist
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/packages/database/prisma ./packages/database/prisma
 
-# Copy schema & migrations dari database (untuk prisma migrate deploy)
+# Copy schema file ke lokasi yang diharapkan entrypoint (/app/prisma/schema.prisma)
 COPY --from=build --chown=node:node /app/packages/database/prisma/schema.prisma ./prisma/schema.prisma
+
+# PENTING: Copy juga folder migrations agar Prisma tahu struktur tabel apa yang harus dibuat
+COPY --from=build --chown=node:node /app/packages/database/prisma/migrations ./prisma/migrations
 
 # Entry point: migrate deploy lalu start
 COPY --chown=node:node apps/backend/src/entrypoint.sh ./entrypoint.sh
