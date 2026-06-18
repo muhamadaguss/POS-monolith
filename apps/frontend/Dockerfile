@@ -2,23 +2,15 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy package files (root + frontend)
+# Copy package files (root + frontend only, tidak butuh database)
 COPY package.json package-lock.json ./
 COPY apps/frontend/package*.json ./
-COPY packages/database/package*.json ./database/
 
-# Install all deps (termasuk prisma CLI di root untuk schema)
+# Install all deps
 RUN npm ci
 
-# Install database deps untuk prisma generate (type dependencies)
-RUN cd database && npm ci
-
-# Copy sisa source
+# Copy source
 COPY apps/frontend/ ./apps/frontend/
-COPY packages/database/ ./packages/database/
-
-# Generate Prisma client — pin versi 5.x (npx tanpa pin akan auto-install v7 yg breaking)
-RUN npx prisma@5 generate --schema packages/database/prisma/schema.prisma
 
 # Build frontend (dengan NEXT_PUBLIC_API_URL & NEXT_PUBLIC_SENTRY_DSN build-arg)
 ARG NEXT_PUBLIC_API_URL
