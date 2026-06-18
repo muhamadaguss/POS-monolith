@@ -80,14 +80,11 @@ jobs:
   build-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.build_backend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -117,14 +114,11 @@ jobs:
   build-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.build_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
