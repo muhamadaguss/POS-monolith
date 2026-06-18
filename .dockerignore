@@ -1,0 +1,61 @@
+# Dependencies
+node_modules
+apps/backend/node_modules
+apps/frontend/node_modules
+packages/database/node_modules
+
+# Build artifacts
+dist
+.next
+build
+out
+coverage
+.nyc_output
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Source control
+.git
+.gitignore
+
+# IDE & editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Uploads (data volume, built at runtime)
+uploads
+*.uploads
+
+# PWA SW (re-generated in Docker)
+public/sw.js
+public/swe-worker-*
+
+# Scripts dev only
+*.mjs
+*.test.ts
+*.spec.ts
+test/
+jest.config.js
+vitest.config.ts
+coverage/

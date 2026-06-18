@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:16
+    container_name: kasirku-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kasirku
+      POSTGRES_PASSWORD: kasirku
+      POSTGRES_DB: kasirku
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kasirku"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend API (NestJS)
+  backend:
+    image: docker.io/muhamadaguss/kasirku-backend:latest
+    container_name: kasirku-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      - DATABASE_URL=postgresql://kasirku:kasirku@db:5432/kasirku?schema=public
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - NODE_ENV=production
+      - PORT=3001
+      - APP_URL=http://localhost:3001
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE}
+    networks:
+      - kasirku-network
+
+  # Frontend (Next.js)
+  frontend:
+    image: docker.io/muhamadaguss/kasirku-frontend:latest
+    container_name: kasirku-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=${AUTH_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    networks:
+      - kasirku-network
+
+networks:
+  kasirku-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    name: kasirku-pgdata
