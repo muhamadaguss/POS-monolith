@@ -51,7 +51,7 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/packages/database/prisma ./packages/database/prisma
 
 # Copy database package.json & node_modules untuk seed (butuh ts-node)
-COPY --from=build --chown=node:node /app/database/package.json ./packages/database/package.json
+COPY --from=build --chown=node:node /app/packages/database/package.json ./packages/database/package.json
 COPY --from=build --chown=node:node /app/database/node_modules ./packages/database/node_modules
 
 # Copy schema file ke lokasi yang diharapkan entrypoint (/app/prisma/schema.prisma)
