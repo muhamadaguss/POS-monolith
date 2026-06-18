@@ -35,8 +35,8 @@ RUN cd apps/backend && npm run build
 FROM node:22-slim AS runtime
 WORKDIR /app
 
-# Install ca-certificates untuk HTTPS (Prisma/Postgres)
-RUN apk add --no-cache ca-certificates
+# Install ca-certificates untuk HTTPS (Prisma/Postgres) — Debian-slim uses apt-get
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Create uploads directory dengan proper permissions
 RUN mkdir -p /app/uploads && chown -R node:node /app

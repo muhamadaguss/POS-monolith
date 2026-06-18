@@ -30,8 +30,8 @@ RUN cd apps/frontend && npm run build
 FROM node:22-slim AS runtime
 WORKDIR /app
 
-# Install ca-certificates
-RUN apk add --no-cache ca-certificates
+# Install ca-certificates (Debian-slim uses apt-get, not apk)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy dari build stage (standalone output)
 COPY --from=build --chown=node:node /app/apps/frontend/.next/standalone ./
