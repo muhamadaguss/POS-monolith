@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy dari deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/database/node_modules/database/node_modules ./database/node_modules
+COPY --from=deps /app/database/node_modules ./database/node_modules
 
 # Copy source
 COPY apps/backend/ ./apps/backend/
