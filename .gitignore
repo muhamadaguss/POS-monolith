@@ -48,3 +48,6 @@ infra/fluent-bit/tail.db
 
 # ── Claude Code (settings lokal) ──────────────────────────────
 .claude/
+
+# Deployment scripts
+update.sh
