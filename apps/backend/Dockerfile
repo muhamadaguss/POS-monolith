@@ -54,6 +54,10 @@ COPY --from=build --chown=node:node /app/packages/database/prisma ./packages/dat
 COPY --from=build --chown=node:node /app/packages/database/package.json ./packages/database/package.json
 COPY --from=build --chown=node:node /app/database/node_modules ./packages/database/node_modules
 
+# Copy generated Prisma Client ke database node_modules agar seed bisa akses
+COPY --from=build --chown=node:node /app/node_modules/@prisma ./packages/database/node_modules/@prisma
+COPY --from=build --chown=node:node /app/node_modules/.prisma ./packages/database/node_modules/.prisma
+
 # Copy schema file ke lokasi yang diharapkan entrypoint (/app/prisma/schema.prisma)
 COPY --from=build --chown=node:node /app/packages/database/prisma/schema.prisma ./prisma/schema.prisma
 
