@@ -20,9 +20,11 @@ COPY packages/database/ ./packages/database/
 # Generate Prisma client — pin versi 5.x (npx tanpa pin akan auto-install v7 yg breaking)
 RUN npx prisma@5 generate --schema packages/database/prisma/schema.prisma
 
-# Build frontend (dengan NEXT_PUBLIC_API_URL build-arg)
+# Build frontend (dengan NEXT_PUBLIC_API_URL & NEXT_PUBLIC_SENTRY_DSN build-arg)
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 RUN cd apps/frontend && npm run build
 
