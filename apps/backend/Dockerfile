@@ -5,6 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY apps/backend/package*.json ./
 COPY packages/database/package*.json ./database/
+# Install build tools untuk native dependencies (misal bcrypt / node-pre-gyp)
+RUN apk add --no-cache python3 make g++
 
 # Install backend deps (termasuk prisma CLI, TypeScript, NestJS — butuh dev deps untuk build)
 RUN npm ci
