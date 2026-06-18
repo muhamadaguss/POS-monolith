@@ -10,7 +10,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3001:3001"
+      - "3005:3005"
     volumes:
       - ./uploads:/app/uploads
     environment:
@@ -20,8 +20,8 @@ services:
       - JWT_ACCESS_EXPIRES_IN=15m
       - JWT_REFRESH_EXPIRES_IN=7d
       - NODE_ENV=production
-      - PORT=3001
-      - APP_URL=http://localhost:3001
+      - PORT=3005
+      - APP_URL=http://localhost:3005
       - FRONTEND_URL=${FRONTEND_URL}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE}
@@ -36,7 +36,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "3004:3000"
     environment:
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_URL=${AUTH_URL}
