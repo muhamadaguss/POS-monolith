@@ -1,16 +1,22 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
+import { LandingPage } from './(landing)/page';
 
 /**
- * Entry redirector — Server Component. Membaca session Auth.js (cookie) di server
- * dan mengarahkan sesuai login state & role. Tak ada lagi spinner hydration klien.
+ * Root page:
+ * - User NOT logged in → Landing Page
+ * - User logged in → Redirect to dashboard/pos/admin based on role
  */
 export default async function RootPage() {
   const session = await getSession();
   const user = session?.user;
 
-  if (!user) redirect('/login');
+  if (!user) {
+    // Show landing page (render the component from (landing) group)
+    return <LandingPage />;
+  }
 
+  // User logged in - redirect based on role
   switch (user.role) {
     case 'SUPER_ADMIN':
       redirect('/admin');
