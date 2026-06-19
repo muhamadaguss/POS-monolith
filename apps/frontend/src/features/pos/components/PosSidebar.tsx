@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from "@/features/auth/store";
 import { useLogout } from "@/features/auth/hooks";
 import { getInitials } from "@/lib/format";
+import { InstallButton } from "@/features/pwa/InstallButton";
 
 const NAV_ITEMS = [
   { href: "/pos", label: "Cashier", icon: ShoppingCart, exact: true },
@@ -87,6 +88,9 @@ export function PosSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
           <LogOut className="w-3.5 h-3.5" />
           Logout
         </button>
+      </div>
+      <div className="px-3 pb-3">
+        <InstallButton />
       </div>
     </div>
   );
