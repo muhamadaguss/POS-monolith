@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
-import { CreateStockAdjustmentDto } from './dto/stock-adjustment.dto';
+import { CreateStockAdjustmentDto, UpdateInventoryDto } from './dto/stock-adjustment.dto';
 import { CreateStockTransferDto, UpdateTransferStatusDto } from './dto/stock-transfer.dto';
 import { InventoryQueryDto } from './dto/inventory-query.dto';
 import { MutationQueryDto } from './dto/mutation-query.dto';
@@ -84,5 +84,26 @@ export class InventoryController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.inventoryService.processTransfer(id, dto, user);
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.INVENTORY_ADJUST)
+  @ApiOperation({ summary: 'Update minStock item inventory' })
+  updateInventory(
+    @Param('id') id: string,
+    @Body() dto: UpdateInventoryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.inventoryService.update(id, dto, user);
+  }
+
+  @Delete(':id')
+  @RequirePermissions(PERMISSIONS.INVENTORY_ADJUST)
+  @ApiOperation({ summary: 'Hapus item dari inventory (set stok ke 0)' })
+  removeInventory(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.inventoryService.remove(id, user);
   }
 }

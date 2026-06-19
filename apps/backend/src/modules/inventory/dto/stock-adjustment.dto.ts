@@ -29,3 +29,15 @@ export class CreateStockAdjustmentDto {
   @Type(() => AdjustmentItemDto)
   items: AdjustmentItemDto[];
 }
+
+export class UpdateInventoryDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minStock?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  quantity?: number;
+}

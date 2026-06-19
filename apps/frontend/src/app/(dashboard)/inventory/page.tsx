@@ -27,7 +27,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useAuthStore, useAuthHydrated } from "@/features/auth/store";
 import { proactiveRefresh } from "@/lib/api";
-import { getInventory, createStockAdjustment } from "@/features/inventory/api";
+import { getInventory, createStockAdjustment, updateInventory, deleteInventory } from "@/features/inventory/api";
 import { resolveImageUrl } from "@/features/products/api";
 import { toastSuccess, errorAlert } from "@/lib/swal";
 import type { InventoryItem } from "@/features/inventory/api";
@@ -140,6 +140,11 @@ export default function InventoryPage() {
   const [showOpname, setShowOpname] = useState(false);
   const [opnameCounts, setOpnameCounts] = useState<Record<string, string>>({});
   const [isPending, setIsPending] = useState(false);
+  const [editItem, setEditItem] = useState<InventoryItem | null>(null);
+  const [editMinStock, setEditMinStock] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
+  const [deleteItem, setDeleteItem] = useState<InventoryItem | null>(null);
+  const [isDeletePending, setIsDeletePending] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -226,6 +231,47 @@ export default function InventoryPage() {
       errorAlert(msg ?? 'Gagal menyimpan penyesuaian stok');
     } finally {
       setIsPending(false);
+    }
+  }
+
+  function handleEditClick(item: InventoryItem) {
+    setEditItem(item);
+    setEditMinStock(String(item.minStock));
+    setEditQuantity(String(item.quantity));
+  }
+
+  async function handleEditSubmit() {
+    if (!editItem) return;
+    setIsPending(true);
+    try {
+      await updateInventory(editItem.id, {
+        minStock: parseInt(editMinStock, 10),
+        quantity: parseInt(editQuantity, 10),
+      });
+      setEditItem(null);
+      toastSuccess('Stok berhasil diperbarui');
+      load(search, category);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      errorAlert(msg ?? 'Gagal memperbarui stok');
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteItem) return;
+    setIsDeletePending(true);
+    try {
+      await deleteInventory(deleteItem.id);
+      setDeleteItem(null);
+      toastSuccess('Item berhasil dihapus dari inventaris');
+      load(search, category);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      errorAlert(msg ?? 'Gagal menghapus item');
+    } finally {
+      setIsDeletePending(false);
     }
   }
 
@@ -474,6 +520,7 @@ export default function InventoryPage() {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
+                          onClick={() => handleEditClick(item)}
                           className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                           title="Edit"
                         >
@@ -481,6 +528,7 @@ export default function InventoryPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setDeleteItem(item)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           title="Hapus"
                         >
@@ -618,6 +666,101 @@ export default function InventoryPage() {
                 </span>
               ) : (
                 "Simpan Opname"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) setEditItem(null); }}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Inventaris</DialogTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              {editItem?.productName} — {editItem?.sku}
+            </p>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label htmlFor="edit-minstock">Min. Stok</Label>
+              <Input
+                id="edit-minstock"
+                type="number"
+                min={0}
+                value={editMinStock}
+                onChange={(e) => setEditMinStock(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-quantity">Jumlah Stok</Label>
+              <Input
+                id="edit-quantity"
+                type="number"
+                min={0}
+                value={editQuantity}
+                onChange={(e) => setEditQuantity(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => setEditItem(null)}
+              className="flex-1 rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={isPending}
+              className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700"
+            >
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Menyimpan...
+                </span>
+              ) : (
+                "Simpan"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteItem} onOpenChange={(o) => { if (!o) setDeleteItem(null); }}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Hapus dari Inventaris</DialogTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              Apakah kamu yakin ingin menghapus <strong>{deleteItem?.productName}</strong> dari inventaris?<br />
+              Stok akan diatur ke 0.
+            </p>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteItem(null)}
+              className="flex-1 rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              disabled={isDeletePending}
+              className="flex-1 rounded-xl bg-red-600 hover:bg-red-700"
+            >
+              {isDeletePending ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Menghapus...
+                </span>
+              ) : (
+                "Hapus"
               )}
             </Button>
           </div>

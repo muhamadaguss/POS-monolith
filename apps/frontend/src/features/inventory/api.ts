@@ -66,3 +66,11 @@ export async function getInventory(outletId: string, search?: string, categoryNa
 export async function createStockAdjustment(payload: StockAdjustmentPayload): Promise<void> {
   await api.post('/inventory/adjustments', payload);
 }
+
+export async function updateInventory(id: string, payload: { minStock?: number; quantity?: number }): Promise<void> {
+  await api.patch(`/inventory/${id}`, payload);
+}
+
+export async function deleteInventory(id: string): Promise<void> {
+  await api.delete(`/inventory/${id}`);
+}

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
-import { CreateStockAdjustmentDto } from './dto/stock-adjustment.dto';
+import { CreateStockAdjustmentDto, UpdateInventoryDto } from './dto/stock-adjustment.dto';
 import { CreateStockTransferDto, UpdateTransferStatusDto } from './dto/stock-transfer.dto';
 import { InventoryQueryDto } from './dto/inventory-query.dto';
 import { MutationQueryDto } from './dto/mutation-query.dto';
@@ -488,6 +488,37 @@ export class InventoryService {
       items,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  // ---- Update Inventory Item (edit minStock / quantity) ----
+
+  async update(id: string, dto: UpdateInventoryDto, currentUser: AuthenticatedUser) {
+    const inventory = await this.prisma.inventory.findFirst({
+      where: { id, tenantId: currentUser.tenantId! },
+    });
+    if (!inventory) throw new NotFoundException('Data stok tidak ditemukan');
+
+    return this.prisma.inventory.update({
+      where: { id },
+      data: {
+        ...(dto.minStock !== undefined && { minStock: dto.minStock }),
+        ...(dto.quantity !== undefined && { quantity: dto.quantity }),
+      },
+    });
+  }
+
+  // ---- Remove Inventory Item (set stok ke 0) ----
+
+  async remove(id: string, currentUser: AuthenticatedUser) {
+    const inventory = await this.prisma.inventory.findFirst({
+      where: { id, tenantId: currentUser.tenantId! },
+    });
+    if (!inventory) throw new NotFoundException('Data stok tidak ditemukan');
+
+    return this.prisma.inventory.update({
+      where: { id },
+      data: { quantity: 0 },
+    });
   }
 
   // ---- Helpers ----
