@@ -22,9 +22,10 @@ export default auth((req) => {
   const isLoggedIn = !!user;
 
   const isAuthRoute = path === '/login' || path === '/select-outlet';
+  const isPublicRoute = path === '/' || path === '/login' || path === '/select-outlet';
 
-  // 1) Belum login & bukan halaman auth → ke /login.
-  if (!isLoggedIn && !isAuthRoute) {
+  // 1) Belum login & bukan halaman auth/public → ke /login.
+  if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(new URL('/login', nextUrl));
   }
 
