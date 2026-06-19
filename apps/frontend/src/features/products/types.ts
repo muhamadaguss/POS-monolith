@@ -117,7 +117,7 @@ export interface CreateProductPayload {
   variants?: ProductVariantInput[];
 }
 
-// PATCH tidak menerima sku.
+// PATCH — mendukung hasVariants + variants untuk edit
 export interface UpdateProductPayload {
   name?: string;
   barcode?: string;
@@ -126,4 +126,6 @@ export interface UpdateProductPayload {
   unit?: string;
   categoryId?: string;
   status?: ProductStatus;
+  hasVariants?: boolean;
+  variants?: ProductVariantInput[];
 }

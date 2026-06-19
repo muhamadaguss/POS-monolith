@@ -110,6 +110,9 @@ export function ProductFormDialog({
     setSaving(true);
     try {
       if (isEdit) {
+        const cleanVariants = hasVariants
+          ? variants.filter((v) => v.name.trim() || v.sku.trim())
+          : [];
         await updateProduct(product!.id, {
           name: name.trim(),
           barcode: barcode.trim() || undefined,
@@ -118,6 +121,15 @@ export function ProductFormDialog({
           unit: unit.trim() || undefined,
           categoryId: categoryId || undefined,
           status,
+          hasVariants,
+          variants:
+            hasVariants && cleanVariants.length > 0
+              ? cleanVariants.map((v) => ({
+                  name: v.name.trim(),
+                  sku: v.sku.trim(),
+                  barcode: v.barcode?.trim() || undefined,
+                }))
+              : undefined,
         });
         toastSuccess('Produk berhasil diperbarui');
       } else {
@@ -343,50 +355,53 @@ export function ProductFormDialog({
             </div>
           )}
 
-          {/* Varian — hanya saat tambah (kontrak PATCH tak mengelola varian) */}
-          {!isEdit && (
-            <div className="rounded-xl border border-gray-100 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={hasVariants}
-                  onChange={(e) => setHasVariants(e.target.checked)}
-                />
-                Produk memiliki varian (size, warna, dll)
-              </label>
+          {/* Variants — aktif di mode tambah DAN edit */}
+          <div className="rounded-xl border border-gray-100 p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={hasVariants}
+                onChange={(e) => setHasVariants(e.target.checked)}
+              />
+              {isEdit ? 'Edit varian produk' : 'Produk memiliki varian (size, warna, dll)'}
+            </label>
 
-              {hasVariants && (
-                <div className="mt-3 space-y-2">
-                  {variants.map((v, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        placeholder="Nama varian"
-                        value={v.name}
-                        onChange={(e) => updateVariant(i, { name: e.target.value })}
-                      />
-                      <Input
-                        placeholder="SKU"
-                        value={v.sku}
-                        onChange={(e) => updateVariant(i, { sku: e.target.value })}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => removeVariant(i)}
-                        title="Hapus varian"
-                      >
-                        <X className="size-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addVariant}>
-                    <Plus className="size-3.5" />
-                    Tambah varian
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+            {hasVariants && (
+              <div className="mt-3 space-y-2">
+                {variants.map((v, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      placeholder="Nama varian"
+                      value={v.name}
+                      onChange={(e) => updateVariant(i, { name: e.target.value })}
+                    />
+                    <Input
+                      placeholder="SKU"
+                      value={v.sku}
+                      onChange={(e) => updateVariant(i, { sku: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Barcode (opsional)"
+                      value={v.barcode ?? ''}
+                      onChange={(e) => updateVariant(i, { barcode: e.target.value })}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removeVariant(i)}
+                      title="Hapus varian"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addVariant}>
+                  <Plus className="size-3.5" />
+                  Tambah varian
+                </Button>
+              </div>
+            )}
+          </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
