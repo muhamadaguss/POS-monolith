@@ -4,7 +4,7 @@ name: CD — Build & Push Docker Images
 # setelah CI selesai dan sukses pada branch `main`.
 #
 # Trigger:
-#   - Dipicu oleh workflow_run dari Backend CI atau Frontend CI yang sukses.
+#   - Dipicu oleh workflow_run dari Backend CI ATAU Frontend CI yang sukses.
 #   - Juga bisa dipicu manual via workflow_dispatch.
 #
 # Prerequisites (GitHub Secrets):
@@ -14,7 +14,7 @@ name: CD — Build & Push Docker Images
 
 on:
   workflow_run:
-    workflows: ["Backend CI"]
+    workflows: ["Backend CI", "Frontend CI"]
     types: [completed]
     branches: [main]
 
