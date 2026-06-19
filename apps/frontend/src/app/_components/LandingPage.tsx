@@ -361,24 +361,57 @@ function Hero() {
     document.getElementById('fitur')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Stable seeded particles (no hydration mismatch)
+  const particles = [
+    { top: '12%', left: '8%', size: 6, opacity: 0.12, delay: '0.5s', duration: '5.5s' },
+    { top: '25%', left: '75%', size: 8, opacity: 0.08, delay: '2s', duration: '7s' },
+    { top: '45%', left: '20%', size: 5, opacity: 0.15, delay: '1s', duration: '6s' },
+    { top: '60%', left: '90%', size: 7, opacity: 0.10, delay: '0.8s', duration: '5s' },
+    { top: '70%', left: '35%', size: 4, opacity: 0.18, delay: '1.5s', duration: '6.5s' },
+    { top: '15%', left: '55%', size: 9, opacity: 0.07, delay: '2.5s', duration: '7.5s' },
+    { top: '82%', left: '15%', size: 5, opacity: 0.14, delay: '0.3s', duration: '5.8s' },
+    { top: '38%', left: '65%', size: 6, opacity: 0.11, delay: '1.8s', duration: '6.2s' },
+  ];
+
   return (
     <section
       className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden"
       style={{
-        background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 40%, #F0FDF4 70%, ${COLORS.warmBg} 100%)`,
+        background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 30%, #F0FDF4 60%, #ECFDF5 80%, ${COLORS.warmBg} 100%)`,
+        backgroundSize: '200% 200%',
+        animation: 'gradient-shift 15s ease infinite',
       }}
     >
-      {/* Subtle background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Floating Particles - stable positions, no hydration mismatch */}
+      {particles.map((p, i) => (
         <div
-          className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10"
-          style={{ backgroundColor: COLORS.primary }}
+          key={i}
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            backgroundColor: COLORS.primary,
+            opacity: p.opacity,
+            top: p.top,
+            left: p.left,
+            animation: `float ${p.duration} ease-in-out infinite`,
+            animationDelay: p.delay,
+          }}
         />
-        <div
-          className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full opacity-10"
-          style={{ backgroundColor: COLORS.primary }}
-        />
-      </div>
+      ))}
+      {/* Floating decorative circles */}
+      <div
+        className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-[0.07]"
+        style={{ backgroundColor: COLORS.primary }}
+      />
+      <div
+        className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full opacity-[0.07]"
+        style={{ backgroundColor: COLORS.primary }}
+      />
+      <div
+        className="absolute top-1/3 -left-10 w-32 h-32 rounded-full opacity-[0.05]"
+        style={{ backgroundColor: COLORS.primary }}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
