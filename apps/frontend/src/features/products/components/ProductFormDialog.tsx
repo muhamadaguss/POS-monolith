@@ -166,7 +166,7 @@ export function ProductFormDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         showCloseButton
-        className="max-w-2xl max-h-[88vh] overflow-y-auto rounded-2xl p-0"
+        className="max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl p-0"
       >
         {/* Header */}
         <DialogHeader className="border-b border-emerald-100 px-6 py-5">
@@ -356,8 +356,8 @@ export function ProductFormDialog({
           )}
 
           {/* Variants — aktif di mode tambah DAN edit */}
-          <div className="rounded-xl border border-gray-100 p-3">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <div className="rounded-xl border border-gray-100 p-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={hasVariants}
@@ -367,29 +367,36 @@ export function ProductFormDialog({
             </label>
 
             {hasVariants && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-4 space-y-3">
                 {variants.map((v, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div
+                    key={i}
+                    className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start rounded-lg border border-gray-100 bg-gray-50/40 p-3"
+                  >
                     <Input
                       placeholder="Nama varian"
                       value={v.name}
                       onChange={(e) => updateVariant(i, { name: e.target.value })}
+                      className="h-10"
                     />
                     <Input
                       placeholder="SKU"
                       value={v.sku}
                       onChange={(e) => updateVariant(i, { sku: e.target.value })}
+                      className="h-10"
                     />
                     <Input
                       placeholder="Barcode (opsional)"
                       value={v.barcode ?? ''}
                       onChange={(e) => updateVariant(i, { barcode: e.target.value })}
+                      className="h-10"
                     />
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => removeVariant(i)}
                       title="Hapus varian"
+                      className="mt-1 sm:mt-0"
                     >
                       <X className="size-4" />
                     </Button>

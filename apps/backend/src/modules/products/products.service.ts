@@ -226,14 +226,102 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto, currentUser: AuthenticatedUser) {
-    await this.findOne(id, currentUser);
-    const { status, ...rest } = dto;
+    const product = await this.findOne(id, currentUser);
+    const { status, hasVariants, variants, ...rest } = dto;
+
+    const data: any = { ...rest };
+    if (status) data.status = status as ProductStatus;
+
+    // Proses varian jika dikirim
+    if (variants && variants.length > 0) {
+      // Validasi SKU varian tidak duplikat dalam payload baru
+      const skus = variants.map((v) => v.sku);
+      const uniqueSkus = new Set(skus);
+      if (skus.length !== uniqueSkus.size) {
+        throw new ConflictException('SKU varian tidak boleh duplikat');
+      }
+
+      // Cek SKU varian yang sudah ada di tenant lain
+      const existingVariantSkus = await this.prisma.productVariant.findMany({
+        where: {
+          tenantId: currentUser.tenantId!,
+          sku: { in: skus },
+          productId: { not: id }, // exclude produk ini
+        },
+        select: { sku: true },
+      });
+      if (existingVariantSkus.length > 0) {
+        throw new ConflictException(
+          `SKU varian sudah digunakan: ${existingVariantSkus.map((v) => v.sku).join(', ')}`,
+        );
+      }
+
+      // Ambil varian existing produk ini
+      const existingVariants = await this.prisma.productVariant.findMany({
+        where: { productId: id },
+        select: { id: true, sku: true },
+      });
+      const existingSkuMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
+      const newSkuSet = new Set(skus);
+
+      // Build operations untuk varian
+      const variantOperations: any[] = [];
+
+      // 1. Update varian yang sudah ada (by SKU)
+      for (const v of variants) {
+        if (existingSkuMap.has(v.sku)) {
+          // Update existing
+          variantOperations.push({
+            where: { sku: v.sku, productId: id },
+            data: { name: v.name, barcode: v.barcode },
+          });
+        } else {
+          // Create new
+          variantOperations.push({
+            create: {
+              tenantId: currentUser.tenantId!,
+              productId: id,
+              name: v.name,
+              sku: v.sku,
+              barcode: v.barcode,
+            },
+          });
+        }
+      }
+
+      // 2. Hapus varian yang tidak ada di payload baru
+      for (const existing of existingVariants) {
+        if (!newSkuSet.has(existing.sku)) {
+          variantOperations.push({
+            where: { id: existing.id },
+            delete: true,
+          });
+        }
+      }
+
+      // Eksekusi semua operasi varian
+      for (const op of variantOperations) {
+        if (op.delete) {
+          await this.prisma.productVariant.delete({ where: op.where });
+        } else if (op.create) {
+          await this.prisma.productVariant.create({ data: op.create });
+        } else if (op.where && op.data) {
+          await this.prisma.productVariant.update({ where: op.where, data: op.data });
+        }
+      }
+
+      data.hasVariants = true;
+    } else if (hasVariants !== undefined) {
+      // Jika hasVariants di-false-kan, hapus semua varian
+      if (!hasVariants) {
+        await this.prisma.productVariant.deleteMany({ where: { productId: id } });
+      }
+      data.hasVariants = hasVariants;
+    }
+
     return this.prisma.product.update({
       where: { id },
-      data: {
-        ...rest,
-        ...(status && { status: status as ProductStatus }),
-      },
+      data,
       select: PRODUCT_SELECT,
     });
   }

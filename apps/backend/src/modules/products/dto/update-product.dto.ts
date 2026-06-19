@@ -1,7 +1,28 @@
-import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 /** Terima URL http(s) penuh ATAU path relatif hasil upload (/uploads/...). */
 export const IMAGE_URL_REGEX = /^(https?:\/\/.+|\/uploads\/.+)$/i;
+
+class VariantInputDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  sku: string;
+
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+}
 
 export class UpdateProductDto {
   @IsOptional()
@@ -33,4 +54,14 @@ export class UpdateProductDto {
   @IsOptional()
   @IsEnum(['ACTIVE', 'INACTIVE', 'DELETED'])
   status?: 'ACTIVE' | 'INACTIVE' | 'DELETED';
+
+  @IsOptional()
+  @IsBoolean()
+  hasVariants?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VariantInputDto)
+  variants?: VariantInputDto[];
 }

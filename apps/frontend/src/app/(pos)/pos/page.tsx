@@ -22,6 +22,7 @@ import { MobileCart } from "@/features/pos/components/MobileCart";
 import { PosSidebar } from "@/features/pos/components/PosSidebar";
 import { CheckoutDialog } from "@/features/pos/components/CheckoutDialog";
 import { ReceiptDialog } from "@/features/pos/components/ReceiptDialog";
+import { VariantSelector } from "@/features/pos/components/VariantSelector";
 import { confirmDialog } from "@/lib/swal";
 import type { Product } from "@/features/pos/types";
 
@@ -30,6 +31,10 @@ export default function PosPage() {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Variant selector state
+  const [variantProduct, setVariantProduct] = useState<Product | null>(null);
+  const [variantSelectorOpen, setVariantSelectorOpen] = useState(false);
 
   const today = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -75,6 +80,27 @@ export default function PosPage() {
       name: product.name,
       price: product.price,
       stock: product.stock,
+    });
+  }
+
+  function handleSelectVariant(product: Product) {
+    setVariantProduct(product);
+    setVariantSelectorOpen(true);
+  }
+
+  function handleAddWithVariant(
+    productId: string,
+    variantId: string | null,
+    name: string,
+    price: number,
+    stock: number,
+  ) {
+    addItem({
+      productId,
+      variantId,
+      name,
+      price,
+      stock,
     });
   }
 
@@ -282,6 +308,7 @@ export default function PosPage() {
                     key={product.id}
                     product={product}
                     onAdd={handleAddProduct}
+                    onSelectVariant={handleSelectVariant}
                   />
                 ))}
               </div>
@@ -315,6 +342,19 @@ export default function PosPage() {
         onCheckout={handleCheckoutOpen}
         isCheckoutPending={isPending}
       />
+
+      {/* Variant selector */}
+      {variantProduct && (
+        <VariantSelector
+          product={variantProduct}
+          open={variantSelectorOpen}
+          onOpenChange={(open) => {
+            setVariantSelectorOpen(open);
+            if (!open) setVariantProduct(null);
+          }}
+          onSelectVariant={handleAddWithVariant}
+        />
+      )}
 
       {/* Checkout dialog */}
       <CheckoutDialog

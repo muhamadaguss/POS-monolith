@@ -8,19 +8,30 @@ import type { Product } from '../types';
 interface ProductCardProps {
   product: Product;
   onAdd: (product: Product) => void;
+  onSelectVariant?: (product: Product) => void;
 }
 
-export function ProductCard({ product, onAdd }: ProductCardProps) {
+export function ProductCard({ product, onAdd, onSelectVariant }: ProductCardProps) {
   const outOfStock = product.stock === 0;
   const [imgFailed, setImgFailed] = useState(false);
   const imgSrc = imgFailed ? null : resolveImageUrl(product.imageUrl ?? null);
+  const hasVariants = product.hasVariants && product.variants.length > 0;
+
+  function handleClick() {
+    if (outOfStock) return;
+    if (hasVariants && onSelectVariant) {
+      onSelectVariant(product);
+      return;
+    }
+    onAdd(product);
+  }
 
   return (
     <div
       role={outOfStock ? undefined : 'button'}
       tabIndex={outOfStock ? undefined : 0}
-      onClick={() => !outOfStock && onAdd(product)}
-      onKeyDown={(e) => { if (!outOfStock && (e.key === 'Enter' || e.key === ' ')) onAdd(product); }}
+      onClick={handleClick}
+      onKeyDown={(e) => { if (!outOfStock && (e.key === 'Enter' || e.key === ' ')) handleClick(); }}
       className={`group bg-white p-2 rounded-xl border border-gray-200 shadow-sm transition-all
         ${outOfStock
           ? 'opacity-60 grayscale cursor-not-allowed'
@@ -53,8 +64,15 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           </div>
         )}
 
-        {/* Stock badge — only when in stock */}
-        {!outOfStock && (
+        {/* Variant badge */}
+        {!outOfStock && hasVariants && (
+          <div className="absolute top-1 left-1 bg-indigo-600/90 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
+            {product.variants.length} varian
+          </div>
+        )}
+
+        {/* Stock badge */}
+        {!outOfStock && !hasVariants && (
           <div className="absolute bottom-1 right-1 bg-emerald-700/90 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
             STOK: {product.stock}
           </div>
@@ -67,8 +85,13 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           {product.name}
         </h3>
         <p className="text-base font-bold text-emerald-700">
-          {IDR.format(product.price)}
+          {hasVariants && product.variants.length > 0
+            ? `${IDR.format(Math.min(...product.variants.map(v => v.price)))} – ${IDR.format(Math.max(...product.variants.map(v => v.price)))}`
+            : IDR.format(product.price)}
         </p>
+        {hasVariants && product.variants.length > 0 && (
+          <p className="text-[10px] text-gray-400 mt-0.5">Stok: {product.variants.reduce((s, v) => s + v.stock, 0)}</p>
+        )}
       </div>
     </div>
   );
