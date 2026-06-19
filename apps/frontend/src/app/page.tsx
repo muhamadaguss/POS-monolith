@@ -1,6 +1,16 @@
 import { redirect } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { getSession } from '@/lib/session';
-import { LandingPage } from './(landing)/page';
+
+// Dynamic import untuk client component
+const LandingPage = dynamic(() => import('./(landing)/page'), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-pulse text-emerald-600 font-medium">Memuat...</div>
+    </div>
+  ),
+});
 
 /**
  * Root page:
@@ -12,7 +22,7 @@ export default async function RootPage() {
   const user = session?.user;
 
   if (!user) {
-    // Show landing page (render the component from (landing) group)
+    // Show landing page (dynamic import for client component)
     return <LandingPage />;
   }
 
