@@ -4,7 +4,6 @@ import { getSession } from '@/lib/session';
 
 // Dynamic import untuk client component (dari _components agar tidak jadi route)
 const LandingPage = dynamic(() => import('@/app/_components/LandingPage'), {
-  ssr: false,
   loading: () => (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-pulse text-emerald-600 font-medium">Memuat...</div>
