@@ -80,6 +80,7 @@ export function PosSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
             <p className="text-xs text-gray-400 truncate">{user?.email}</p>
           </div>
         </div>
+        <InstallButton />
         <button
           type="button"
           onClick={logout}
@@ -88,9 +89,6 @@ export function PosSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
           <LogOut className="w-3.5 h-3.5" />
           Logout
         </button>
-      </div>
-      <div className="px-3 pb-3">
-        <InstallButton />
       </div>
     </div>
   );
