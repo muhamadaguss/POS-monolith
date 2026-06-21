@@ -29,8 +29,8 @@ export const registerSchema = z.object({
     .string()
     .min(2, 'Nama outlet minimal 2 karakter')
     .max(120, 'Nama outlet maksimal 120 karakter'),
-  plan: z.enum(['FREE', 'STARTER', 'GROWTH', 'ENTERPRISE'], {
-    errorMap: () => ({ message: 'Pilih paket subscription' }),
+  plan: z.enum(['FREE', 'STARTER', 'GROWTH'], {
+    message: 'Pilih paket subscription',
   }),
 });
 
