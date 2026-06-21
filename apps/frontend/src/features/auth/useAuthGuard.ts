@@ -22,7 +22,8 @@ import { useSession } from 'next-auth/react';
  * lagi (sesi yang macet diganti yang baru). Tak ada risiko loop reload.
  */
 
-const STUCK_TIMEOUT_MS = 12_000;
+// Lebih agresif: 8 detik sudah cukup untuk deteksi stuck
+const STUCK_TIMEOUT_MS = 8_000;
 
 export function useAuthGuard() {
   const { data: session, status } = useSession();
