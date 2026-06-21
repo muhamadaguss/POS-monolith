@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '@/features/auth/useAuthGuard';
 import { proactiveRefresh } from '@/lib/api';
+import TrialBanner from '@/components/TrialBanner';
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -31,5 +32,10 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <TrialBanner />
+      {children}
+    </div>
+  );
 }

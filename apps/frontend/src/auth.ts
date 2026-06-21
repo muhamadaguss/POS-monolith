@@ -31,6 +31,10 @@ export interface AuthUser {
   requiresPinVerification?: boolean;
   /** true → user sudah punya PIN (false → arahkan ke /setup-pin). */
   hasPin?: boolean;
+  /** Status tenant (TRIAL, ACTIVE, SUSPENDED) */
+  tenantStatus?: string;
+  /** Tanggal berakhir trial (ISO string) */
+  trialEndsAt?: string;
 }
 
 export interface OutletOption {
@@ -245,6 +249,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           mustChangePassword: appUser.mustChangePassword ?? false,
           requiresPinVerification: appUser.requiresPinVerification ?? false,
           hasPin: appUser.hasPin ?? false,
+          tenantStatus: appUser.tenantStatus,
+          trialEndsAt: appUser.trialEndsAt,
         };
       }
       session.outlets = (token.outlets as OutletOption[]) ?? [];
@@ -283,6 +289,10 @@ declare module 'next-auth' {
       requiresPinVerification?: boolean;
       /** true → user sudah punya PIN (false → /setup-pin). */
       hasPin?: boolean;
+      /** Status tenant (TRIAL, ACTIVE, SUSPENDED) */
+      tenantStatus?: string;
+      /** Tanggal berakhir trial (ISO string) */
+      trialEndsAt?: string;
     } & DefaultSession['user'];
     outlets: OutletOption[];
     backendAccessToken?: string;

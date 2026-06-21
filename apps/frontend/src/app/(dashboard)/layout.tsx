@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Sidebar } from '@/components/shared/Sidebar';
+import TrialBanner from '@/components/TrialBanner';
 import { useAuthGuard } from '@/features/auth/useAuthGuard';
 import { proactiveRefresh } from '@/lib/api';
 
@@ -88,7 +89,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
+          <div className="max-w-6xl mx-auto">
+            <TrialBanner />
+            {children}
+          </div>
         </main>
       </div>
     </div>

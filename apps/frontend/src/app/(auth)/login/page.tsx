@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 import { useLogin } from "@/features/auth/hooks";
 import {
   Mail,
@@ -15,6 +16,7 @@ import {
   TrendingUp,
   MapPin,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 
 const loginSchema = z.object({
@@ -277,9 +279,34 @@ export default function LoginPage() {
 
               {/* Error */}
               {error && (
-                <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-                  <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className={`rounded-xl border px-4 py-4 ${
+                  error.includes('trial') || error.includes('Trial')
+                    ? 'bg-amber-50 border-amber-300'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    {error.includes('trial') || error.includes('Trial') ? (
+                      <Clock className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                    )}
+                    <div>
+                      <p className={`font-medium ${
+                        error.includes('trial') || error.includes('Trial')
+                          ? 'text-amber-800'
+                          : 'text-red-700'
+                      }`}>
+                        {error.includes('trial') || error.includes('Trial') ? 'Trial Berakhir' : 'Login Gagal'}
+                      </p>
+                      <p className={`text-sm mt-1 ${
+                        error.includes('trial') || error.includes('Trial')
+                          ? 'text-amber-700'
+                          : 'text-red-600'
+                      }`}>
+                        {error}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -302,13 +329,13 @@ export default function LoginPage() {
 
             {/* Bottom CTA */}
             <div className="mt-8 pt-8 border-t border-gray-200 flex flex-col items-center gap-4">
-              <p className="text-sm text-gray-400">Belum memiliki akun?</p>
-              <button
-                type="button"
+              <p className="text-sm text-gray-400">Belum punya akun?</p>
+              <Link
+                href="/register"
                 className="text-sm font-semibold text-[#006c49] px-8 py-3 border border-[#006c49] rounded-lg hover:bg-[#006c49]/5 transition-colors"
               >
-                Hubungi Tim Sales Kami
-              </button>
+                Daftar Gratis
+              </Link>
             </div>
 
             {/* Mobile footer */}

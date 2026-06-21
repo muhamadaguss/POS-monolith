@@ -25,20 +25,42 @@ export function useLogin() {
     setIsPending(true);
     setError(null);
     try {
-      const res = await signIn('credentials', {
+      // Panggil backend langsung untuk dapat error message yang jelas
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+      const apiRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await apiRes.json();
+
+      if (!apiRes.ok) {
+        const errorMessage = body?.message || body?.error || 'Login gagal. Periksa kredensial Anda.';
+        setError(errorMessage);
+        return;
+      }
+
+      const data = body.data;
+      if (!data) {
+        setError('Login gagal. Data tidak valid dari server.');
+        return;
+      }
+
+      // Login berhasil → set sesi Auth.js
+      const signInResult = await signIn('credentials', {
         redirect: false,
         email: payload.email,
         password: payload.password,
         tenantSlug: payload.tenantSlug ?? '',
       });
 
-      if (!res || res.error) {
-        // Auth.js v5 menyamarkan pesan error Credentials → tampilkan pesan umum.
-        setError('Login gagal. Periksa email, password, dan kode toko Anda.');
+      if (!signInResult || signInResult.error) {
+        setError('Login gagal. Periksa kembali kredensial Anda.');
         return;
       }
 
-      // Sesi sudah terbentuk. Ambil sesi terbaru untuk menentukan tujuan & outlet.
+      // Redirect by role
       const session = await update();
       const user = session?.user;
       const outlets = session?.outlets ?? [];
@@ -55,15 +77,12 @@ export function useLogin() {
         window.location.href = '/dashboard';
         return;
       }
-      // Gate PIN: kasir yang belum verifikasi PIN harus ke /verify-pin (atau
-      // /setup-pin bila belum punya PIN) SEBELUM select-outlet — jika tidak,
-      // rotasi token select-outlet bertabrakan dengan redirect PIN-gate.
       if (user.requiresPinVerification && !session.pinVerified) {
         window.location.href = user.hasPin ? '/verify-pin' : '/setup-pin';
         return;
       }
       if (outlets.length === 0) {
-        setError('Akun Anda belum memiliki akses ke outlet manapun. Hubungi administrator.');
+        setError('Akun Anda belum memiliki akses ke outlet manapun.');
         await signOut({ redirect: false });
         return;
       }
@@ -73,7 +92,7 @@ export function useLogin() {
       }
       window.location.href = '/select-outlet';
     } catch {
-      setError('Login gagal. Periksa kembali kredensial Anda.');
+      setError('Terjadi kesalahan sistem. Silakan coba lagi.');
     } finally {
       setIsPending(false);
     }
@@ -129,11 +148,98 @@ export function useLogout() {
 
   async function logout() {
     clearCart();
-    // Revoke refresh token backend dulu (Server Action, best-effort), lalu hapus
-    // cookie sesi Auth.js & arahkan ke /login.
     await logoutAction();
     await signOut({ redirectTo: '/login' });
   }
 
   return { logout };
+}
+
+/**
+ * Register hook — daftar akun baru + buat tenant + auto-login.
+ *
+ * Flow:
+ * 1. POST /auth/register (backend buat tenant + user + outlet + generate token)
+ * 2. signIn dengan token backend (Auth.js Credentials)
+ * 3. Redirect ke dashboard
+ */
+export function useRegister() {
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { update } = useSession();
+
+  async function register(data: {
+    email: string;
+    password: string;
+    ownerName: string;
+    businessName: string;
+    businessSlug: string;
+    outletName: string;
+    plan: 'FREE' | 'STARTER' | 'GROWTH' | 'ENTERPRISE';
+  }) {
+    setIsPending(true);
+    setError(null);
+
+    try {
+      // 1. Panggil backend register API
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+      const res = await fetch(`${BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const body = await res.json();
+
+      if (!res.ok) {
+        const message =
+          body?.message ||
+          body?.error ||
+          'Registrasi gagal. Silakan coba lagi.';
+        setError(message);
+        return;
+      }
+
+      // Backend return: { success: true, data: { accessToken, refreshToken, user, outlets } }
+      const { accessToken, refreshToken, user, outlets } = body.data ?? body;
+
+      // 2. Set token ke Auth.js session via signIn('credentials')
+      //    Gunakan tenantSlug dari response register
+      const signInResult = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+        tenantSlug: data.businessSlug, // Gunakan slug dari form register
+      });
+
+      if (!signInResult || signInResult.error) {
+        console.error('[REGISTER] signIn error:', signInResult?.error);
+        setError('Registrasi berhasil tapi gagal login. Silakan login manual.');
+        return;
+      }
+
+      // 3. Update session dengan token backend yang baru
+      await update({
+        backendAccessToken: accessToken,
+        backendRefreshToken: refreshToken,
+        outlets: outlets,
+        outletUpdate: {
+          currentOutletId: user.currentOutletId,
+          role: user.role,
+          permissions: user.permissions,
+        },
+      });
+
+      // 4. Redirect ke dashboard
+      window.location.href = '/dashboard';
+      return;
+    } catch (err) {
+      console.error('[REGISTER] Error:', err);
+      setError('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return { register, isPending, error };
 }

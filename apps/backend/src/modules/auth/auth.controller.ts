@@ -17,6 +17,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { PinDto } from './dto/pin.dto';
+import { RegisterDto } from './dto/register.dto';
 import { Public, CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/jwt-payload.type';
 
@@ -44,6 +45,23 @@ export class AuthController {
   ) {
     const ip = req.ip ?? req.socket.remoteAddress;
     return this.authService.login(dto, ip, userAgent);
+  }
+
+  // Register endpoint — rate limit ketat (3 percobaan/menit/IP) untuk mencegah abuse.
+  @Public()
+  @Throttle({
+    default: {
+      limit: parseInt(process.env.THROTTLE_REGISTER_LIMIT ?? '3', 10),
+      ttl: parseInt(process.env.THROTTLE_REGISTER_TTL ?? '60000', 10),
+    },
+  })
+  @Post('register')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Daftar akun baru + buat tenant + outlet pertama (auto-login)',
+  })
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
   // Refresh juga endpoint publik — batasi lebih ketat dari global (10/menit/IP).

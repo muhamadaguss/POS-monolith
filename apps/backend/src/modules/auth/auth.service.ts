@@ -13,13 +13,16 @@ import { LoginDto } from './dto/login.dto';
 import { SelectOutletDto } from './dto/select-outlet.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { PinDto } from './dto/pin.dto';
+import { RegisterDto } from './dto/register.dto';
+import { Public, CurrentUser } from '../../common/decorators';
 import type {
   JwtPayload,
   JwtRefreshPayload,
   AuthenticatedUser,
 } from '../../common/types/jwt-payload.type';
 import { ROLE_DEFAULT_PERMISSIONS } from '../../common/rbac/permissions';
-import { Role, UserStatus, TenantStatus } from '@prisma/client';
+import { Role, UserStatus, TenantStatus, SubscriptionPlan } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import ms from 'ms';
@@ -100,6 +103,14 @@ export class AuthService {
         throw new ForbiddenException(
           'Akun bisnis Anda sedang ditangguhkan. Hubungi support.',
         );
+      }
+      // 3.3 Cek trial expired untuk FREE plan
+      if (user.tenant.status === TenantStatus.TRIAL && user.tenant.trialEndsAt) {
+        if (new Date() > user.tenant.trialEndsAt) {
+          throw new UnauthorizedException(
+            'Masa trial Anda telah berakhir. Silakan hubungi tim sales untuk upgrade.',
+          );
+        }
       }
     }
 
@@ -183,13 +194,150 @@ export class AuthService {
         tenantId: user.tenantId,
         currentOutletId: resolvedOutletId,
         permissions: permissions as string[],
-        // Wajib ganti password (mis. setelah reset oleh Super Admin) → frontend
-        // memaksa user ke /change-password sebelum bisa memakai aplikasi.
         mustChangePassword: user.mustChangePassword,
-        // Gate PIN setelah login: hanya kasir yang wajib verifikasi PIN per sesi.
-        // hasPin=false → frontend arahkan ke /setup-pin; lalu /verify-pin.
         requiresPinVerification: resolvedRole === Role.CASHIER,
         hasPin: user.pin != null,
+        tenantStatus: user.tenant?.status,
+        trialEndsAt: user.tenant?.trialEndsAt?.toISOString(),
+      },
+      outlets,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  /**
+   * Daftar akun baru + buat tenant + outlet pertama + auto-login.
+   *
+   * Flow:
+   * 1. Validasi email & slug unik
+   * 2. Tentukan status tenant (FREE = TRIAL 14 hari, STARTER/GROWTH = ACTIVE)
+   * 3. Buat Tenant, User, Outlet, UserOutletRole dalam satu transaksi
+   * 4. Generate token & return seperti login
+   *
+   * Rate-limit: 3x/menit/IP di controller.
+   */
+  async register(dto: RegisterDto) {
+    // 1. Validasi email & slug belum ada
+    const [existingEmail, existingSlug] = await Promise.all([
+      this.prisma.user.findUnique({ where: { email: dto.email } }),
+      this.prisma.tenant.findUnique({ where: { slug: dto.businessSlug } }),
+    ]);
+
+    if (existingEmail) {
+      throw new BadRequestException('Email sudah terdaftar di sistem');
+    }
+    if (existingSlug) {
+      throw new BadRequestException('URL bisnis sudah digunakan, coba yang lain');
+    }
+
+    // 2. Tentukan tenant status berdasarkan plan
+    const now = new Date();
+    const isFree = dto.plan === SubscriptionPlan.FREE;
+    const tenantStatus = isFree
+      ? TenantStatus.TRIAL
+      : TenantStatus.ACTIVE;
+    const trialEndsAt = isFree
+      ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      : null;
+
+    // 3. Hash password
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    // 4. Buat Tenant + User + Outlet + UserOutletRole dalam satu transaksi
+    const result = await this.prisma.$transaction(async (tx) => {
+      // a. Buat tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.businessName,
+          slug: dto.businessSlug,
+          email: dto.email,
+          plan: dto.plan,
+          status: tenantStatus,
+          trialEndsAt,
+          maxOutlets: isFree ? 1 : 10,
+          maxStaff: isFree ? 5 : 50,
+        },
+      });
+
+      // b. Buat user (TENANT_OWNER)
+      const user = await tx.user.create({
+        data: {
+          name: dto.ownerName,
+          email: dto.email,
+          passwordHash,
+          role: Role.TENANT_OWNER,
+          tenantId: tenant.id,
+          status: UserStatus.ACTIVE,
+        },
+      });
+
+      // c. Buat outlet pertama
+      const outlet = await tx.outlet.create({
+        data: {
+          name: dto.outletName,
+          tenantId: tenant.id,
+          isActive: true,
+        },
+      });
+
+      // d. Buat userOutletRole (Owner → outlet pertama)
+      await tx.userOutletRole.create({
+        data: {
+          userId: user.id,
+          outletId: outlet.id,
+          tenantId: tenant.id,
+          role: Role.TENANT_OWNER,
+        },
+      });
+
+      return { tenant, user, outlet };
+    });
+
+    // 5. Generate token (auto-login sebagai TENANT_OWNER)
+    const permissions = ROLE_DEFAULT_PERMISSIONS[Role.TENANT_OWNER] as string[];
+    const { accessToken, refreshToken } = await this.generateTokens(
+      {
+        userId: result.user.id,
+        email: result.user.email,
+        tenantId: result.tenant.id,
+        currentOutletId: result.outlet.id,
+        role: Role.TENANT_OWNER,
+        permissions,
+      },
+    );
+
+    // 6. Ambil daftar outlet (hanya satu)
+    const outlets = [
+      {
+        id: result.outlet.id,
+        name: result.outlet.name,
+        role: Role.TENANT_OWNER,
+        permissions,
+      },
+    ];
+
+    console.log(`[REGISTER] Akun baru dibuat:
+      Email: ${dto.email}
+      Tenant: ${result.tenant.name} (${result.tenant.slug})
+      Plan: ${dto.plan} (status: ${tenantStatus}${isFree ? `, trial ends: ${trialEndsAt}` : ''})
+      Outlet: ${result.outlet.name}
+    `);
+
+    return {
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: Role.TENANT_OWNER,
+        tenantId: result.tenant.id,
+        currentOutletId: result.outlet.id,
+        permissions,
+        mustChangePassword: false,
+        requiresPinVerification: false,
+        hasPin: false,
+        tenantStatus: result.tenant.status,
+        trialEndsAt: result.tenant.trialEndsAt?.toISOString(),
       },
       outlets,
       accessToken,

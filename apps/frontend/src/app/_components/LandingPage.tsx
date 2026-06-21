@@ -278,7 +278,7 @@ function Header() {
               Login
             </Link>
             <Link
-              href="/login"
+              href="/register"
               className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
               style={{ backgroundColor: COLORS.primary }}
             >
@@ -334,7 +334,7 @@ function Header() {
             Login
           </Link>
           <Link
-            href="/login"
+            href="/register"
             className="block w-full text-center px-4 py-3 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:shadow-lg active:scale-95"
             style={{ backgroundColor: COLORS.primary }}
             onClick={() => setMobileMenuOpen(false)}
@@ -469,7 +469,7 @@ function Hero() {
             {/* CTA Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
-                href="/login"
+                href="/register"
                 className="group inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-medium text-white rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95"
                 style={{ backgroundColor: COLORS.primary }}
               >
