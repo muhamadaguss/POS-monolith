@@ -101,42 +101,63 @@ export default function HargaPage() {
     <div className="min-h-screen bg-white" style={{ color: COLORS.text }}>
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.primary }}>
-                <span className="text-white font-bold text-sm">K</span>
-              </div>
-              <span className="font-bold text-lg">Kasirku</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              {NAV_ITEMS.map((item) => (
-                <Link key={item.href} href={item.href}
-                  className="text-sm font-medium transition-colors hover:text-emerald-600"
-                  style={{ color: item.href === '/harga' ? COLORS.primary : COLORS.textSecondary }}>
-                  {item.label}
-                </Link>
-              ))}
-              <Link href="/register"
-                className="text-white text-sm font-semibold px-5 py-2 rounded-xl transition-all hover:shadow-lg hover:scale-105"
-                style={{ backgroundColor: COLORS.primary }}>
-                Coba Gratis
+          <div className="flex items-center h-16">
+            {/* Logo - KIRI */}
+            <div className="flex-1 flex justify-start">
+              <Link href="/" className="flex items-center gap-2 group cursor-pointer">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg" style={{ backgroundColor: COLORS.primary }}>
+                  <span className="text-white font-bold text-sm">K</span>
+                </div>
+                <span className="font-bold text-xl transition-colors" style={{ color: COLORS.text }}>
+                  Kasirku
+                </span>
               </Link>
             </div>
-            <button className="md:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+
+            {/* Desktop Nav - TENGAH */}
+            <div className="hidden md:flex flex-1 justify-center">
+              <nav className="flex items-center gap-8">
+                {NAV_ITEMS.map((item) => (
+                  <Link key={item.href} href={item.href}
+                    className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
+                    style={{ color: item.href === '/harga' ? COLORS.primary : COLORS.textSecondary }}>
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+
+            {/* CTA + Hamburger - KANAN */}
+            <div className="flex-1 flex justify-end items-center gap-3">
+              <div className="hidden md:flex items-center gap-3">
+                <Link href="/login" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: COLORS.text }}>
+                  Login
+                </Link>
+                <Link href="/register" className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95" style={{ backgroundColor: COLORS.primary }}>
+                  Mulai Gratis
+                </Link>
+              </div>
+              <button className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+                {menuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
           {menuOpen && (
             <div className="md:hidden pb-4 border-t border-gray-100 pt-4 space-y-3">
               {NAV_ITEMS.map((item) => (
                 <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
-                  className="block text-sm font-medium" style={{ color: COLORS.textSecondary }}>
+                  className="block text-sm font-medium py-2 px-3 hover:bg-gray-50 rounded-lg" style={{ color: COLORS.textSecondary }}>
                   {item.label}
                 </Link>
               ))}
+              <hr className="border-gray-100" />
+              <Link href="/login" onClick={() => setMenuOpen(false)}
+                className="block text-sm font-medium py-2 px-3" style={{ color: COLORS.text }}>
+                Login
+              </Link>
               <Link href="/register" onClick={() => setMenuOpen(false)}
-                className="block text-center text-white text-sm font-semibold px-5 py-2 rounded-xl" style={{ backgroundColor: COLORS.primary }}>
-                Coba Gratis
+                className="block text-center text-white text-sm font-semibold px-5 py-3 rounded-xl" style={{ backgroundColor: COLORS.primary }}>
+                Mulai Gratis
               </Link>
             </div>
           )}
