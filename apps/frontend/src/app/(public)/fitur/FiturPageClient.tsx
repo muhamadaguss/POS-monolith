@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   ShoppingCart, Package, BarChart3, Store, Users, Smartphone,
   ArrowRight, Check, Menu, X, Zap, Clock, TrendingUp, Layers,
@@ -66,6 +67,12 @@ function FadeInSection({ children }: { children: React.ReactNode }) {
 
 export default function FiturPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   return (
     <div className="min-h-screen bg-white" style={{ color: COLORS.text }}>
@@ -89,8 +96,8 @@ export default function FiturPage() {
               <nav className="flex items-center gap-8">
                 {NAV_ITEMS.map((item) => (
                   <Link key={item.href} href={item.href}
-                    className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
-                    style={{ color: item.href === '/fitur' ? COLORS.primary : COLORS.textSecondary }}>
+                    className="text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+                    style={{ color: isActive(item.href) ? COLORS.primary : COLORS.textSecondary }}>
                     {item.label}
                   </Link>
                 ))}

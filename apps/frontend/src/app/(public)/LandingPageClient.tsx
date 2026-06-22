@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   ShoppingCart,
   Package,
@@ -207,6 +208,7 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
 function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -218,6 +220,11 @@ function Header() {
     document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   const NAV_ITEMS = [
     { label: 'Beranda', href: '/' },
@@ -257,8 +264,11 @@ function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
-                  style={{ color: COLORS.textSecondary }}
+                  className="text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+                  style={{
+                    color: isActive(item.href) ? COLORS.primary : COLORS.textSecondary,
+                    opacity: 1,
+                  }}
                 >
                   {item.label}
                 </Link>

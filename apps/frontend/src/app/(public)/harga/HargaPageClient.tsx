@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Check, Menu, X, ArrowRight, Zap, Shield, Clock,
   HelpCircle, ChevronDown,
@@ -96,6 +97,12 @@ function FadeInSection({ children }: { children: React.ReactNode }) {
 export default function HargaPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   return (
     <div className="min-h-screen bg-white" style={{ color: COLORS.text }}>
@@ -117,10 +124,10 @@ export default function HargaPage() {
             {/* Desktop Nav - TENGAH */}
             <div className="hidden md:flex flex-1 justify-center">
               <nav className="flex items-center gap-8">
-                {NAV_ITEMS.map((item) => (
+{NAV_ITEMS.map((item) => (
                   <Link key={item.href} href={item.href}
-                    className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
-                    style={{ color: item.href === '/harga' ? COLORS.primary : COLORS.textSecondary }}>
+                    className="text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
+                    style={{ color: isActive(item.href) ? COLORS.primary : COLORS.textSecondary }}>
                     {item.label}
                   </Link>
                 ))}
