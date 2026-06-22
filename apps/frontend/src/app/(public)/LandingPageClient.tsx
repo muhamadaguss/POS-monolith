@@ -219,17 +219,11 @@ function Header() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  const navItems = [
-    { id: 'fitur', label: 'Fitur' },
-    { id: 'harga', label: 'Harga' },
-    { id: 'testimoni', label: 'Testimoni' },
-    { id: 'faq', label: 'FAQ' },
+  const NAV_ITEMS = [
+    { label: 'Beranda', href: '/' },
+    { label: 'Fitur', href: '/fitur' },
+    { label: 'Harga', href: '/harga' },
   ];
-
-  const scrollTo = (id: string) => {
-    setMobileMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   return (
     <header
@@ -259,22 +253,21 @@ function Header() {
           {/* Desktop Nav - TENGAH */}
           <div className="hidden md:flex flex-1 justify-center">
             <nav className="flex items-center gap-8">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => scrollTo(item.id)}
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
                   className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
                   style={{ color: COLORS.textSecondary }}
                 >
                   {item.label}
-                </button>
+                </Link>
               ))}
             </nav>
           </div>
 
           {/* CTA Buttons + Hamburger - KANAN */}
           <div className="flex-1 flex justify-end items-center gap-3">
-            {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
               <Link
                 href="/login"
@@ -291,7 +284,6 @@ function Header() {
                 Mulai Gratis
               </Link>
             </div>
-            {/* Mobile Menu Button */}
             <button
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -320,15 +312,16 @@ function Header() {
         }`}
       >
         <div className="space-y-4">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => scrollTo(item.id)}
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
               className="block text-sm font-medium w-full text-left py-2 hover:bg-gray-50 rounded-lg px-3 transition-colors"
               style={{ color: COLORS.textSecondary }}
+              onClick={() => setMobileMenuOpen(false)}
             >
               {item.label}
-            </button>
+            </Link>
           ))}
           <hr className="border-gray-100" />
           <Link
