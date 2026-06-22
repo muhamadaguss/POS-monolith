@@ -8,6 +8,16 @@ const nextConfig: NextConfig = {
   // yang dibutuhkan saja (.next/standalone) → image Docker ramping. Dipakai
   // runtime container via `node server.js`. Tak berpengaruh untuk `next dev`.
   output: "standalone",
+
+  // Performance optimization
+  compress: true,
+
+  // Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
+  },
+
   turbopack: {
     // process.cwd() akan mengarah ke folder 'apps/frontend'
     // kita naik 2 tingkat ke atas untuk mencapai root 'Point-of-sales'
