@@ -1275,17 +1275,16 @@ function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Produk</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li>
-                <button onClick={() => document.getElementById('fitur')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="hover:text-white transition-colors">
+                <li><Link href="/" className="hover:text-white transition-colors">Beranda</Link></li>
+                <li>
+                <Link href="/fitur" className="hover:text-white transition-colors">
                   Fitur
-                </button>
+                </Link>
               </li>
               <li>
-                <button onClick={() => document.getElementById('harga')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="hover:text-white transition-colors">
+                <Link href="/harga" className="hover:text-white transition-colors">
                   Harga
-                </button>
+                </Link>
               </li>
               <li>
                 <button onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
