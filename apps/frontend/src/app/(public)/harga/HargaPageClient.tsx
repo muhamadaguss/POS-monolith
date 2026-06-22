@@ -171,13 +171,18 @@ export default function HargaPage() {
       </nav>
 
       <section className="relative overflow-hidden py-20 md:py-28" style={{ background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 30%, #F0FDF4 60%, #ECFDF5 80%, ${COLORS.warmBg} 100%)` }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.primary} 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
+        {/* Gradient Blob */}
+        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
+        <div className="absolute -bottom-32 -left-32 w-[350px] h-[350px] rounded-full opacity-[0.05] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <FadeInSection>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6" style={{ backgroundColor: COLORS.lightBg, color: COLORS.primary }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 transition-all duration-300 hover:scale-105 cursor-default" style={{ backgroundColor: COLORS.lightBg, color: COLORS.primary }}>
               <Zap size={14} />
               Paket Harga Transparan
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6" style={{ color: COLORS.text }}>
               Pilih Paket yang <span style={{ color: COLORS.primary }}>Sesuai</span>
               <br />untuk Bisnis Anda
             </h1>
@@ -257,17 +262,19 @@ export default function HargaPage() {
       <section className="py-20" style={{ backgroundColor: COLORS.warmBg }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeInSection>
-            <h2 className="text-3xl font-bold text-center mb-12">Pertanyaan <span style={{ color: COLORS.primary }}>Umum</span></h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-4" style={{ color: COLORS.text }}>Pertanyaan <span style={{ color: COLORS.primary }}>Umum</span></h2>
+            <p className="text-center text-sm mb-12" style={{ color: COLORS.textSecondary }}>Temukan jawaban cepat untuk pertanyaan Anda</p>
           </FadeInSection>
           <div className="space-y-4">
             {FAQS.map((faq, i) => (
               <FadeInSection key={i}>
-                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-emerald-200">
                   <button
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between p-5 text-left font-medium transition-colors hover:bg-gray-50">
-                    <span>{faq.q}</span>
-                    <ChevronDown size={18} className={`transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} style={{ color: COLORS.primary }} />
+                    className="w-full flex items-center justify-between p-5 text-left font-medium transition-colors hover:bg-gray-50/70"
+                    style={{ color: COLORS.text }}>
+                    <span className="pr-4">{faq.q}</span>
+                    <HelpCircle size={18} className={`transition-all duration-300 flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`} style={{ color: COLORS.primary }} />
                   </button>
                   <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-96 pb-5' : 'max-h-0'}`}>
                     <p className="px-5 text-sm leading-relaxed" style={{ color: COLORS.textSecondary }}>{faq.a}</p>
@@ -279,15 +286,22 @@ export default function HargaPage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+      <section className="py-20 overflow-hidden relative">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: COLORS.primary }} />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: COLORS.primary }} />
+        </div>
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <FadeInSection>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6" style={{ backgroundColor: `${COLORS.primary}15` }}>
+              <Zap size={32} style={{ color: COLORS.primary }} />
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-4" style={{ color: COLORS.text }}>
               Mulai Sekarang, <span style={{ color: COLORS.primary }}>Gratis</span>
             </h2>
-            <p className="text-lg mb-8" style={{ color: COLORS.textSecondary }}>Tidak perlu kartu kredit. Tidak ada batas waktu.</p>
+            <p className="text-lg mb-10" style={{ color: COLORS.textSecondary }}>Tidak perlu kartu kredit. Tidak ada batas waktu.</p>
             <Link href="/register"
-              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:scale-105"
+              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
               style={{ backgroundColor: COLORS.primary }}>
               Daftar Gratis <ArrowRight size={20} />
             </Link>

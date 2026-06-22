@@ -143,13 +143,24 @@ export default function FiturPage() {
       </nav>
 
       <section className="relative overflow-hidden py-20 md:py-28" style={{ background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 30%, #F0FDF4 60%, #ECFDF5 80%, ${COLORS.warmBg} 100%)` }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        {/* Grid Pattern Overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.primary} 1px, transparent 0)`,
+            backgroundSize: '40px 40px',
+          }}
+        />
+        {/* Gradient Blob */}
+        <div className="absolute -top-32 -right-32 w-[400px] h-[400px] rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
+        <div className="absolute -bottom-32 -left-32 w-[350px] h-[350px] rounded-full opacity-[0.05] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <FadeInSection>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6" style={{ backgroundColor: COLORS.lightBg, color: COLORS.primary }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 transition-all duration-300 hover:scale-105 cursor-default" style={{ backgroundColor: COLORS.lightBg, color: COLORS.primary }}>
               <Zap size={14} />
               Semua fitur yang Anda butuhkan
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
+            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6" style={{ color: COLORS.text }}>
               Fitur Lengkap untuk<br />
               <span style={{ color: COLORS.primary }}>Bisnis Modern</span>
             </h1>
@@ -157,7 +168,7 @@ export default function FiturPage() {
               Dari kasir cepat hingga laporan real-time — semua dalam satu platform.
             </p>
             <Link href="/register"
-              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:scale-105"
+              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
               style={{ backgroundColor: COLORS.primary }}>
               Mulai Gratis <ArrowRight size={20} />
             </Link>
@@ -180,12 +191,17 @@ export default function FiturPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FEATURES.map((feat) => (
               <FadeInSection key={feat.title}>
-                <div className="group p-6 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-all hover:shadow-lg hover:-translate-y-1">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: COLORS.lightBg }}>
-                    <feat.icon size={24} style={{ color: COLORS.primary }} />
+                <div className="group relative p-6 rounded-2xl border border-gray-100 transition-all hover:shadow-xl hover:-translate-y-1 bg-white overflow-hidden cursor-pointer">
+                  {/* Bottom gradient line */}
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: `linear-gradient(135deg, ${COLORS.primary}08, transparent 50%)` }} />
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg relative" style={{ backgroundColor: COLORS.lightBg }}>
+                    <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ boxShadow: `0 0 20px ${COLORS.primary}40` }} />
+                    <feat.icon size={24} style={{ color: COLORS.primary, position: 'relative', zIndex: 1 }} />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">{feat.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: COLORS.textSecondary }}>{feat.desc}</p>
+                  <h3 className="text-lg font-bold mb-2 transition-colors group-hover:text-emerald-700 relative z-[1]">{feat.title}</h3>
+                  <p className="text-sm leading-relaxed relative z-[1]" style={{ color: COLORS.textSecondary }}>{feat.desc}</p>
                 </div>
               </FadeInSection>
             ))}
@@ -203,8 +219,8 @@ export default function FiturPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {BENEFITS.map((b) => (
               <FadeInSection key={b.title}>
-                <div className="text-center p-8 rounded-2xl bg-white border border-gray-100 hover:shadow-lg transition-all">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 ${b.color}`}>
+                <div className="text-center p-8 rounded-2xl bg-white/70 backdrop-blur-sm border border-gray-100 transition-all hover:shadow-xl hover:-translate-y-1">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 hover:scale-110 ${b.color}`}>
                     <b.icon size={28} />
                   </div>
                   <h3 className="text-xl font-bold mb-2">{b.title}</h3>
@@ -216,15 +232,23 @@ export default function FiturPage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+      <section className="py-20 overflow-hidden relative">
+        {/* Decorative blobs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-[0.05] blur-3xl" style={{ backgroundColor: COLORS.primary }} />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-[0.04] blur-3xl" style={{ backgroundColor: COLORS.primary }} />
+        </div>
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <FadeInSection>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6" style={{ backgroundColor: `${COLORS.primary}15` }}>
+              <Zap size={32} style={{ color: COLORS.primary }} />
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold leading-tight mb-4" style={{ color: COLORS.text }}>
               Siap <span style={{ color: COLORS.primary }}>Mengubah Bisnis</span> Anda?
             </h2>
-            <p className="text-lg mb-8" style={{ color: COLORS.textSecondary }}>Gratis selamanya untuk bisnis kecil.</p>
+            <p className="text-lg mb-10" style={{ color: COLORS.textSecondary }}>Gratis selamanya untuk bisnis kecil.</p>
             <Link href="/register"
-              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:scale-105"
+              className="inline-flex items-center gap-2 text-white text-lg font-semibold px-8 py-4 rounded-2xl transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
               style={{ backgroundColor: COLORS.primary }}>
               Daftar Gratis Sekarang <ArrowRight size={20} />
             </Link>

@@ -25,6 +25,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  UserPlus,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────
@@ -391,7 +392,32 @@ function Hero() {
         animation: 'gradient-shift 15s ease infinite',
       }}
     >
-      {/* Floating Particles - stable positions, no hydration mismatch */}
+      {/* Grid Pattern Overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.primary} 1px, transparent 0)`,
+          backgroundSize: '40px 40px',
+        }}
+      />
+      
+      {/* Gradient Blob - top right */}
+      <div
+        className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.08] blur-3xl pointer-events-none"
+        style={{ backgroundColor: COLORS.primary }}
+      />
+      {/* Gradient Blob - bottom left */}
+      <div
+        className="absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full opacity-[0.06] blur-3xl pointer-events-none"
+        style={{ backgroundColor: COLORS.primary }}
+      />
+      {/* Gradient Blob - center accent */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04] blur-3xl pointer-events-none"
+        style={{ backgroundColor: '#10B981' }}
+      />
+
+      {/* Floating Particles */}
       {particles.map((p, i) => (
         <div
           key={i}
@@ -405,22 +431,10 @@ function Hero() {
             left: p.left,
             animation: `float ${p.duration} ease-in-out infinite`,
             animationDelay: p.delay,
+            boxShadow: `0 0 ${p.size * 2}px ${p.size}px ${COLORS.primary}22`,
           }}
         />
       ))}
-      {/* Floating decorative circles */}
-      <div
-        className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-[0.07]"
-        style={{ backgroundColor: COLORS.primary }}
-      />
-      <div
-        className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full opacity-[0.07]"
-        style={{ backgroundColor: COLORS.primary }}
-      />
-      <div
-        className="absolute top-1/3 -left-10 w-32 h-32 rounded-full opacity-[0.05]"
-        style={{ backgroundColor: COLORS.primary }}
-      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -635,10 +649,14 @@ function Stats() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-12">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 py-16">
         {stats.map((stat, i) => (
           <RevealSection key={stat.label} delay={i * 100}>
-            <div className="text-center group">
+            <div className="relative group bg-white/70 backdrop-blur-sm rounded-2xl border border-gray-100/80 p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-emerald-200">
+              {/* Gradient accent bar */}
+              <div
+                className="absolute top-0 left-4 right-4 h-1 rounded-full bg-gradient-to-r from-emerald-300 to-emerald-500 opacity-0 group-hover:opacity-100 transition-all duration-500"
+              />
               <div
                 className="text-3xl md:text-4xl font-bold mb-1 transition-all duration-300 group-hover:scale-110"
                 style={{ color: COLORS.primary }}
@@ -725,7 +743,19 @@ function Features() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <RevealSection key={feature.title} delay={index * 100}>
-              <div className="group relative p-6 rounded-2xl border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-emerald-200 cursor-pointer bg-white">
+              <div className="group relative p-6 rounded-2xl border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 bg-white cursor-pointer overflow-hidden">
+                {/* Gradient border overlay on hover */}
+                <div
+                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${COLORS.primary}08, transparent 50%)`,
+                  }}
+                />
+                {/* Bottom gradient line */}
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"
+                />
+
                 {/* Tag */}
                 {feature.tag && (
                   <span
@@ -738,26 +768,33 @@ function Features() {
 
                 {/* Icon */}
                 <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                  className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg relative"
                   style={{ backgroundColor: `${feature.color}15` }}
                 >
-                  <feature.icon size={28} style={{ color: feature.color }} />
+                  {/* Glow ring */}
+                  <div
+                    className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{
+                      boxShadow: `0 0 20px ${feature.color}40`,
+                    }}
+                  />
+                  <feature.icon size={28} style={{ color: feature.color, position: 'relative', zIndex: 1 }} />
                 </div>
 
                 {/* Content */}
                 <h3
-                  className="text-lg font-semibold mb-2 transition-colors group-hover:text-emerald-700"
+                  className="text-lg font-semibold mb-2 transition-colors group-hover:text-emerald-700 relative z-[1]"
                   style={{ color: COLORS.text }}
                 >
                   {feature.title}
                 </h3>
-                <p className="text-sm leading-relaxed" style={{ color: COLORS.textSecondary }}>
+                <p className="text-sm leading-relaxed relative z-[1]" style={{ color: COLORS.textSecondary }}>
                   {feature.description}
                 </p>
 
                 {/* Hover Arrow */}
                 <div
-                  className="mt-4 flex items-center gap-2 text-sm font-medium transition-all duration-300 group-hover:gap-3"
+                  className="mt-4 flex items-center gap-2 text-sm font-medium transition-all duration-300 group-hover:gap-3 relative z-[1]"
                   style={{ color: feature.color }}
                 >
                   <span>Pelajari</span>
@@ -777,9 +814,9 @@ function Features() {
 // ─────────────────────────────────────────────────────────────
 function HowItWorks() {
   const steps = [
-    { number: '1', title: 'Daftar Akun', description: 'Buat akun gratis dalam 30 detik', icon: '🚀' },
-    { number: '2', title: 'Tambah Produk', description: 'Input produk satu per satu atau import CSV', icon: '📦' },
-    { number: '3', title: 'Mulai Jualan', description: 'Langsung gunakan kasir digital', icon: '💰' },
+    { number: '1', title: 'Daftar Akun', description: 'Buat akun gratis dalam 30 detik', icon: UserPlus, color: '#059669' },
+    { number: '2', title: 'Tambah Produk', description: 'Input produk satu per satu atau import CSV', icon: Package, color: '#3B82F6' },
+    { number: '3', title: 'Mulai Jualan', description: 'Langsung gunakan kasir digital', icon: ShoppingCart, color: '#8B5CF6' },
   ];
 
   return (
@@ -799,20 +836,30 @@ function HowItWorks() {
           {steps.map((step, index) => (
             <RevealSection key={step.number} delay={index * 150}>
               <div className="relative text-center group">
-                {/* Step Circle */}
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl"
-                  style={{ backgroundColor: COLORS.primary }}
-                >
-                  {step.icon}
-                </div>
-
-                {/* Connector Line */}
+                {/* Connected vertical line - desktop only */}
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-1">
-                    <div className="h-full bg-gradient-to-r from-emerald-200 to-emerald-100 rounded-full" />
+                  <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-0.5 z-0">
+                    <div className="h-full bg-gradient-to-r from-emerald-200 via-emerald-300 to-emerald-100 rounded-full" />
                   </div>
                 )}
+
+                {/* Step Number Circle */}
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl relative z-10"
+                  style={{
+                    background: `linear-gradient(135deg, ${step.color}, ${COLORS.primary})`,
+                    boxShadow: `0 4px 20px ${step.color}40`,
+                  }}
+                >
+                  <step.icon size={28} className="text-white" />
+                  {/* Step number badge */}
+                  <div
+                    className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white shadow-md"
+                    style={{ backgroundColor: COLORS.primaryDark }}
+                  >
+                    {step.number}
+                  </div>
+                </div>
 
                 <h3
                   className="text-xl font-semibold mb-2 transition-colors group-hover:text-emerald-700"
@@ -883,9 +930,22 @@ function Testimonials() {
         <div className="grid md:grid-cols-2 gap-6">
           {testimonials.map((testimonial, index) => (
             <RevealSection key={testimonial.name} delay={index * 100}>
-              <div className="p-6 rounded-2xl border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-emerald-200 bg-white">
+              <div className="relative p-6 rounded-2xl border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white overflow-hidden">
+                {/* Decorative quote mark */}
+                <div
+                  className="absolute -top-4 -right-2 text-6xl font-serif leading-none opacity-[0.06] pointer-events-none select-none"
+                  style={{ color: COLORS.primary }}
+                >
+                  &quot;
+                </div>
+                
+                {/* Left gradient accent */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                />
+
                 {/* Rating */}
-                <div className="flex gap-1 mb-4">
+                <div className="flex gap-1 mb-4 relative z-[1]">
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
                     <Star
                       key={i}
@@ -896,17 +956,27 @@ function Testimonials() {
                 </div>
 
                 {/* Quote */}
-                <p className="text-base mb-4 leading-relaxed italic" style={{ color: COLORS.text }}>
+                <p className="text-base mb-4 leading-relaxed italic relative z-[1]" style={{ color: COLORS.text }}>
                   &quot;{testimonial.text}&quot;
                 </p>
 
                 {/* Author */}
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold transition-transform duration-300 hover:scale-110 hover:shadow-lg"
-                    style={{ backgroundColor: COLORS.primary }}
-                  >
-                    {testimonial.avatar}
+                <div className="flex items-center gap-3 relative z-[1]">
+                  <div className="relative group/avatar">
+                    {/* Gradient ring */}
+                    <div
+                      className="absolute inset-0 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300"
+                      style={{
+                        background: `linear-gradient(135deg, ${COLORS.primary}, #10B981)`,
+                        padding: '2px',
+                      }}
+                    />
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold transition-transform duration-300 hover:scale-110 relative z-10"
+                      style={{ backgroundColor: COLORS.primary }}
+                    >
+                      {testimonial.avatar}
+                    </div>
                   </div>
                   <div>
                     <p className="font-semibold" style={{ color: COLORS.text }}>
