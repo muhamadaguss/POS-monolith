@@ -43,6 +43,7 @@ import {
   PRODUCTS_PAGE_SIZE,
   rupiah,
   pageNumbers,
+  ImportProductsModal,
 } from '@/features/products/components';
 
 const PAGE_SIZE = PRODUCTS_PAGE_SIZE;
@@ -82,6 +83,7 @@ function ProductsPageInner() {
   const [priceProduct, setPriceProduct] = useState<ProductListItem | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductListItem | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -190,6 +192,12 @@ function ProductsPageInner() {
             <Button variant="outline" size="lg" onClick={() => setCategoryDialogOpen(true)}>
               <Tag className="size-4" />
               Kategori
+            </Button>
+          )}
+          {canManage && (
+            <Button variant="outline" size="lg" onClick={() => setImportModalOpen(true)}>
+              <Package className="size-4" />
+              Import CSV
             </Button>
           )}
           {canManage && (
@@ -493,6 +501,18 @@ function ProductsPageInner() {
           onClose={() => setDeleteTarget(null)}
           onDeleted={() => {
             setDeleteTarget(null);
+            load();
+            loadStats();
+          }}
+        />
+      )}
+
+      {importModalOpen && (
+        <ImportProductsModal
+          open={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onSuccess={() => {
+            setImportModalOpen(false);
             load();
             loadStats();
           }}

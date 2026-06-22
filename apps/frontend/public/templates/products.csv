@@ -1,0 +1,6 @@
+name,category,sku,price,cost,description,barcode,stock,min_stock,is_active,variants
+Kopi Americano,Minuman,kopi-americano,18000,9000,Kopi americano khas,1234567890,100,10,true,
+Kopi Latte,Minuman,kopi-latte,22000,11000,Kopi latte creamy,1234567891,100,10,true,Size|Regular|Large
+Teh Manis,Minuman,teh-manis,8000,4000,Teh manis segerr,1234567892,200,20,true,Level|Normal|Less|No Ice
+Nasi Goreng,Makanan,nasi-goreng,25000,12000,Nasi goreng spesial,1234567893,50,5,true,
+Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,Topping|Keju|Coklat

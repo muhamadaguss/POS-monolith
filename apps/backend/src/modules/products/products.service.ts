@@ -404,4 +404,142 @@ export class ProductsService {
       },
     });
   }
+
+  async importProducts(file: Express.Multer.File, currentUser: AuthenticatedUser) {
+    const csvParser = require('csv-parser');
+    const fs = require('fs');
+
+    const results: any[] = [];
+    const stream = fs.createReadStream(file.path);
+
+    return new Promise((resolve, reject) => {
+      stream
+        .pipe(csvParser())
+        .on('data', (row: any) => results.push(row))
+        .on('end', async () => {
+          try {
+            const tenantId = currentUser.tenantId!;
+            const errors: any[] = [];
+            const products: any[] = [];
+            let successCount = 0;
+
+            for (let i = 0; i < results.length; i++) {
+              const row = results[i];
+              const rowNum = i + 1;
+
+              try {
+                // Validate required fields
+                if (!row.name || !row.sku || !row.price) {
+                  errors.push({ row: rowNum, message: 'Nama, SKU, dan harga wajib diisi', data: row });
+                  continue;
+                }
+
+                // Validate SKU format
+                if (!/^[a-z0-9-]+$/.test(row.sku)) {
+                  errors.push({ row: rowNum, message: 'SKU hanya boleh huruf kecil, angka, dan tanda hubung', data: row });
+                  continue;
+                }
+
+                // Validate price
+                const price = parseFloat(row.price);
+                if (isNaN(price) || price < 0) {
+                  errors.push({ row: rowNum, message: 'Harga harus angka valid >= 0', data: row });
+                  continue;
+                }
+
+                // Parse variants
+                let variants: any[] = [];
+                if (row.variants) {
+                  const parts = row.variants.split(',').map((v: string) => v.trim());
+                  for (const part of parts) {
+                    const [name, ...opts] = part.split('|');
+                    if (name && opts.length > 0) {
+                      variants.push({ name, options: opts });
+                    }
+                  }
+                }
+
+                // Check duplicate SKU
+                const existing = await this.prisma.product.findUnique({
+                  where: { tenantId_sku: { tenantId, sku: row.sku } },
+                });
+                if (existing) {
+                  errors.push({ row: rowNum, message: `SKU ${row.sku} sudah ada`, data: row });
+                  continue;
+                }
+
+                // Find or create category
+                let categoryId: string | null = null;
+                if (row.category) {
+                  let cat = await this.prisma.category.findFirst({ where: { tenantId, name: row.category.trim() } });
+                  if (!cat) {
+                    cat = await this.prisma.category.create({ data: { tenantId, name: row.category.trim(), color: '#006C49' } });
+                  }
+                  categoryId = cat.id;
+                }
+
+                // Create product + variants + inventory
+                await this.prisma.$transaction(async (tx) => {
+                  const product = await tx.product.create({
+                    data: {
+                      tenantId,
+                      categoryId,
+                      name: row.name.trim(),
+                      sku: row.sku.trim(),
+                      barcode: row.barcode || null,
+                      description: row.description || null,
+                      unit: row.unit || 'pcs',
+                      status: row.isActive === 'true' || row.isActive === true ? ProductStatus.ACTIVE : ProductStatus.INACTIVE,
+                      costPrice: row.cost ? parseFloat(row.cost) : 0,
+                      sellPrice: price,
+                      hasVariants: variants.length > 0,
+                    },
+                  });
+
+                  // Create variant options
+                  for (const v of variants) {
+                    for (const opt of v.options) {
+                      await tx.variant.create({
+                        data: {
+                          productId: product.id,
+                          name: v.name,
+                          sku: `${product.sku}-${opt.trim()}`,
+                          barcode: row.barcode || null,
+                          status: ProductStatus.ACTIVE,
+                        },
+                      });
+                    }
+                  }
+
+                  // Insert stock directly to inventory
+                  if (row.stock && currentUser.currentOutletId) {
+                    const stockQty = parseFloat(row.stock);
+                    if (!isNaN(stockQty) && stockQty > 0) {
+                      await tx.inventory.create({
+                        data: {
+                          productId: product.id,
+                          outletId: currentUser.currentOutletId,
+                          quantity: stockQty,
+                          unit: row.unit || 'pcs',
+                        },
+                      });
+                    }
+                  }
+                });
+
+                products.push({ id: `row_${rowNum}`, name: row.name, sku: row.sku, status: 'CREATED' });
+                successCount++;
+              } catch (err: any) {
+                errors.push({ row: rowNum, message: err.message, data: row });
+              }
+            }
+
+            resolve({ totalRows: results.length, successCount, errorCount: errors.length, errors, products });
+          } catch (err: any) {
+            reject(err);
+          }
+        })
+        .on('error', (err: any) => reject(err));
+    });
+  }
 }

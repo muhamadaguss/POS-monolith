@@ -122,6 +122,44 @@ export class ProductsController {
     return { url: `/uploads/products/${file.filename}` };
   }
 
+  @Post('import')
+  @Roles(Role.STORE_MANAGER)
+  @RequirePermissions(PERMISSIONS.PRODUCT_MANAGE)
+  @ApiOperation({ summary: 'Import produk dari file CSV' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/imports',
+        filename: (_req, file, cb) => {
+          cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+      fileFilter: (_req, file, cb) => {
+        if (!file.originalname.endsWith('.csv')) {
+          return cb(new BadRequestException('File harus format CSV.'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async importProducts(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File CSV wajib diunggah.');
+    }
+    return this.productsService.importProducts(file, user);
+  }
+
   @Patch(':id')
   @Roles(Role.STORE_MANAGER)
   @RequirePermissions(PERMISSIONS.PRODUCT_MANAGE)

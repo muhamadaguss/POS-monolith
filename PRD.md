@@ -261,6 +261,26 @@ ERD lengkap: [packages/database/ERD.md](packages/database/ERD.md)
 - ✅ **Middleware** (`src/middleware.ts`): Redirect `/` → `/login`.
 - ✅ **Bug fix navigation**: Ganti `router.push` dengan `window.location.href` setelah set outlet agar Zustand persist ter-flush ke localStorage sebelum layout guard dievaluasi.
 - ✅ **Backend fix**: Login response ditambah `outlets[]` (list outlet user) dan `permissions[]` di user object. Response dibungkus `{ success, data }`, di-unwrap oleh Axios interceptor.
+- ✅ **Halaman Register** (`/register`):
+  - ✅ Form registrasi dengan field: email, password, ownerName, businessName, businessSlug, outletName
+  - ✅ Plan selector dengan 3 opsi: FREE (Trial 14 hari), STARTER (Rp 99rb/bulan), GROWTH (Rp 299rb/bulan)
+  - ✅ Auto-generate slug dari businessName (lowercase, hyphenated)
+  - ✅ Validasi via react-hook-form + Zod
+  - ✅ Redirect ke landing page "Mulai Gratis" button
+  - ✅ Link "Daftar Gratis" di halaman login
+- ✅ **Auto-login after Registration**:
+  - ✅ Backend `POST /auth/register` return tokens + user data
+  - ✅ Frontend auto-login via signIn('credentials') dengan tenantSlug
+  - ✅ Redirect ke `/dashboard` setelah registrasi berhasil
+- ✅ **Trial 14-Day System**:
+  - ✅ Backend set `trialEndsAt` saat registrasi paket FREE (14 hari dari createdAt)
+  - ✅ Login check: jika `now > trialEndsAt` dan plan FREE → reject dengan message "Masa trial Anda telah berakhir"
+  - ✅ Trial banner di Dashboard dan POS muncul jika `< 7 hari` sebelum trial habis
+- ✅ **Trial Banner Component** (`src/components/TrialBanner.tsx`):
+  - ✅ Tampil di Dashboard layout dan POS layout jika status TRIAL dan < 7 hari
+  - ✅ Warning style (amber) jika < 3 hari, info style (blue) jika 3-7 hari
+  - ✅ Dismiss button untuk menutup banner
+  - ✅ Pesan informatif dengan tanggal berakhir trial
 
 ### 11.3 POS Screen Layout (Cashier Mode) ✅ Selesai
 
@@ -316,6 +336,17 @@ _Dashboard menggunakan tata letak standar Web Desktop untuk mempermudah peninjau
 - ✅ **Integrasi Diskon**: Apply `discountId` di keranjang, baris diskon tampil di summary keranjang.
 - ✅ **Billing & Subscription** (`/billing`): Halaman paket langganan, daftar invoice, bayar invoice.
 - ✅ **Export laporan penjualan ke Excel** (`/reports`): tombol "Export Excel" memicu unduhan `.xlsx` dari `/reports/sales/export`.
+- ✅ **Import Produk CSV** (`/products`):
+  - ✅ Tombol "Import CSV" di halaman produk
+  - ✅ Upload file CSV via drag & drop atau file picker
+  - ✅ Format CSV: name (wajib), sku (wajib), price, category, cost, description, barcode, stock, is_active, variants
+  - ✅ Preview table + highlight error sebelum import
+  - ✅ Download template CSV
+  - ✅ Create Only mode — skip row jika SKU sudah ada
+  - ✅ Auto-create kategori jika belum ada
+  - ✅ Support varian produk dengan pipe-separated format (Size|Regular|Large)
+  - ✅ Stok langsung masuk ke inventory
+  - ✅ Result summary (success/error count)
 
 ### 11.6 Konsol Super Admin ✅ Selesai
 
