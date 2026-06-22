@@ -239,7 +239,7 @@ function Header() {
           : 'bg-white/90 backdrop-blur-md border-b border-gray-100/50'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group cursor-pointer">
@@ -254,22 +254,24 @@ function Header() {
             </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => scrollTo(item.id)}
-                className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
-                style={{ color: COLORS.textSecondary }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          {/* Desktop Nav - CENTERED for landing page */}
+          <div className="hidden md:flex items-center justify-center absolute left-1/2 -translate-x-1/2">
+            <nav className="flex items-center gap-8">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollTo(item.id)}
+                  className="text-sm font-medium hover:opacity-80 transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ color: COLORS.textSecondary }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* CTA Buttons - RIGHT aligned */}
+          <div className="hidden md:flex items-center gap-3 ml-auto">
             <Link
               href="/login"
               className="text-sm font-medium hover:opacity-80 transition-opacity"
