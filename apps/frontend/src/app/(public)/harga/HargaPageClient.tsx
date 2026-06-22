@@ -23,45 +23,44 @@ const NAV_ITEMS = [
   { label: 'Harga', href: '/harga' },
 ];
 
-const PLANS = [
+const pricingPlans = [
   {
-    name: 'Gratis',
-    price: '0',
-    period: 'selamanya',
-    desc: 'Untuk UMKM yang baru mulai. Fitur lengkap tanpa batas.',
-    popular: false,
-    features: [
-      'Kasir cepat & offline',
-      'Manajemen stok multi-outlet',
-      'Laporan penjualan real-time',
-      'Manajemen karyawan (max 3)',
-      'Import CSV produk',
-      'Barcode & QR scan',
-      'Cetak struk thermal',
-      'Multi pembayaran',
-    ],
+    name: 'Starter',
+    price: 'Gratis',
+    period: '',
+    description: 'Cocok untuk bisnis kecil',
+    features: ['1 Outlet', '3 Karyawan', 'Fitur Dasar', 'Laporan Sederhana'],
     cta: 'Mulai Gratis',
-    href: '/register',
+    popular: false,
   },
   {
-    name: 'Pro',
-    price: 'Gratis',
-    period: 'juga selamanya',
-    desc: 'Semua fitur tanpa batasan. Untuk bisnis berkembang.',
-    popular: true,
+    name: 'Growth',
+    price: 'Rp 299rb',
+    period: '/bulan',
+    description: 'Untuk bisnis yang berkembang',
     features: [
-      'Semua fitur Gratis +',
-      'Manajemen karyawan tak terbatas',
-      'Pencatatan stok masuk/keluar',
-      'Faktur & ekspor laporan PDF/Excel',
-      'Manajemen piutang',
-      'Multi-outlet tak terbatas',
-      'Import/ekspor data massal',
-      'Notifikasi stok habis',
-      'Prioritas support',
+      '5 Outlet',
+      '20 Karyawan',
+      'Semua Fitur',
+      'Laporan Lengkap',
+      'Priority Support',
     ],
-    cta: 'Mulai Sekarang',
-    href: '/register',
+    cta: 'Pilih Paket',
+    popular: true,
+  },
+  {
+    name: 'Enterprise',
+    price: 'Hubungi Kami',
+    description: 'Untuk bisnis skala besar',
+    features: [
+      'Unlimited Outlet',
+      'Unlimited Karyawan',
+      'Custom Fitur',
+      'Dedicated Support',
+      'API Access',
+    ],
+    cta: 'Hubungi Kami',
+    popular: false,
   },
 ];
 
@@ -176,14 +175,14 @@ export default function HargaPage() {
           <FadeInSection>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6" style={{ backgroundColor: COLORS.lightBg, color: COLORS.primary }}>
               <Zap size={14} />
-              Harga transparan, tanpa biaya tersembunyi
+              Paket Harga Transparan
             </div>
             <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
-              Harga yang <span style={{ color: COLORS.primary }}>Sederhana</span>
-              <br />untuk Semua Bisnis
+              Pilih Paket yang <span style={{ color: COLORS.primary }}>Sesuai</span>
+              <br />untuk Bisnis Anda
             </h1>
             <p className="text-lg md:text-xl max-w-3xl mx-auto mb-10" style={{ color: COLORS.textSecondary }}>
-              Mulai gratis selamanya. Upgrade kapan pun Anda butuh fitur lebih.
+              Mulai gratis, upgrade kapan saja sesuai kebutuhan bisnis Anda.
             </p>
           </FadeInSection>
         </div>
@@ -191,40 +190,61 @@ export default function HargaPage() {
 
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto justify-center">
-            {PLANS.map((plan, i) => (
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {pricingPlans.map((plan, index) => (
               <FadeInSection key={plan.name}>
-                <div className={`relative rounded-2xl border p-8 transition-all hover:shadow-xl ${
-                  plan.popular ? 'border-emerald-500 shadow-lg scale-105' : 'border-gray-100'
-                }`} style={{ backgroundColor: plan.popular ? '#F0FDF4' : 'white' }}>
+                <div
+                  className={`relative p-6 rounded-2xl transition-all duration-300 hover:-translate-y-2 ${
+                    plan.popular
+                      ? 'bg-white shadow-xl border-2 border-emerald-500 scale-105 md:scale-110'
+                      : 'bg-white border border-gray-200 hover:shadow-xl hover:border-emerald-200'
+                  }`}
+                >
                   {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: COLORS.primary }}>
-                      PALING POPULER
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-lg whitespace-nowrap">
+                      ⭐ PALING POPULER
                     </div>
                   )}
-                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <p className="text-sm mb-4" style={{ color: COLORS.textSecondary }}>{plan.desc}</p>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="ml-1 text-sm" style={{ color: COLORS.textSecondary }}>/{plan.period}</span>
+                  <h3 className="text-lg font-semibold" style={{ color: COLORS.text }}>
+                    {plan.name}
+                  </h3>
+                  <div className="mt-2 mb-1">
+                    <span
+                      className="text-3xl font-bold"
+                      style={{ color: plan.popular ? COLORS.primary : COLORS.text }}
+                    >
+                      {plan.price}
+                    </span>
+                    {plan.period && (
+                      <span className="text-sm" style={{ color: COLORS.textSecondary }}>
+                        {plan.period}
+                      </span>
+                    )}
                   </div>
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm">
-                        <Check size={16} className="mt-0.5 shrink-0" style={{ color: COLORS.primary }} />
-                        <span>{f}</span>
+                  <p className="text-sm mb-4" style={{ color: COLORS.textSecondary }}>
+                    {plan.description}
+                  </p>
+                  <ul className="space-y-2 mb-6">
+                    {plan.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2 text-sm"
+                        style={{ color: COLORS.text }}
+                      >
+                        <Check size={16} style={{ color: COLORS.primary }} />
+                        {feature}
                       </li>
                     ))}
                   </ul>
-                  <Link href={plan.href}
-                    className={`block text-center font-semibold py-3 px-6 rounded-xl transition-all ${
-                      plan.popular ? 'text-white hover:shadow-lg hover:scale-105' : 'border-2 hover:bg-emerald-50'
+                  <Link
+                    href={plan.cta === 'Hubungi Kami' ? '/contact' : '/register'}
+                    className={`block w-full py-3 text-center font-medium rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:scale-95 ${
+                      plan.popular
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:shadow-lg hover:opacity-90'
+                        : 'text-white hover:opacity-90 hover:shadow-lg'
                     }`}
-                    style={{
-                      backgroundColor: plan.popular ? COLORS.primary : 'transparent',
-                      borderColor: plan.popular ? 'transparent' : COLORS.primary,
-                      color: plan.popular ? 'white' : COLORS.primary,
-                    }}>
+                    style={plan.popular ? {} : { backgroundColor: COLORS.primary }}
+                  >
                     {plan.cta}
                   </Link>
                 </div>
