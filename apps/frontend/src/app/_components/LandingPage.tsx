@@ -239,23 +239,25 @@ function Header() {
           : 'bg-white/90 backdrop-blur-md border-b border-gray-100/50'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group cursor-pointer">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
-              style={{ backgroundColor: COLORS.primary }}
-            >
-              <span className="text-white font-bold text-sm">K</span>
-            </div>
-            <span className="font-bold text-xl transition-colors" style={{ color: COLORS.text }}>
-              Kasirku
-            </span>
-          </Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center h-16">
+          {/* Logo - KIRI */}
+          <div className="flex-1 flex justify-start">
+            <Link href="/" className="flex items-center gap-2 group cursor-pointer">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                style={{ backgroundColor: COLORS.primary }}
+              >
+                <span className="text-white font-bold text-sm">K</span>
+              </div>
+              <span className="font-bold text-xl transition-colors" style={{ color: COLORS.text }}>
+                Kasirku
+              </span>
+            </Link>
+          </div>
 
-          {/* Desktop Nav - CENTERED for landing page */}
-          <div className="hidden md:flex items-center justify-center absolute left-1/2 -translate-x-1/2">
+          {/* Desktop Nav - TENGAH */}
+          <div className="hidden md:flex flex-1 justify-center">
             <nav className="flex items-center gap-8">
               {navItems.map((item) => (
                 <button
@@ -270,32 +272,34 @@ function Header() {
             </nav>
           </div>
 
-          {/* CTA Buttons - RIGHT aligned */}
-          <div className="hidden md:flex items-center gap-3 ml-auto">
-            <Link
-              href="/login"
-              className="text-sm font-medium hover:opacity-80 transition-opacity"
-              style={{ color: COLORS.text }}
+          {/* CTA Buttons + Hamburger - KANAN */}
+          <div className="flex-1 flex justify-end items-center gap-3">
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-3">
+              <Link
+                href="/login"
+                className="text-sm font-medium hover:opacity-80 transition-opacity"
+                style={{ color: COLORS.text }}
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
+                style={{ backgroundColor: COLORS.primary }}
+              >
+                Mulai Gratis
+              </Link>
+            </div>
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
             >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
-              style={{ backgroundColor: COLORS.primary }}
-            >
-              Mulai Gratis
-            </Link>
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
       </div>
 
