@@ -24,7 +24,8 @@ export function useImportProducts() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/v1/products/import', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+      const response = await fetch(`${API_URL}/products/import`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -42,7 +43,6 @@ export function useImportProducts() {
         setPreview(result.data.products.map((p: any) => ({
           name: p.name,
           sku: p.sku,
-          price: 'Rp ' + parseInt(p.name).toLocaleString('id-ID'),
         })));
         setErrors(result.data.errors);
         return true;
@@ -91,7 +91,8 @@ export function useImportProducts() {
       const formDataWithFile = new FormData();
       formDataWithFile.append('file', file);
 
-      const response = await fetch('/api/v1/products/import', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+      const response = await fetch(`${API_URL}/products/import`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,

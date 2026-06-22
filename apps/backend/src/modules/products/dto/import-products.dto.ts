@@ -1,10 +1,7 @@
-import { IsFile, IsNotEmpty } from 'class-validator';
-
 /**
  * DTO untuk import produk CSV
+ * Catatan: Validasi file dilakukan di controller via multer
  */
 export class ImportProductsDto {
-  @IsFile()
-  @IsNotEmpty()
-  file: Express.Multer.File;
+  // File validation handled by multer in controller
 }

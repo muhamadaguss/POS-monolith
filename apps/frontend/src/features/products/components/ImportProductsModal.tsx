@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Upload, X, Download, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
+import { Upload, X, Download, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toastSuccess, errorAlert } from '@/lib/swal';
@@ -81,28 +82,11 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/v1/products/import', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload gagal');
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        setPreview(result.data.products);
-        setErrors(result.data.errors);
-      } else {
-        errorAlert(result.message || 'Terjadi kesalahan');
-      }
+      const { data } = await api.post('/products/import', formData);
+      setPreview(data.products ?? []);
+      setErrors(data.errors ?? []);
     } catch (err: any) {
-      errorAlert(err.message || 'Gagal upload file');
+      errorAlert(err?.response?.data?.message || err.message || 'Gagal upload file');
     } finally {
       setIsUploading(false);
     }
@@ -116,29 +100,12 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/v1/products/import', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Import gagal');
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        setResult(result.data);
-        toastSuccess(`Berhasil import ${result.data.successCount} produk`);
-        onSuccess();
-      } else {
-        errorAlert(result.message || 'Terjadi kesalahan');
-      }
+      const { data } = await api.post('/products/import', formData);
+      setResult(data);
+      toastSuccess(`Berhasil import ${data.successCount} produk`);
+      onSuccess();
     } catch (err: any) {
-      errorAlert(err.message || 'Gagal import produk');
+      errorAlert(err?.response?.data?.message || err.message || 'Gagal import produk');
     } finally {
       setIsProcessing(false);
     }
@@ -265,13 +232,13 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
                     <Button variant="outline" onClick={() => setFile(null)}>
                       Ganti File
                     </Button>
-                    <Button onClick={handleImport} disabled={hasErrors} isLoading={isProcessing}>
+                    <Button onClick={handleImport} disabled={hasErrors || isProcessing}>
                       {isProcessing ? 'Mengimport...' : 'Import Sekarang'}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button onClick={handleUpload} isLoading={isUploading} className="w-full">
+                <Button onClick={handleUpload} disabled={isUploading} className="w-full">
                   {isUploading ? 'Memproses...' : 'Proses CSV'}
                 </Button>
               )}

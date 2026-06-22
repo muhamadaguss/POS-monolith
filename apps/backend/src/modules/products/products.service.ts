@@ -419,6 +419,12 @@ export class ProductsService {
         .on('end', async () => {
           try {
             const tenantId = currentUser.tenantId!;
+
+            // Get all outlets — produk masuk ke semua outlet
+            const outlets = await this.prisma.outlet.findMany({
+              where: { tenantId },
+            });
+
             const errors: any[] = [];
             const products: any[] = [];
             let successCount = 0;
@@ -489,9 +495,7 @@ export class ProductsService {
                       barcode: row.barcode || null,
                       description: row.description || null,
                       unit: row.unit || 'pcs',
-                      status: row.isActive === 'true' || row.isActive === true ? ProductStatus.ACTIVE : ProductStatus.INACTIVE,
-                      costPrice: row.cost ? parseFloat(row.cost) : 0,
-                      sellPrice: price,
+                      status: row.is_active === 'false' || row.is_active === false ? ProductStatus.INACTIVE : ProductStatus.ACTIVE,
                       hasVariants: variants.length > 0,
                     },
                   });
@@ -499,28 +503,41 @@ export class ProductsService {
                   // Create variant options
                   for (const v of variants) {
                     for (const opt of v.options) {
-                      await tx.variant.create({
+                      await tx.productVariant.create({
                         data: {
                           productId: product.id,
+                          tenantId,
                           name: v.name,
                           sku: `${product.sku}-${opt.trim()}`,
-                          barcode: row.barcode || null,
                           status: ProductStatus.ACTIVE,
                         },
                       });
                     }
                   }
 
-                  // Insert stock directly to inventory
-                  if (row.stock && currentUser.currentOutletId) {
-                    const stockQty = parseFloat(row.stock);
-                    if (!isNaN(stockQty) && stockQty > 0) {
+                  // Insert stock & price ke semua outlet
+                  if (outlets.length > 0) {
+                    const stockQty = row.stock && !isNaN(parseFloat(row.stock)) && parseFloat(row.stock) > 0
+                      ? parseFloat(row.stock) : 0;
+
+                    for (const outlet of outlets) {
                       await tx.inventory.create({
                         data: {
+                          tenantId,
+                          outletId: outlet.id,
                           productId: product.id,
-                          outletId: currentUser.currentOutletId,
                           quantity: stockQty,
-                          unit: row.unit || 'pcs',
+                          minStock: row.min_stock ? parseFloat(row.min_stock) : 0,
+                        },
+                      });
+
+                      await tx.outletPrice.create({
+                        data: {
+                          tenantId,
+                          outletId: outlet.id,
+                          productId: product.id,
+                          sellPrice: price,
+                          costPrice: row.cost ? parseFloat(row.cost) : 0,
                         },
                       });
                     }
