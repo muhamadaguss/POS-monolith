@@ -22,7 +22,7 @@ export default auth((req) => {
   const isLoggedIn = !!user;
 
   const isAuthRoute = path === '/login' || path === '/select-outlet' || path === '/register';
-  const isPublicRoute = path === '/' || path === '/login' || path === '/select-outlet' || path === '/register';
+  const isPublicRoute = path === '/' || path === '/login' || path === '/select-outlet' || path === '/register' || path === '/fitur' || path === '/harga';
 
   // 1) Belum login & bukan halaman auth/public → ke /login.
   if (!isLoggedIn && !isPublicRoute) {
