@@ -7,14 +7,14 @@ import { OfflineBadge } from "@/features/pwa/OfflineBadge";
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
-  display: 'swap',
+  display: 'optional',
   preload: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-  display: 'swap',
+  display: 'optional',
   preload: false,
 });
 
