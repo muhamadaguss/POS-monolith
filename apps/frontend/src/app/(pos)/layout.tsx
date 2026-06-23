@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '@/features/auth/useAuthGuard';
 import { proactiveRefresh } from '@/lib/api';
 import TrialBanner from '@/components/TrialBanner';
+import '../globals-ui.css';
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

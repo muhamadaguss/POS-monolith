@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/shared/Sidebar';
 import TrialBanner from '@/components/TrialBanner';
 import { useAuthGuard } from '@/features/auth/useAuthGuard';
 import { proactiveRefresh } from '@/lib/api';
+import '../globals-ui.css';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

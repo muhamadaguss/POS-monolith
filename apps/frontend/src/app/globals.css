@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -9,62 +7,25 @@ html {
 }
 
 /* ── Premium scrollbar ── */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #059669;
-}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #059669; }
 
 /* ── Floating particles ── */
-@keyframes float {
-  0%, 100% { transform: translateY(0px) scale(1); opacity: 0.4; }
-  50% { transform: translateY(-20px) scale(1.1); opacity: 0.8; }
-}
-@keyframes float-slow {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(3deg); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse-soft {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); }
-  50% { box-shadow: 0 0 0 15px rgba(5, 150, 105, 0); }
-}
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+@keyframes float { 0%,100% { transform: translateY(0px) scale(1); opacity: 0.4; } 50% { transform: translateY(-20px) scale(1.1); opacity: 0.8; } }
+@keyframes float-slow { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-soft { 0%,100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4); } 50% { box-shadow: 0 0 0 15px rgba(5, 150, 105, 0); } }
+@keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+/* ponytail: gradient-shift uses background-position — not composited. Replace with transform when landing page is refactored. */
 
 /* ── Glass morphism ── */
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
+.glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2); }
 
 /* ── Gradient text ── */
-.gradient-text {
-  background: linear-gradient(135deg, #059669, #10B981, #34D399);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+.gradient-text { background: linear-gradient(135deg, #059669, #10B981, #34D399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
 @theme inline {
   --color-background: var(--background);
@@ -179,6 +140,27 @@ html {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/*
+ * Print — terisolasi untuk ReceiptDialog (struk 80mm) + shift (A4).
+ * Saat window.print(), HANYA .print-root yang tampil; sisanya disembunyikan.
+ *
+ * PENTING: selektor .print-root + @page { size: 80mm } dulu GLOBAL,
+ * membuat halaman shift yang panggil window.print() tanpa .receipt-print-root
+ * → SEMUA tersembunyi → "print preview kosong". Sekarang size 80mm
+ * HANYA pada varian .print-receipt.
+ */
+.print-receipt { display: none; }
+@media print {
+  body { background: #fff !important; }
+  body * { visibility: hidden; }
+  .print-root, .print-root * { visibility: visible !important; }
+  .print-root { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100%; }
+  .print-area { margin: 0 !important; box-shadow: none !important; }
+  .print-root.print-receipt { width: 80mm !important; }
+  .print-receipt #receipt-print-area { width: 80mm !important; max-width: 80mm !important; padding: 3mm !important; }
+}
+@page { margin: 0; }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -189,70 +171,4 @@ html {
   html {
     @apply font-sans;
   }
-}
-
-/*
- * Cetak terisolasi (dipakai dua tempat):
- *  - ReceiptDialog (struk transaksi)   → .print-root.print-receipt (kertas 80mm)
- *  - PrintModal/CloseRekapModal (shift) → .print-root (kertas default A4/Letter)
- *
- * Pola: saat window.print(), HANYA .print-root yang tampil; seluruh UI lain
- * disembunyikan agar tidak ikut tercetak. Konten cetak diberi .print-area.
- *
- * PENTING (regresi yang diperbaiki): sebelumnya selektor di-hardcode ke
- * `.receipt-print-root` + `@page { size: 80mm }` GLOBAL. Akibatnya halaman shift
- * yang memanggil window.print() tanpa .receipt-print-root → SEMUA tersembunyi →
- * "print preview kosong". Solusi: selektor umum `.print-root`, dan ukuran 80mm
- * HANYA pada varian struk (.print-receipt), bukan global.
- */
-
-/* Area cetak struk (di-portal ke body oleh ReceiptDialog) hanya tampil saat cetak. */
-.print-receipt {
-  display: none;
-}
-
-@media print {
-  body {
-    background: #fff !important;
-  }
-  /* Sembunyikan semua, lalu tampilkan kembali HANYA .print-root & isinya.
-   * Pakai `visibility` (bukan `display:none` pada semua) agar layout parent
-   * tidak runtuh — lebih tahan banting untuk konten yang masih di dalam modal
-   * (shift) maupun yang di-portal ke body (struk). */
-  body * {
-    visibility: hidden;
-  }
-  .print-root,
-  .print-root * {
-    visibility: visible !important;
-  }
-  /* .print-root ditarik ke kiri-atas kertas, lepas dari posisi modal/overlay. */
-  .print-root {
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100%;
-  }
-  .print-area {
-    margin: 0 !important;
-    box-shadow: none !important;
-  }
-
-  /* ── Varian STRUK: kertas gulungan 80mm (ReceiptDialog) ── */
-  .print-root.print-receipt {
-    width: 80mm !important;
-  }
-  .print-receipt #receipt-print-area {
-    width: 80mm !important;
-    max-width: 80mm !important;
-    padding: 3mm !important;
-  }
-}
-
-/* @page margin 0 menghilangkan header/footer browser. Ukuran kertas struk
- * diatur dinamis oleh ReceiptDialog (#receipt-page-size, 80mm × tinggi-isi);
- * modal shift memakai ukuran kertas default browser (A4/Letter). */
-@page {
-  margin: 0;
 }
