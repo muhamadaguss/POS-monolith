@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionProvider } from "@/features/auth/SessionProvider";
-import { OfflineBadge } from "@/features/pwa/OfflineBadge";
+import dynamic from 'next/dynamic';
+
+const SessionProvider = dynamic(() => import('@/features/auth/SessionProvider').then(m => ({ default: m.SessionProvider })));
+const OfflineBadge = dynamic(() => import('@/features/pwa/OfflineBadge').then(m => ({ default: m.OfflineBadge })));
 
 const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
