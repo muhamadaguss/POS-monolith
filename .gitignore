@@ -54,3 +54,4 @@ infra/fluent-bit/tail.db
 
 # Deployment scripts
 update.sh
+.agent/
