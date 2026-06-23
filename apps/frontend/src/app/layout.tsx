@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/features/auth/SessionProvider";
 import { OfflineBadge } from "@/features/pwa/OfflineBadge";
 
-const jakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: 'optional',
-  preload: true,
-});
-
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
   display: 'optional',
   preload: false,
@@ -78,7 +71,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${jakartaSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <script
