@@ -6,12 +6,12 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   ShoppingCart, Package, BarChart3,
-  ArrowRight, Check, Menu, X,
-  TrendingUp, Shield, Clock, Zap, ChevronDown,
+  TrendingUp, Shield, Clock, Zap,
 } from 'lucide-react';
 import {
   COLORS, RevealSection, AnimatedCounter,
 } from './landing-shared';
+import { ArrowRight, Check, ChevronDown, Menu, X } from './Icons';
 
 // ⬇️ Lazy-load below-fold sections (Features → Footer)
 const LandingSections = dynamic(() => import('./LandingSections'), {
