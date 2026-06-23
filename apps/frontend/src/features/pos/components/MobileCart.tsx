@@ -36,7 +36,7 @@ export function MobileCart({
     <>
       {/* Bar bawah — hanya muncul bila ada item */}
       {totalItems > 0 && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 px-3 pb-3 pt-2 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent">
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 px-3 pb-3 pt-2 bg-gradient-to-t from-gray-50 dark:from-gray-900 via-gray-50 dark:via-gray-900 to-transparent">
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -67,13 +67,13 @@ export function MobileCart({
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute inset-x-0 bottom-0 h-[88vh] rounded-t-2xl bg-white overflow-hidden shadow-xl animate-in slide-in-from-bottom duration-200 flex flex-col">
+          <div className="absolute inset-x-0 bottom-0 h-[88vh] rounded-t-2xl bg-white dark:bg-gray-800 overflow-hidden shadow-xl animate-in slide-in-from-bottom duration-200 flex flex-col">
             {/* Tombol tutup mengambang */}
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Tutup keranjang"
-              className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+              className="absolute top-3 right-3 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

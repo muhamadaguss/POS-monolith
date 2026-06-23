@@ -104,16 +104,16 @@ function KpiCard({
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5">
+    <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
       <div className="flex items-start justify-between gap-2">
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow ${color}`}>
           <Icon className="w-5 h-5" />
         </div>
         {badge}
       </div>
-      <p className="text-xs text-gray-500 font-medium mt-4">{label}</p>
-      <p className="text-2xl font-black text-gray-900 mt-1 tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-4">{label}</p>
+      <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1 tabular-nums">{value}</p>
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -235,8 +235,11 @@ export default async function ReportsPage({
       {/* Header + kontrol */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Laporan Penjualan</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Analisis penjualan, produk, &amp; shift.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Laporan Penjualan
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Analisis penjualan, produk, &amp; shift.</p>
         </div>
         <ReportsControls
           isOwner={isOwner}
@@ -294,9 +297,9 @@ export default async function ReportsPage({
       {tab === 'sales' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="lg:col-span-2 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Tren Penjualan <span className="font-normal text-gray-400">({trendLabel})</span>
                 </p>
                 <CompareToggle checked={compare} />
@@ -322,14 +325,14 @@ export default async function ReportsPage({
                 previousData={compare ? summary.dailyBreakdownPrevious : undefined}
               />
             </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <p className="text-sm font-semibold text-gray-900 mb-4">Metode Pembayaran</p>
+            <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Metode Pembayaran</p>
               <PaymentBreakdown data={summary.paymentBreakdown} />
             </div>
           </div>
 
           {/* Ringkasan keuangan */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div className="flex flex-wrap gap-x-10 gap-y-4">
                 <div>
@@ -366,10 +369,10 @@ export default async function ReportsPage({
       {/* Tab: Analitik (per jam + per kategori + perbandingan outlet) */}
       {tab === 'analytics' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold text-gray-900">Penjualan per Jam</p>
-              <span className="text-xs text-gray-400">Jam ramai disorot hijau pekat</span>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Penjualan per Jam</p>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Jam ramai disorot hijau pekat</span>
             </div>
             <p className="text-xs text-gray-400 mb-4">
               Distribusi omzet sepanjang hari — bantu atur jadwal shift &amp; stok
@@ -378,10 +381,10 @@ export default async function ReportsPage({
           </div>
 
           {outletSales.length > 1 && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-gray-900">Perbandingan Outlet</p>
-                <div className="flex items-center gap-3 text-xs text-gray-500">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Perbandingan Outlet</p>
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Omzet
                   </span>
@@ -397,9 +400,9 @@ export default async function ReportsPage({
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-900 mb-1">Penjualan per Kategori</p>
-            <p className="text-xs text-gray-400 mb-4">
+          <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Penjualan per Kategori</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
               Kontribusi tiap kategori produk terhadap omzet
             </p>
             <div className="max-w-md">
@@ -411,15 +414,16 @@ export default async function ReportsPage({
 
       {/* Tab: Produk Terlaris */}
       {tab === 'products' && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-900">Produk Terlaris</p>
+        <div className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100/50 dark:border-gray-700/30">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Produk Terlaris</p>
             <TopLimitSelect value={topLimit} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+                <tr className="text-left border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                   <th className="px-5 py-3 font-medium">#</th>
                   <th className="px-5 py-3 font-medium">Produk</th>
                   <th className="px-5 py-3 font-medium text-right">Terjual</th>
@@ -438,10 +442,10 @@ export default async function ReportsPage({
                   </tr>
                 ) : (
                   topProducts.map((p, i) => (
-                    <tr key={p.productId} className="border-b border-gray-50">
-                      <td className="px-5 py-3 text-gray-400 font-medium">{i + 1}</td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{p.productName}</td>
-                      <td className="px-5 py-3 text-right tabular-nums text-gray-600">
+                    <tr key={p.productId} className="border-b border-gray-100/50 dark:border-gray-700/30 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors">
+                      <td className="px-5 py-3 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">{p.productName}</td>
+                      <td className="px-5 py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
                         {p.quantitySold}
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums font-semibold text-gray-900">
@@ -477,11 +481,12 @@ export default async function ReportsPage({
 
       {/* Tab: Rekap Shift */}
       {tab === 'shifts' && shiftData && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+                <tr className="text-left border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                   <th className="px-5 py-3 font-medium">Dibuka</th>
                   <th className="px-5 py-3 font-medium">Ditutup</th>
                   <th className="px-5 py-3 font-medium">Outlet</th>
@@ -500,12 +505,12 @@ export default async function ReportsPage({
                   </tr>
                 ) : (
                   shiftData.items.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-50">
-                      <td className="px-5 py-3 text-gray-700">{dateTime(s.openedAt)}</td>
-                      <td className="px-5 py-3 text-gray-500">{dateTime(s.closedAt)}</td>
-                      <td className="px-5 py-3 text-gray-700">{s.outletName}</td>
-                      <td className="px-5 py-3 text-gray-700">{s.cashierName}</td>
-                      <td className="px-5 py-3 text-right tabular-nums text-gray-600">
+                    <tr key={s.id} className="border-b border-gray-100/50 dark:border-gray-700/30 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors">
+                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{dateTime(s.openedAt)}</td>
+                      <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{dateTime(s.closedAt)}</td>
+                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{s.outletName}</td>
+                      <td className="px-5 py-3 text-gray-700 dark:text-gray-300">{s.cashierName}</td>
+                      <td className="px-5 py-3 text-right tabular-nums text-gray-600 dark:text-gray-400">
                         {s.salesCount}
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums font-semibold text-gray-900">
@@ -530,7 +535,7 @@ export default async function ReportsPage({
           </div>
 
           {shiftData.meta.totalPages > 1 && (
-            <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500">
+            <div className="flex items-center justify-between gap-3 border-t border-gray-100/50 dark:border-gray-700/30 px-5 py-3 text-sm text-gray-500 dark:text-gray-400">
               <span>Total {shiftData.meta.total} shift</span>
               <div className="flex items-center gap-2">
                 <PageLink
@@ -561,13 +566,13 @@ function PageLink({ disabled, href, next }: { disabled: boolean; href: string; n
     'inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors';
   if (disabled) {
     return (
-      <span className={`${base} border-gray-200 text-gray-300 cursor-not-allowed`} aria-disabled>
+      <span className={`${base} border-gray-200 dark:border-gray-600 text-gray-300 dark:text-gray-600 cursor-not-allowed`} aria-disabled>
         <Icon className="size-4" />
       </span>
     );
   }
   return (
-    <Link href={href} className={`${base} border-gray-200 text-gray-700 hover:bg-gray-50`}>
+    <Link href={href} className={`${base} border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800`}>
       <Icon className="size-4" />
     </Link>
   );

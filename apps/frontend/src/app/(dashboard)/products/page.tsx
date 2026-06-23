@@ -165,8 +165,11 @@ function ProductsPageInner() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Katalog Produk</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Katalog Produk
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">
             Kelola produk, varian, kategori &amp; harga per outlet.
           </p>
         </div>
@@ -178,7 +181,7 @@ function ProductsPageInner() {
                 setPickedOutletId(e.target.value);
                 setPage(1);
               }}
-              className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+              className="h-9 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             >
               {outlets.length === 0 && <option value="">Tidak ada outlet</option>}
               {outlets.map((o) => (
@@ -254,7 +257,7 @@ function ProductsPageInner() {
             setCategoryFilter(e.target.value);
             setPage(1);
           }}
-          className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+          className="h-9 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-w-[140px]"
         >
           <option value="">Semua kategori</option>
           {categories.map((c) => (
@@ -269,7 +272,7 @@ function ProductsPageInner() {
             setStatusFilter(e.target.value as ProductStatus | '');
             setPage(1);
           }}
-          className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+          className="h-9 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
         >
           <option value="">Semua status</option>
           <option value="ACTIVE">Aktif</option>
@@ -282,11 +285,12 @@ function ProductsPageInner() {
       </div>
 
       {/* Tabel */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs uppercase text-gray-500">
+              <tr className="border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-left text-xs uppercase text-gray-500 dark:text-gray-400 tracking-wider">
                 <th className="px-4 py-3 font-medium">Produk</th>
                 <th className="px-4 py-3 font-medium">SKU</th>
                 <th className="px-4 py-3 font-medium">Kategori</th>
@@ -298,21 +302,26 @@ function ProductsPageInner() {
             <tbody>
               {isLoading && items.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-50">
-                    <td colSpan={6} className="px-4 py-4">
-                      <div className="h-6 w-full animate-pulse rounded bg-gray-100" />
+                  <tr key={i} className="border-b border-gray-100/50 dark:border-gray-700/30">
+                    <td className="px-4 py-3" colSpan={6}>
+                      <div className="h-4 w-48 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
-                    Tidak ada produk.
+                  <td colSpan={6} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-3">
+                        <Package className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+                      </div>
+                      <p className="text-sm text-gray-400 dark:text-gray-500">Tidak ada produk ditemukan.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 items.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                  <tr key={p.id} className="border-b border-gray-100/50 dark:border-gray-700/30 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors duration-150">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="size-9 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
@@ -353,7 +362,7 @@ function ProductsPageInner() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-700">
+                    <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
                       {p.hasVariants ? (
                         <span className="text-xs text-gray-400">per varian</span>
                       ) : (
@@ -408,7 +417,7 @@ function ProductsPageInner() {
         </div>
 
         {/* Footer + pagination */}
-        <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm text-gray-500">
+        <div className="flex items-center justify-between gap-3 border-t border-gray-100/50 dark:border-gray-700/30 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
           <span>
             {meta && meta.total > 0
               ? `Menampilkan ${(meta.page - 1) * meta.limit + 1} – ${Math.min(

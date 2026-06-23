@@ -64,9 +64,9 @@ function ShiftDetailInner() {
   if (error || !shift) {
     return (
       <div className="max-w-lg mx-auto mt-12 space-y-4">
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-5 py-4 shadow-sm">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-700">{error ?? 'Shift tidak ditemukan'}</p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">{error ?? 'Shift tidak ditemukan'}</p>
         </div>
         <Link href="/shift/history">
           <Button variant="outline" className="rounded-xl gap-2">
@@ -113,21 +113,21 @@ function ShiftDetailInner() {
       </div>
 
       {/* Rekap kas — blok ini yang tercetak (print-root/print-area di globals.css). */}
-      <div className="print-root print-area bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+      <div className="print-root print-area bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 divide-y divide-gray-100/50 dark:divide-gray-700/30 shadow-sm">
         {/* Header hanya saat cetak — beri konteks pada kertas. */}
         <div className="hidden print:block px-6 pt-5 pb-3 text-center">
-          <p className="font-bold text-base">{shift.outlet?.name ?? 'Outlet'}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Rekap Shift</p>
+          <p className="font-bold text-base text-gray-900 dark:text-gray-100">{shift.outlet?.name ?? 'Outlet'}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Rekap Shift</p>
         </div>
         {recapRows.map(([label, val]) => (
           <div key={label} className="flex justify-between px-6 py-3.5 text-sm">
-            <span className="text-gray-500">{label}</span>
-            <span className="font-semibold text-gray-900 text-right">{val}</span>
+            <span className="text-gray-500 dark:text-gray-400">{label}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100 text-right">{val}</span>
           </div>
         ))}
         {isClosed && (
           <div className="flex justify-between px-6 py-4">
-            <span className="font-bold text-gray-900">Selisih Kas</span>
+            <span className="font-bold text-gray-900 dark:text-gray-100">Selisih Kas</span>
             <span
               className={`text-lg font-black ${
                 diff === 0 ? 'text-emerald-600' : diff > 0 ? 'text-blue-600' : 'text-red-600'
@@ -141,15 +141,15 @@ function ShiftDetailInner() {
       </div>
 
       {/* Daftar transaksi shift — tidak ikut tercetak (di luar print-root). */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden print:hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-          <Receipt className="w-4 h-4 text-gray-400" />
-          <p className="font-semibold text-gray-900">
+      <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 overflow-hidden print:hidden shadow-sm">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100/50 dark:border-gray-700/30">
+          <Receipt className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          <p className="font-semibold text-gray-900 dark:text-gray-100">
             Transaksi ({shift._count?.transactions ?? shift.transactions.length})
           </p>
         </div>
         {shift.transactions.length === 0 ? (
-          <div className="py-12 text-center text-sm text-gray-400">
+          <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">
             Tidak ada transaksi pada shift ini
           </div>
         ) : (
@@ -159,7 +159,7 @@ function ShiftDetailInner() {
               return (
                 <li key={trx.id} className="flex items-center gap-3 px-5 py-3.5 text-sm">
                   <div className="min-w-0 flex-1">
-                    <p className={`font-medium ${voided ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                    <p className={`font-medium ${voided ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
                       {trx.receiptNumber}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -170,7 +170,7 @@ function ShiftDetailInner() {
                         : ''}
                     </p>
                   </div>
-                  <span className={`font-semibold ${voided ? 'text-gray-400' : 'text-gray-900'}`}>
+                  <span className={`font-semibold ${voided ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
                     {IDR.format(toNum(trx.totalAmount))}
                   </span>
                 </li>

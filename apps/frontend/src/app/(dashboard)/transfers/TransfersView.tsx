@@ -118,8 +118,11 @@ export function TransfersView({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Transfer Stok</h1>
-          <p className="text-sm text-gray-500">Pindahkan stok antar cabang dengan persetujuan.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Transfer Stok
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Pindahkan stok antar cabang dengan persetujuan.</p>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="size-4" />
@@ -135,7 +138,7 @@ export function TransfersView({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Cari produk atau ID Transfer…"
-            className="h-10 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-700"
+            className="h-10 w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 text-sm text-gray-700 dark:text-gray-300 transition-all text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </form>
         <select
@@ -155,7 +158,7 @@ export function TransfersView({
             aria-label="Filter cabang"
             value={filters.outlet}
             onChange={(e) => setParam({ outlet: e.target.value })}
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-700"
+            className="h-10 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300 transition-all"
           >
             <option value="">Semua Cabang</option>
             {outlets.map((o) => (
@@ -168,11 +171,12 @@ export function TransfersView({
       </div>
 
       {/* Tabel */}
-      <div className={`rounded-2xl border border-gray-200 bg-white overflow-hidden ${isPending ? 'opacity-60' : ''}`}>
+      <div className={`relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm overflow-hidden ${isPending ? 'opacity-60' : ''}`}>
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+              <tr className="text-left border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                 <th className="px-5 py-3 font-medium">ID Transfer &amp; Tanggal</th>
                 <th className="px-5 py-3 font-medium">Rute Cabang</th>
                 <th className="px-5 py-3 font-medium">Ringkasan Produk</th>
@@ -199,7 +203,7 @@ export function TransfersView({
                   const acts = actionsFor(t);
                   const totalUnit = t.items.reduce((s, i) => s + i.quantity, 0);
                   return (
-                    <tr key={t.id} className="border-b border-gray-50 last:border-0 align-top">
+                    <tr key={t.id} className="border-b border-gray-100/50 dark:border-gray-700/30 last:border-0 align-top hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors">
                       <td className="px-5 py-4">
                         <p className="font-mono font-semibold text-emerald-600">
                           {displayTransferNo(t)}
@@ -211,12 +215,12 @@ export function TransfersView({
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <div>
-                            <p className="font-medium text-gray-900">{t.fromOutlet.name}</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{t.fromOutlet.name}</p>
                             <p className="text-[11px] uppercase tracking-wide text-gray-400">Asal</p>
                           </div>
                           <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
                           <div>
-                            <p className="font-medium text-gray-900">{t.toOutlet.name}</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{t.toOutlet.name}</p>
                             <p className="text-[11px] uppercase tracking-wide text-gray-400">
                               Tujuan
                             </p>
@@ -224,14 +228,14 @@ export function TransfersView({
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-gray-900">{t.items.length} Items</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{t.items.length} Items</p>
                         <p className="text-xs text-gray-400">Total: {totalUnit} unit</p>
                       </td>
                       <td className="px-5 py-4">
                         <StatusBadge status={t.status} />
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-medium text-gray-900">{t.requestedBy?.name ?? '—'}</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{t.requestedBy?.name ?? '—'}</p>
                         <p className="text-xs text-gray-400">{roleLabel(t.requestedBy?.role)}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -280,8 +284,8 @@ export function TransfersView({
 
         {/* Footer paginasi */}
         {meta.total > 0 && (
-          <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-gray-100 flex-wrap">
-            <p className="text-xs text-gray-500">
+          <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-gray-100/50 dark:border-gray-700/30 flex-wrap">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Menampilkan {from}-{to} dari {meta.total} rekaman transfer.
             </p>
             <div className="flex items-center gap-1">

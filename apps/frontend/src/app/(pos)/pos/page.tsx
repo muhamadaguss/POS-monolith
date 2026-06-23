@@ -136,7 +136,7 @@ export default function PosPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans">
       {/* ================================================================
           SIDEBAR KIRI — navigasi utama (statis, desktop ≥lg)
       ================================================================ */}
@@ -161,14 +161,14 @@ export default function PosPage() {
       {/* ================================================================
           AREA UTAMA — produk
       ================================================================ */}
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-900 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between gap-2 px-3 md:px-5 h-16 bg-white border-b border-gray-200 shadow-sm shrink-0 z-10">
+        <header className="flex items-center justify-between gap-2 px-3 md:px-5 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm shrink-0 z-10">
           {/* Hamburger — mobile/tablet saja */}
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="lg:hidden flex items-center justify-center w-9 h-9 shrink-0 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="lg:hidden flex items-center justify-center w-9 h-9 shrink-0 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label="Buka menu"
           >
             <Menu className="w-5 h-5" />
@@ -191,7 +191,7 @@ export default function PosPage() {
               type="button"
               onClick={reload}
               title="Muat ulang katalog"
-              className="p-2 rounded-full hover:bg-gray-100 text-emerald-700 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-emerald-700 transition-colors"
             >
               <RefreshCw
                 className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
@@ -203,17 +203,17 @@ export default function PosPage() {
           <div className="flex items-center gap-3">
             {/* No-shift warning */}
             {!activeShift && !isLoading && (
-              <div className="hidden md:flex items-center gap-1.5 text-amber-600 text-xs font-medium bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+              <div className="hidden md:flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-medium bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-full px-3 py-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 Tidak ada shift aktif
               </div>
             )}
 
             <div className="hidden md:flex flex-col items-end">
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Kasirku
               </span>
-              <span className="text-xs text-gray-400">{today}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{today}</span>
             </div>
 
             <div className="w-px h-8 bg-gray-200 mx-1" />
@@ -229,7 +229,7 @@ export default function PosPage() {
         </header>
 
         {/* Category pills */}
-        <div className="flex items-center gap-2 px-5 py-3 bg-white border-b border-gray-100 overflow-x-auto shrink-0">
+        <div className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 overflow-x-auto shrink-0">
           <button
             type="button"
             onClick={() => setActiveCategory("ALL")}
@@ -237,7 +237,7 @@ export default function PosPage() {
               ${
                 activeCategory === "ALL"
                   ? "bg-emerald-700 text-white shadow-sm"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
           >
             Semua
@@ -251,7 +251,7 @@ export default function PosPage() {
                 ${
                   activeCategory === cat.id
                     ? "text-white shadow-sm"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               style={
                 activeCategory === cat.id
@@ -268,7 +268,7 @@ export default function PosPage() {
         {!activeShift && !isLoading && (
           <Link
             href="/pos/shift"
-            className="md:hidden flex items-center gap-2 px-5 py-2.5 bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium shrink-0"
+            className="md:hidden flex items-center gap-2 px-5 py-2.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs font-medium shrink-0"
           >
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1">Tidak ada shift aktif — buka shift untuk transaksi</span>
@@ -285,18 +285,18 @@ export default function PosPage() {
                 {Array.from({ length: 10 }).map((_, i) => (
                   <div
                     key={i}
-                    className="aspect-3/4 rounded-xl bg-gray-200 animate-pulse"
+                    className="aspect-3/4 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse"
                   />
                 ))}
               </div>
             ) : products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <Search className="w-10 h-10 text-gray-200 mb-3" />
-                <p className="text-sm font-medium text-gray-400">
+                <p className="text-sm font-medium text-gray-400 dark:text-gray-500">
                   Produk tidak ditemukan
                 </p>
                 {search && (
-                  <p className="text-xs text-gray-300 mt-1">
+                  <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">
                     Coba kata kunci lain atau scan ulang barcode
                   </p>
                 )}

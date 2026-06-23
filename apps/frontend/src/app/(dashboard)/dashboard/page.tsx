@@ -5,6 +5,7 @@ import {
   Tag,
   BarChart2,
   Clock,
+  Package,
   ArrowRight,
   ArrowUpRight,
   ArrowDownRight,
@@ -63,8 +64,8 @@ function GrowthBadge({ growth }: { growth: number | null }) {
   const Icon = up ? ArrowUpRight : ArrowDownRight;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-        up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+      className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm ${
+        up ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400'
       }`}
     >
       <Icon className="w-3 h-3" />
@@ -90,16 +91,16 @@ function KpiCard({
   badge?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5">
+    <div className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
       <div className="flex items-start justify-between gap-2">
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow ${color}`}>
           <Icon className="w-5 h-5" />
         </div>
         {badge}
       </div>
-      <p className="text-xs text-gray-500 font-medium mt-4">{label}</p>
-      <p className="text-2xl font-black text-gray-900 mt-1 tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-4">{label}</p>
+      <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1 tabular-nums">{value}</p>
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -146,8 +147,11 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Selamat datang, {user.name}</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+          Dashboard
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Selamat datang, {user.name}</p>
       </div>
       {outletId ? (
         <CashierDashboard data={await getCashierDashboard(outletId)} />
@@ -186,8 +190,11 @@ function ManagerDashboard({
     <>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Ringkasan performa penjualan outlet</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Dashboard
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Ringkasan performa penjualan outlet</p>
         </div>
         <DashboardControls
           isOwner={isOwner}
@@ -197,9 +204,9 @@ function ManagerDashboard({
         />
       </div>
       {isOwner && (
-        <p className="text-xs text-gray-400 -mt-4">
+        <p className="text-xs text-gray-400 dark:text-gray-500 -mt-4">
           Menampilkan data:{' '}
-          <span className="font-semibold text-gray-600">{selectedOutletName}</span>
+          <span className="font-semibold text-gray-600 dark:text-gray-300">{selectedOutletName}</span>
         </p>
       )}
 
@@ -236,101 +243,115 @@ function ManagerDashboard({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="relative lg:col-span-2 bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
           <div className="flex items-baseline justify-between mb-4">
             <div>
-              <p className="text-sm font-semibold text-gray-900">Tren Penjualan</p>
-              <p className="text-xs text-gray-400 mt-0.5">{TREND_SUBTITLE[period]}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tren Penjualan</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{TREND_SUBTITLE[period]}</p>
             </div>
-            <p className="text-xs text-gray-400">Total {IDR.format(summary.totalRevenue)}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Total {IDR.format(summary.totalRevenue)}</p>
           </div>
           <SalesTrendChart data={summary.dailyBreakdown} />
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-900 mb-4">Metode Pembayaran</p>
+        <div className="relative bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400/60 to-blue-500/20" />
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Metode Pembayaran</p>
           <PaymentBreakdown data={summary.paymentBreakdown} />
         </div>
       </div>
 
       {/* Jam ramai + kontribusi kategori (ringkas; versi penuh di /reports) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="relative lg:col-span-2 bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-400/60 to-violet-500/20" />
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-gray-900">Jam Ramai</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Jam Ramai</p>
             <Link
               href="/reports"
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 hover:gap-2 transition-all"
             >
               Lihat Analitik
             </Link>
           </div>
           <HourlyBarChart data={hourly} />
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <p className="text-sm font-semibold text-gray-900 mb-4">Penjualan per Kategori</p>
+        <div className="relative bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-400/60 to-orange-500/20" />
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Penjualan per Kategori</p>
           <CategoryBreakdown data={categories} />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="relative bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-gray-900">Produk Terlaris</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Produk Terlaris</p>
           <Link
             href="/reports"
-            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 hover:gap-2 transition-all"
           >
             Lihat Semua
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-gray-100">
-                <th className="pb-3 text-xs font-semibold text-gray-400 pr-4">#</th>
-                <th className="pb-3 text-xs font-semibold text-gray-400 pr-4">Produk</th>
-                <th className="pb-3 text-xs font-semibold text-gray-400 text-right pr-4">Terjual</th>
-                <th className="pb-3 text-xs font-semibold text-gray-400 text-right pr-4">Revenue</th>
-                <th className="pb-3 text-xs font-semibold text-gray-400 text-right">Margin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {topProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-10 text-center text-gray-400">
-                    Belum ada penjualan pada periode ini.
-                  </td>
+        <div className="relative">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-3 pr-4 text-xs font-semibold text-gray-400 dark:text-gray-500">#</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-gray-400 dark:text-gray-500">Produk</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-gray-400 dark:text-gray-500 text-right">Terjual</th>
+                  <th className="pb-3 pr-4 text-xs font-semibold text-gray-400 dark:text-gray-500 text-right hidden sm:table-cell">Revenue</th>
+                  <th className="pb-3 text-xs font-semibold text-gray-400 dark:text-gray-500 text-right hidden lg:table-cell">Margin</th>
                 </tr>
-              ) : (
-                topProducts.map((p, i) => (
-                  <tr key={p.productId}>
-                    <td className="py-3 pr-4 text-gray-400 font-medium">{i + 1}</td>
-                    <td className="py-3 pr-4">
-                      <ProductCell name={p.productName} imageUrl={p.imageUrl} />
-                    </td>
-                    <td className="py-3 pr-4 text-right text-gray-600 tabular-nums">
-                      {p.quantitySold}
-                    </td>
-                    <td className="py-3 pr-4 text-right font-semibold text-gray-900 tabular-nums">
-                      {IDR.format(p.revenue)}
-                    </td>
-                    <td className="py-3 text-right">
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          p.margin >= 50
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : p.margin >= 30
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {p.margin}%
-                      </span>
+              </thead>
+              <tbody className="divide-y divide-gray-100/50 dark:divide-gray-700/30">
+                {topProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-3">
+                          <Package className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+                        </div>
+                        <p className="text-sm text-gray-400 dark:text-gray-500">Belum ada penjualan pada periode ini.</p>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  topProducts.map((p, i) => (
+                    <tr key={p.productId} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors duration-150">
+                      <td className="py-3 pr-4 text-gray-400 dark:text-gray-500 font-medium">{i + 1}</td>
+                      <td className="py-3 pr-4">
+                        <ProductCell name={p.productName} imageUrl={p.imageUrl} />
+                      </td>
+                      <td className="py-3 pr-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
+                        {p.quantitySold}
+                      </td>
+                      <td className="py-3 pr-4 text-right font-semibold text-gray-900 dark:text-gray-100 tabular-nums hidden sm:table-cell">
+                        {IDR.format(p.revenue)}
+                      </td>
+                      <td className="py-3 text-right hidden lg:table-cell">
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full shadow-sm ${
+                            p.margin >= 50
+                              ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                              : p.margin >= 30
+                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
+                                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+                          }`}
+                        >
+                          {p.margin}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* Scroll shadow cue */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white dark:from-gray-800/90 to-transparent" />
         </div>
       </div>
     </>
@@ -345,14 +366,14 @@ function CashierDashboard({ data }: { data: CashierDashboardData }) {
     <div className="space-y-4">
       {/* Status shift */}
       {shift ? (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-center justify-between">
+        <div className="relative bg-white dark:bg-gray-800/90 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm border-l-4 border-l-emerald-500">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
               <Clock className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="font-semibold text-emerald-900">Shift Sedang Berjalan</p>
-              <p className="text-xs text-emerald-600 mt-0.5">
+              <p className="font-semibold text-emerald-900 dark:text-emerald-300">Shift Sedang Berjalan</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
                 Dibuka{' '}
                 {new Date(shift.openedAt).toLocaleTimeString('id-ID', {
                   hour: '2-digit',
@@ -366,27 +387,27 @@ function CashierDashboard({ data }: { data: CashierDashboardData }) {
           </div>
           <Link
             href="/shift"
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 flex items-center gap-1"
+            className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 flex items-center gap-1 hover:gap-2 transition-all shrink-0"
           >
             Kelola <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
       ) : (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between">
+        <div className="relative bg-white dark:bg-gray-800/90 rounded-2xl border border-amber-200 dark:border-amber-800/50 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm border-l-4 border-l-amber-500">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shrink-0 shadow-sm">
               <Clock className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="font-semibold text-amber-900">Belum Ada Shift Aktif</p>
-              <p className="text-xs text-amber-700 mt-0.5">
+              <p className="font-semibold text-amber-900 dark:text-amber-300">Belum Ada Shift Aktif</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
                 Buka shift untuk mulai menerima transaksi
               </p>
             </div>
           </div>
           <Link
             href="/shift"
-            className="text-xs font-semibold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+            className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 flex items-center gap-1 hover:gap-2 transition-all shrink-0"
           >
             Buka Shift <ArrowRight className="w-3 h-3" />
           </Link>
@@ -395,7 +416,7 @@ function CashierDashboard({ data }: { data: CashierDashboardData }) {
 
       {/* Statistik hari ini */}
       <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
           Transaksi Anda Hari Ini
         </p>
         <div className="grid grid-cols-2 gap-4">
@@ -404,14 +425,14 @@ function CashierDashboard({ data }: { data: CashierDashboardData }) {
             label="Total Transaksi"
             value={stats.totalTransactions.toString()}
             sub="transaksi selesai"
-            color="bg-blue-100 text-blue-600"
+            color="bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
           />
           <KpiCard
             icon={TrendingUp}
             label="Total Omset"
             value={IDR.format(stats.totalRevenue)}
             sub="outlet hari ini"
-            color="bg-emerald-100 text-emerald-600"
+            color="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"
           />
         </div>
       </div>
@@ -419,7 +440,7 @@ function CashierDashboard({ data }: { data: CashierDashboardData }) {
       {/* Shortcut ke POS */}
       <Link
         href="/pos"
-        className="flex items-center justify-center gap-2 w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors"
+        className="flex items-center justify-center gap-2 w-full h-14 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98]"
       >
         Mulai Kasir (POS)
         <ArrowRight className="w-4 h-4" />

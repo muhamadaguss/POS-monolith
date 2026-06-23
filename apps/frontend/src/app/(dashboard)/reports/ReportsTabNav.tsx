@@ -31,7 +31,7 @@ export function ReportsTabNav({ active }: { active: ReportTab }) {
   }
 
   return (
-    <div className="flex gap-1 border-b border-gray-200" aria-busy={isPending}>
+    <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700/30" aria-busy={isPending}>
       {TABS.map((t) => (
         <button
           key={t.value}
@@ -39,8 +39,8 @@ export function ReportsTabNav({ active }: { active: ReportTab }) {
           onClick={() => selectTab(t.value)}
           className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
             active === t.value
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-emerald-600 dark:border-emerald-500 text-emerald-700 dark:text-emerald-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
           {t.label}

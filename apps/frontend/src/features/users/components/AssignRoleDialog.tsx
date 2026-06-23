@@ -100,7 +100,7 @@ export function AssignRoleDialog({
       <DialogContent className="max-w-sm rounded-2xl">
         <DialogHeader>
           <DialogTitle>Assign Role Outlet</DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">{staff?.name}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-1">{staff?.name}</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-1.5">

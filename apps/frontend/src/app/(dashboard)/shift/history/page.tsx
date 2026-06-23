@@ -73,17 +73,17 @@ function StatCard({
   valueColor?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5">
+    <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
       <div className="flex items-start justify-between">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow ${iconBg}`}>
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
-        <span className="text-xs font-medium text-gray-400 bg-gray-50 rounded-full px-2.5 py-1">
+        <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-full px-2.5 py-1">
           {badge}
         </span>
       </div>
-      <p className="text-sm text-gray-500 mt-4">{label}</p>
-      <p className={`text-2xl font-bold mt-0.5 ${valueColor ?? 'text-gray-900'}`}>{value}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">{label}</p>
+      <p className={`text-2xl font-bold mt-0.5 ${valueColor ?? 'text-gray-900 dark:text-gray-100'}`}>{value}</p>
     </div>
   );
 }
@@ -197,8 +197,11 @@ export default async function ShiftHistoryPage({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Riwayat Shift</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Riwayat Shift
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">
             Daftar shift kasir yang pernah dibuka, beserta rekap kas.
           </p>
         </div>
@@ -256,8 +259,9 @@ export default async function ShiftHistoryPage({
       />
 
       {/* Tabel (server-rendered; baris = Link navigasi) */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="hidden md:grid grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+      <div className="relative bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 shadow-sm overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
+        <div className="hidden md:grid grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-gray-100/50 dark:border-gray-700/30 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           <span>Informasi Shift</span>
           <span>Waktu</span>
           <span>Transaksi</span>
@@ -268,8 +272,8 @@ export default async function ShiftHistoryPage({
         {list.items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <History className="w-10 h-10 text-gray-200 mb-3" />
-            <p className="text-sm font-medium text-gray-900">Belum ada riwayat shift</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Belum ada riwayat shift</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Coba ubah filter periode atau kata kunci pencarian
             </p>
           </div>
@@ -279,7 +283,7 @@ export default async function ShiftHistoryPage({
               <li key={shift.id}>
                 <Link
                   href={`/shift/history/${shift.id}`}
-                  className="grid grid-cols-1 md:grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 hover:bg-gray-50 transition-colors items-center"
+                  className="grid grid-cols-1 md:grid-cols-[2.5fr_2fr_1fr_1fr_auto] gap-2 md:gap-4 px-5 py-4 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors items-center"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0 text-xs font-bold text-gray-500">
@@ -287,7 +291,7 @@ export default async function ShiftHistoryPage({
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 truncate">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                           {shift.outlet?.name ?? 'Outlet'}
                         </p>
                         <StatusBadge status={shift.status} />
@@ -299,7 +303,7 @@ export default async function ShiftHistoryPage({
                   </div>
 
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">{formatDate(shift.openedAt)}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{formatDate(shift.openedAt)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {formatShiftRange(shift.openedAt, shift.closedAt)}
                     </p>
@@ -326,8 +330,8 @@ export default async function ShiftHistoryPage({
 
         {/* Pagination bernomor (Link → ubah ?page=) */}
         {meta.total > 0 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100/50 dark:border-gray-700/30">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Menampilkan {(meta.page - 1) * meta.limit + 1}-
               {Math.min(meta.page * meta.limit, meta.total)} dari {meta.total} shift
             </p>
@@ -343,8 +347,8 @@ export default async function ShiftHistoryPage({
                   href={buildHref(sp, { page: String(p) })}
                   className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                     p === page
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   {p}
@@ -361,9 +365,9 @@ export default async function ShiftHistoryPage({
       </div>
 
       {needsOutlet && (
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-5 py-4 shadow-sm">
           <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-amber-700 dark:text-amber-400">
             Pilih outlet terlebih dahulu untuk melihat riwayat shift cabang Anda.
           </p>
         </div>
@@ -378,11 +382,11 @@ function PageLink({ disabled, href, label }: { disabled: boolean; href: string; 
     'inline-flex items-center h-9 px-3 rounded-xl border text-sm font-medium transition-colors';
   if (disabled) {
     return (
-      <span className={`${base} border-gray-200 text-gray-300 cursor-not-allowed`}>{label}</span>
+      <span className={`${base} border-gray-200 dark:border-gray-600 text-gray-300 dark:text-gray-600 cursor-not-allowed`}>{label}</span>
     );
   }
   return (
-    <Link href={href} className={`${base} border-gray-200 text-gray-700 hover:bg-gray-50`}>
+    <Link href={href} className={`${base} border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800`}>
       {label}
     </Link>
   );

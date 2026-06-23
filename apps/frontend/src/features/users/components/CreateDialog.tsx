@@ -144,7 +144,7 @@ export function CreateDialog({ open, outlets, onClose, onSaved }: CreateDialogPr
                     role: e.target.value as "STORE_MANAGER" | "CASHIER",
                   }))
                 }
-                className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="CASHIER">Kasir</option>
                 <option value="STORE_MANAGER">Manager</option>
@@ -157,7 +157,7 @@ export function CreateDialog({ open, outlets, onClose, onSaved }: CreateDialogPr
                 onChange={(e) =>
                   setForm((f) => ({ ...f, outletId: e.target.value }))
                 }
-                className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {outlets.map((o) => (
                   <option key={o.id} value={o.id}>

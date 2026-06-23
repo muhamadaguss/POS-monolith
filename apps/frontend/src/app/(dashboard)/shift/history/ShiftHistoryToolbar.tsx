@@ -89,7 +89,7 @@ export function ShiftHistoryToolbar({
   const busy = isPending || isExporting;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
+    <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-4 space-y-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -98,7 +98,7 @@ export function ShiftHistoryToolbar({
             placeholder="Cari shift atau kasir..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10 h-11 rounded-xl"
+            className="pl-10 h-11 rounded-xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
 
@@ -106,7 +106,7 @@ export function ShiftHistoryToolbar({
           aria-label="Status"
           value={status}
           onChange={(e) => pushParams({ status: e.target.value })}
-          className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="h-11 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>
@@ -122,7 +122,7 @@ export function ShiftHistoryToolbar({
               type="button"
               onClick={() => pushParams({ period: p, start: '', end: '' })}
               className={`h-11 px-4 rounded-xl text-sm font-medium transition-colors ${
-                period === p ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-100'
+                period === p ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
               {p} Hari
@@ -132,7 +132,7 @@ export function ShiftHistoryToolbar({
             type="button"
             onClick={() => pushParams({ period: 'CUSTOM' })}
             className={`h-11 px-4 rounded-xl text-sm font-medium transition-colors ${
-              period === 'CUSTOM' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-100'
+                period === 'CUSTOM' ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
             }`}
           >
             Custom
@@ -142,7 +142,7 @@ export function ShiftHistoryToolbar({
             type="button"
             onClick={handleExport}
             disabled={busy}
-            className="h-11 px-4 rounded-xl text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors inline-flex items-center gap-2 disabled:opacity-60"
+            className="h-11 px-4 rounded-xl text-sm font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center gap-2 disabled:opacity-60"
           >
             <Download className="w-4 h-4" /> {isExporting ? 'Mengunduh...' : 'Export'}
           </button>
@@ -156,7 +156,7 @@ export function ShiftHistoryToolbar({
             aria-label="Tanggal mulai"
             defaultValue={customStart}
             onChange={(e) => pushParams({ period: 'CUSTOM', start: e.target.value, end: customEnd })}
-            className="h-11 rounded-xl w-auto"
+            className="h-11 rounded-xl w-auto bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
           />
           <span className="text-gray-400">—</span>
           <Input
@@ -164,7 +164,7 @@ export function ShiftHistoryToolbar({
             aria-label="Tanggal akhir"
             defaultValue={customEnd}
             onChange={(e) => pushParams({ period: 'CUSTOM', start: customStart, end: e.target.value })}
-            className="h-11 rounded-xl w-auto"
+            className="h-11 rounded-xl w-auto bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
           />
         </div>
       )}

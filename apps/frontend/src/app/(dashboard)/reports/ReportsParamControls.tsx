@@ -24,12 +24,12 @@ function useSetParam() {
 export function CompareToggle({ checked }: { checked: boolean }) {
   const { setParam } = useSetParam();
   return (
-    <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+    <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => setParam('compare', e.target.checked ? '1' : '')}
-        className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+        className="rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-gray-800"
       />
       Bandingkan periode sebelumnya
     </label>
@@ -44,7 +44,7 @@ export function TopLimitSelect({ value }: { value: number }) {
       aria-label="Jumlah produk terlaris"
       value={value}
       onChange={(e) => setParam('limit', e.target.value)}
-      className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700"
+      className="h-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 text-xs text-gray-700 dark:text-gray-300"
     >
       <option value={10}>Top 10</option>
       <option value={25}>Top 25</option>

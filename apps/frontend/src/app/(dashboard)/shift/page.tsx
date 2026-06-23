@@ -119,14 +119,14 @@ export default function ShiftPage() {
     const diff = toNum(closedShift.cashDifference);
     return (
       <div className="max-w-lg mx-auto mt-12 space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3 print:hidden">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-8 text-center space-y-3 print:hidden shadow-sm">
           <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
-          <h2 className="text-xl font-bold text-gray-900">Shift Ditutup</h2>
-          <p className="text-sm text-gray-500">Berikut rekap shift Anda hari ini</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Shift Ditutup</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Berikut rekap shift Anda hari ini</p>
         </div>
 
         {/* print-root + print-area: blok rekap ini yang tercetak (globals.css). */}
-        <div className="print-root print-area bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+        <div className="print-root print-area bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 divide-y divide-gray-100/50 dark:divide-gray-700/30 shadow-sm">
           {/* Header hanya tampil saat cetak — beri konteks outlet & kasir di kertas. */}
           <div className="hidden print:block px-6 pt-5 pb-3 text-center">
             <p className="font-bold text-base">{closedShift.outlet?.name ?? 'Outlet'}</p>
@@ -141,12 +141,12 @@ export default function ShiftPage() {
             ['Kas Fisik (input)', IDR.format(toNum(closedShift.closingCash))],
           ].map(([label, val]) => (
             <div key={label} className="flex justify-between px-6 py-4 text-sm">
-              <span className="text-gray-500">{label}</span>
-              <span className="font-semibold text-gray-900">{val}</span>
+              <span className="text-gray-500 dark:text-gray-400">{label}</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{val}</span>
             </div>
           ))}
           <div className="flex justify-between px-6 py-4">
-            <span className="font-bold text-gray-900">Selisih Kas</span>
+            <span className="font-bold text-gray-900 dark:text-gray-100">Selisih Kas</span>
             <span className={`text-lg font-black ${diff === 0 ? 'text-emerald-600' : diff > 0 ? 'text-blue-600' : 'text-red-600'}`}>
               {diff > 0 ? '+' : ''}{IDR.format(diff)}
             </span>
@@ -173,8 +173,11 @@ export default function ShiftPage() {
     <div className="max-w-lg mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Shift</h1>
-          <p className="text-sm text-gray-500 mt-1">Buka dan tutup shift kasir dengan pencatatan kas</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Manajemen Shift
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Buka dan tutup shift kasir dengan pencatatan kas</p>
         </div>
         {canManageShift && (
           <Link href="/shift/history">
@@ -188,9 +191,9 @@ export default function ShiftPage() {
       {/* Owner: pilih outlet karena tidak terikat satu cabang */}
       {isOwner && (
         outlets.length === 0 ? (
-          <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+          <div className="flex items-start gap-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-5 py-4">
             <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               Belum ada outlet yang bisa dikelola. Tambahkan outlet terlebih dahulu.
             </p>
           </div>
@@ -201,7 +204,7 @@ export default function ShiftPage() {
               id="outlet-select"
               value={ownerOutletId}
               onChange={(e) => setSelectedOutletId(e.target.value)}
-              className="w-full h-12 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full h-12 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100 transition-all"
             >
               {outlets.map((o) => (
                 <option key={o.id} value={o.id}>{o.name}</option>
@@ -212,7 +215,7 @@ export default function ShiftPage() {
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           {error}
         </div>
@@ -220,14 +223,14 @@ export default function ShiftPage() {
 
       {/* Tidak ada shift aktif — form buka shift */}
       {!shift && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-6 space-y-5 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-emerald-600" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shadow-sm">
+              <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">Tidak Ada Shift Aktif</p>
-              <p className="text-xs text-gray-400">Buka shift untuk mulai menerima transaksi</p>
+              <p className="font-semibold text-gray-900 dark:text-gray-100">Tidak Ada Shift Aktif</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Buka shift untuk mulai menerima transaksi</p>
             </div>
           </div>
 
@@ -273,15 +276,15 @@ export default function ShiftPage() {
       {/* Ada shift aktif — info shift */}
       {shift && (
         <>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 space-y-4">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-emerald-900">Shift Sedang Berjalan</p>
-                  <p className="text-xs text-emerald-600">Dibuka {formatTimeOnly(shift.openedAt)} · {formatShiftDuration(shift.openedAt)} yang lalu</p>
+                  <p className="font-semibold text-emerald-900 dark:text-emerald-300">Shift Sedang Berjalan</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Dibuka {formatTimeOnly(shift.openedAt)} · {formatShiftDuration(shift.openedAt)} yang lalu</p>
                 </div>
               </div>
               <Button
@@ -290,7 +293,7 @@ export default function ShiftPage() {
                 size="icon-sm"
                 onClick={loadShift}
                 title="Muat ulang"
-                className="text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
+                className="text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300"
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>
@@ -299,38 +302,38 @@ export default function ShiftPage() {
             <Separator className="border-emerald-200" />
 
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-white rounded-xl p-3 border border-emerald-100">
-                <p className="text-xs text-gray-400 mb-1">Dibuka oleh</p>
-                <p className="font-semibold text-gray-900">{shift.openedBy?.name ?? '-'}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900/40 shadow-sm">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Dibuka oleh</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">{shift.openedBy?.name ?? '-'}</p>
               </div>
-              <div className="bg-white rounded-xl p-3 border border-emerald-100">
-                <p className="text-xs text-gray-400 mb-1">Kas Awal</p>
-                <p className="font-semibold text-gray-900">{IDR.format(toNum(shift.openingCash))}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900/40 shadow-sm">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Kas Awal</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">{IDR.format(toNum(shift.openingCash))}</p>
               </div>
             </div>
           </div>
 
           {/* Kasir hanya bisa tutup shift miliknya sendiri */}
           {isCashier && !isOwnShift(shift) ? (
-            <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+            <div className="flex items-start gap-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-5 py-4 shadow-sm">
               <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-800">Shift bukan milik Anda</p>
-                <p className="text-sm text-amber-700 mt-0.5">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400">Shift bukan milik Anda</p>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
                   Shift ini dibuka oleh <span className="font-semibold">{shift.openedBy?.name ?? 'kasir lain'}</span>.
                   Hanya kasir yang membuka shift atau Manager yang dapat menutupnya.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+            <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-6 space-y-5 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-amber-600" />
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shadow-sm">
+                  <DollarSign className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Tutup Shift</p>
-                  <p className="text-xs text-gray-400">Hitung kas fisik di laci kasir</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Tutup Shift</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Hitung kas fisik di laci kasir</p>
                 </div>
               </div>
 

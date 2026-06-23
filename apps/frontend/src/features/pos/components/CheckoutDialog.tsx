@@ -64,8 +64,8 @@ export function CheckoutDialog({
     <Dialog open={open} onOpenChange={isPending ? undefined : onOpenChange}>
       <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl">
         <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle className="text-lg font-bold text-gray-900">Pembayaran</DialogTitle>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <DialogTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">Pembayaran</DialogTitle>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Total tagihan:{' '}
             <span className="font-bold text-emerald-700 text-base">{IDR.format(grandTotal)}</span>
           </p>
@@ -76,7 +76,7 @@ export function CheckoutDialog({
         <div className="px-6 py-5 space-y-5">
           {/* Payment method selector */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
               Metode Bayar
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -88,7 +88,7 @@ export function CheckoutDialog({
                   className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 py-3 transition-all ${
                     method === value
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -101,7 +101,7 @@ export function CheckoutDialog({
           {/* Cash section */}
           {method === 'CASH' && (
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 Uang Diterima
               </p>
 
@@ -112,7 +112,7 @@ export function CheckoutDialog({
                     key={amount}
                     type="button"
                     onClick={() => handleCashShortcut(amount)}
-                    className="rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 py-2 text-xs font-semibold text-gray-700 transition-colors"
+                    className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 transition-colors"
                   >
                     {IDR.format(amount)}
                   </button>
@@ -132,7 +132,7 @@ export function CheckoutDialog({
               {/* Change display */}
               {cashReceived > 0 && (
                 <div className={`rounded-xl px-4 py-3 text-center ${
-                  isCashInsufficient ? 'bg-red-50 border border-red-200' : 'bg-emerald-50 border border-emerald-200'
+                  isCashInsufficient ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
                 }`}>
                   {isCashInsufficient ? (
                     <p className="text-sm font-semibold text-red-600">
@@ -153,7 +153,7 @@ export function CheckoutDialog({
 
           {/* Error */}
           {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}

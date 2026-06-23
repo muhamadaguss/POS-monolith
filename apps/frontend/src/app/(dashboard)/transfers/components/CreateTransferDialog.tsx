@@ -116,7 +116,7 @@ export function CreateTransferDialog({
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>Ajukan Transfer Stok</DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Pilih cabang asal &amp; tujuan, lalu produk yang dipindahkan. Stok berpindah setelah
             cabang tujuan menerima.
           </p>
@@ -125,14 +125,14 @@ export function CreateTransferDialog({
         <div className="space-y-4 mt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="from" className="mb-1 text-xs text-gray-500">
+              <Label htmlFor="from" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
                 Cabang Asal
               </Label>
               <select
                 id="from"
                 value={fromOutletId}
                 onChange={(e) => setFromOutletId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+                className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300"
               >
                 <option value="">Pilih cabang…</option>
                 {outlets.map((o) => (
@@ -143,14 +143,14 @@ export function CreateTransferDialog({
               </select>
             </div>
             <div>
-              <Label htmlFor="to" className="mb-1 text-xs text-gray-500">
+              <Label htmlFor="to" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
                 Cabang Tujuan
               </Label>
               <select
                 id="to"
                 value={toOutletId}
                 onChange={(e) => setToOutletId(e.target.value)}
-                className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+                className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300"
               >
                 <option value="">Pilih cabang…</option>
                 {outlets
@@ -165,13 +165,13 @@ export function CreateTransferDialog({
           </div>
 
           <div>
-            <Label className="mb-1 text-xs text-gray-500">Produk</Label>
+            <Label className="mb-1 text-xs text-gray-500 dark:text-gray-400">Produk</Label>
             {loadingStock ? (
-              <div className="flex items-center gap-2 text-sm text-gray-400 py-3">
+              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-3">
                 <Loader2 className="size-4 animate-spin" /> Memuat stok cabang asal…
               </div>
             ) : stock.length === 0 && fromOutletId ? (
-              <p className="text-sm text-gray-400 py-3">Tidak ada stok tersedia di cabang asal.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-3">Tidak ada stok tersedia di cabang asal.</p>
             ) : (
               <div className="space-y-2">
                 {rows.map((row, idx) => {
@@ -184,7 +184,7 @@ export function CreateTransferDialog({
                           aria-label="Pilih produk"
                           value={row.productId}
                           onChange={(e) => updateRow(idx, { productId: e.target.value })}
-                          className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+                          className="h-9 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300"
                         >
                           <option value="">Pilih produk…</option>
                           {stock.map((s) => (
@@ -227,7 +227,7 @@ export function CreateTransferDialog({
           </div>
 
           <div>
-            <Label htmlFor="note" className="mb-1 text-xs text-gray-500">
+            <Label htmlFor="note" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
               Catatan (opsional)
             </Label>
             <Input

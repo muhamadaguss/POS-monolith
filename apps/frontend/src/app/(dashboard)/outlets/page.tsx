@@ -141,8 +141,11 @@ function OutletsPageInner() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Outlet</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Manajemen Outlet
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">
             Kelola cabang/outlet bisnis Anda secara terpusat.
           </p>
         </div>
@@ -191,16 +194,17 @@ function OutletsPageInner() {
       </div>
 
       {/* Panel Daftar Cabang */}
-      <div className="rounded-2xl border border-gray-200 bg-white">
+      <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 shadow-sm backdrop-blur-sm">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
         <div className="flex items-center justify-between px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Daftar Cabang</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Daftar Cabang</h2>
           <DropdownMenu>
             <DropdownMenuTrigger
               title="Filter status"
               className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                 statusFilter !== 'ALL'
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
               }`}
             >
               <ListFilter className="w-4 h-4" />
@@ -223,7 +227,7 @@ function OutletsPageInner() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-y border-gray-100 bg-gray-50/60 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr className="border-y border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <th className="px-5 py-3 font-semibold">Nama Outlet</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold">Alamat</th>
@@ -234,9 +238,9 @@ function OutletsPageInner() {
             <tbody>
               {isLoading && outlets.length === 0 ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-50">
+                  <tr key={i} className="border-b border-gray-100/50 dark:border-gray-700/30">
                     <td className="px-5 py-4" colSpan={5}>
-                      <div className="h-8 rounded-lg bg-gray-100 animate-pulse" />
+                      <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse" />
                     </td>
                   </tr>
                 ))
@@ -244,7 +248,7 @@ function OutletsPageInner() {
                 <tr>
                   <td colSpan={5} className="px-5 py-16 text-center">
                     <Store className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-400 dark:text-gray-500">
                       {statusFilter === 'ALL'
                         ? 'Belum ada outlet.'
                         : 'Tidak ada outlet pada filter ini.'}
@@ -255,7 +259,7 @@ function OutletsPageInner() {
                 pageItems.map((o) => (
                   <tr
                     key={o.id}
-                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
+                    className="border-b border-gray-100/50 dark:border-gray-700/30 last:border-0 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors"
                   >
                     {/* Nama + avatar */}
                     <td className="px-5 py-4">
@@ -267,7 +271,7 @@ function OutletsPageInner() {
                         >
                           {initials(o.name) || <Store className="w-5 h-5" />}
                         </div>
-                        <span className="font-semibold text-gray-900 truncate">{o.name}</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{o.name}</span>
                       </div>
                     </td>
                     {/* Status */}
@@ -275,8 +279,8 @@ function OutletsPageInner() {
                       <span
                         className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
                           o.isActive
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-gray-100 text-gray-500'
+                            ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                         }`}
                       >
                         <span
@@ -289,7 +293,7 @@ function OutletsPageInner() {
                     </td>
                     {/* Alamat */}
                     <td className="px-5 py-4 max-w-xs">
-                      <div className="flex items-start gap-2 text-gray-600">
+                      <div className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
                         <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-gray-300" />
                         <span className="line-clamp-2">
                           {[o.address, o.city].filter(Boolean).join(', ') || 'Alamat belum diisi'}
@@ -297,7 +301,7 @@ function OutletsPageInner() {
                       </div>
                     </td>
                     {/* Pajak */}
-                    <td className="px-5 py-4 whitespace-nowrap text-gray-600">
+                    <td className="px-5 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
                       Pajak {(o.taxRate * 100).toFixed(0)}%
                     </td>
                     {/* Aksi */}
@@ -318,7 +322,7 @@ function OutletsPageInner() {
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               title="Aksi lain"
-                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                             >
                               <MoreVertical className="w-4 h-4" />
                             </DropdownMenuTrigger>
@@ -353,8 +357,8 @@ function OutletsPageInner() {
         </div>
 
         {/* Footer: range + pagination */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-          <p className="text-sm text-gray-500">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100/50 dark:border-gray-700/30">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Menampilkan {rangeStart}
             {rangeEnd > rangeStart ? `–${rangeEnd}` : ''} dari {filtered.length} outlet
           </p>
@@ -363,7 +367,7 @@ function OutletsPageInner() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
-              className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -377,7 +381,7 @@ function OutletsPageInner() {
                   className={`flex items-center justify-center min-w-9 h-9 px-2 rounded-lg text-sm font-medium transition-colors ${
                     n === safePage
                       ? 'bg-emerald-600 text-white'
-                      : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      : 'border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
                   {n}
@@ -388,7 +392,7 @@ function OutletsPageInner() {
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
-              className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -424,27 +428,27 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+    <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
       <div className="flex items-start justify-between">
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow ${
             tone === 'success'
-              ? 'bg-emerald-50 text-emerald-600'
-              : 'bg-gray-100 text-gray-500'
+              ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}
         >
           {icon}
         </div>
         <span
           className={`text-xs font-medium ${
-            tone === 'success' ? 'text-emerald-600' : 'text-gray-400'
+            tone === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'
           }`}
         >
           {tag}
         </span>
       </div>
-      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
+      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   );
 }

@@ -90,7 +90,7 @@ export function ReportsControls({
             aria-label="Pilih cabang"
             value={pickedOutletId}
             onChange={(e) => pushParams({ outlet: e.target.value })}
-            className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"
+            className="h-9 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-700 dark:text-gray-300"
           >
             <option value="">Semua Cabang</option>
             {outlets.map((o) => (
@@ -100,7 +100,7 @@ export function ReportsControls({
             ))}
           </select>
         )}
-        <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+        <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1 gap-1">
           {PRESETS.map((p) => (
             <button
               key={p.value}
@@ -114,8 +114,8 @@ export function ReportsControls({
               }
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 preset === p.value
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               {p.label}
@@ -137,9 +137,9 @@ export function ReportsControls({
       </div>
 
       {preset === 'CUSTOM' && (
-        <div className="flex items-end gap-3 flex-wrap rounded-xl border border-gray-200 bg-white p-3">
+        <div className="flex items-end gap-3 flex-wrap rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-3">
           <div>
-            <Label htmlFor="r-from" className="mb-1 text-xs text-gray-500">
+            <Label htmlFor="r-from" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
               Dari
             </Label>
             <Input
@@ -154,7 +154,7 @@ export function ReportsControls({
             />
           </div>
           <div>
-            <Label htmlFor="r-to" className="mb-1 text-xs text-gray-500">
+            <Label htmlFor="r-to" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
               Sampai
             </Label>
             <Input

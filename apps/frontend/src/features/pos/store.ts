@@ -31,10 +31,18 @@ export const useCartStore = create<CartState>()(
             (i) => i.productId === item.productId && i.variantId === item.variantId,
           );
           if (existing) {
+            // Pakai item.stock (fresh dari API) sebagai batas maks, bukan
+            // i.stock (bisa stale dari localStorage). Update juga stock
+            // agar tidak stale untuk penambahan berikutnya.
+            if (item.stock <= 0) return state; // skip jika stok habis
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId && i.variantId === item.variantId
-                  ? { ...i, quantity: Math.min(i.quantity + 1, i.stock) }
+                  ? {
+                      ...i,
+                      quantity: Math.min(i.quantity + 1, item.stock),
+                      stock: item.stock,
+                    }
                   : i,
               ),
             };

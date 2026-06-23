@@ -114,21 +114,21 @@ export function PriceDialog({
         className="max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl p-0"
       >
         {/* Header */}
-        <DialogHeader className="border-b border-gray-100 px-6 py-5">
-          <DialogTitle className="text-xl font-bold text-gray-900">
+        <DialogHeader className="border-b border-gray-100 dark:border-gray-700 px-6 py-5">
+          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">
             Harga — <span className="text-emerald-600">{product.name}</span>
           </DialogTitle>
-          <p className="text-sm italic text-gray-500 mt-1">
+          <p className="text-sm italic text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">
             Harga jual &amp; HPP diatur per outlet.
           </p>
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-6">
           {/* Daftar harga eksisting */}
-          <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr className="bg-gray-50 dark:bg-gray-800/50 text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   <th className="px-4 py-3 font-semibold">Outlet</th>
                   <th className="px-4 py-3 font-semibold">Varian</th>
                   <th className="px-4 py-3 font-semibold text-right">HPP</th>
@@ -171,7 +171,7 @@ export function PriceDialog({
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="h-5 w-1 rounded-full bg-emerald-600" />
-                <p className="text-base font-semibold text-gray-900">Atur harga</p>
+                <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Atur harga</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -183,7 +183,7 @@ export function PriceDialog({
                     id="pr-outlet"
                     value={outletId}
                     onChange={(e) => setOutletId(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm"
+                    className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100"
                   >
                     {outlets.map((o) => (
                       <option key={o.id} value={o.id}>
@@ -201,7 +201,7 @@ export function PriceDialog({
                       id="pr-variant"
                       value={variantId}
                       onChange={(e) => setVariantId(e.target.value)}
-                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm"
+                      className="h-10 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100"
                     >
                       <option value="">Pilih varian…</option>
                       {product.variants.map((v) => (
@@ -236,7 +236,7 @@ export function PriceDialog({
 
         {/* Footer */}
         {canEdit && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/50 px-6 py-4">
             <Button variant="ghost" onClick={onClose} disabled={saving}>
               Batal
             </Button>

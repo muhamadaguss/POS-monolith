@@ -141,7 +141,7 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
           {!file && (
             <div
               className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 hover:border-emerald-400'
+                isDragging ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30' : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400 dark:hover:border-emerald-500'
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -167,7 +167,7 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
                     <Upload className="size-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                    <p className="text-sm font-medium {...existing...}">{file.name}</p>
                     <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
           {/* Result */}
           {result && (
             <div className="space-y-4">
-              <div className="border rounded-xl p-6 bg-emerald-50">
+              <div className="border rounded-xl p-6 bg-emerald-50 dark:bg-emerald-900/30">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
                     <CheckCircle2 className="size-6 text-emerald-600" />

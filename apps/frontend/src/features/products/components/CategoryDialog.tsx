@@ -94,7 +94,7 @@ export function CategoryDialog({
           {categories.map((c) => (
             <div
               key={c.id}
-              className="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2"
+              className="flex items-center gap-2 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/50 px-3 py-2"
             >
               <span
                 className="size-3 rounded-full shrink-0"
@@ -118,7 +118,7 @@ export function CategoryDialog({
           ))}
         </div>
 
-        <div className="mt-4 rounded-xl border border-gray-100 p-3 space-y-3">
+        <div className="mt-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 p-3 space-y-3">
           <p className="text-sm font-medium text-gray-700">
             {editingId ? 'Edit kategori' : 'Tambah kategori'}
           </p>
@@ -134,7 +134,7 @@ export function CategoryDialog({
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-9 w-12 rounded-lg border border-gray-200 bg-white p-1"
+                className="h-9 w-12 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-1"
               />
             </div>
           </div>

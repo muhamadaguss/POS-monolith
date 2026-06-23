@@ -289,8 +289,11 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventaris</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Inventaris
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">
             Pantau dan kelola ketersediaan produk di seluruh outlet Anda secara
             real-time.
           </p>
@@ -306,7 +309,7 @@ export default function InventoryPage() {
                   setCategory("Semua");
                   setPage(1);
                 }}
-                className="appearance-none pl-3 pr-8 py-2 text-sm font-medium bg-white border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer transition-all"
               >
                 {outlets.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -320,7 +323,7 @@ export default function InventoryPage() {
           <Button
             variant="outline"
             onClick={() => setShowOpname(true)}
-            className="gap-2 rounded-xl border-gray-300 text-gray-600"
+            className="gap-2 rounded-xl border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"
           >
             <ClipboardList className="w-4 h-4" />
             Stock Opname
@@ -330,34 +333,34 @@ export default function InventoryPage() {
 
       {/* Insight Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-100 rounded-xl flex items-center justify-center shrink-0">
-            <Package className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+            <Package className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 font-medium">Total Produk</p>
-            <p className="text-3xl font-bold text-gray-900 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Produk</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">
               {isLoading ? "—" : items.length.toLocaleString("id-ID")}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600" />
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 dark:text-orange-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 font-medium">Stok Rendah</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Stok Rendah</p>
             <p className="text-3xl font-bold text-orange-600 mt-0.5">
               {isLoading ? "—" : lowStockCount}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-red-600" />
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 p-5 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-100 dark:bg-red-900/40 rounded-xl flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-red-600 dark:text-red-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 font-medium">Produk Habis</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Produk Habis</p>
             <p className="text-3xl font-bold text-red-600 mt-0.5">
               {isLoading ? "—" : outOfStockCount}
             </p>
@@ -366,7 +369,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white rounded-2xl border border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl border border-gray-100/80 dark:border-gray-700/50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
         <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
@@ -374,7 +377,7 @@ export default function InventoryPage() {
             placeholder="Cari produk, SKU, atau kategori..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-gray-700 transition-all text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
         <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
@@ -405,41 +408,41 @@ export default function InventoryPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-100 bg-gray-50">
+            <thead className="border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50">
               <tr>
                 <th className="text-left px-6 py-4">
                   <button
                     type="button"
                     onClick={() => toggleSort("name")}
-                    className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                    className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                   >
                     Produk
                     <ArrowUpDown className="w-3 h-3" />
                   </button>
                 </th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500">
+                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
                   SKU
                 </th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500">
+                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
                   Kategori
                 </th>
                 <th className="text-right px-6 py-4">
                   <button
                     type="button"
                     onClick={() => toggleSort("quantity")}
-                    className="ml-auto flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors"
+                    className="ml-auto flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                   >
                     Stok Saat Ini
                     <ArrowUpDown className="w-3 h-3" />
                   </button>
                 </th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500">
+                <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
                   Status
                 </th>
-                <th className="text-center px-6 py-4 text-xs font-semibold text-gray-500">
+                <th className="text-center px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
                   Aksi
                 </th>
               </tr>
@@ -459,9 +462,14 @@ export default function InventoryPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="text-center py-16 text-sm text-gray-400"
+                    className="text-center py-16"
                   >
-                    Tidak ada produk ditemukan
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-3">
+                        <Package className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+                      </div>
+                      <p className="text-sm text-gray-400 dark:text-gray-500">Tidak ada produk ditemukan</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -498,10 +506,10 @@ export default function InventoryPage() {
                       <span
                         className={`font-bold tabular-nums text-base ${
                           item.quantity === 0
-                            ? "text-red-600"
+                            ? "text-red-600 dark:text-red-400"
                             : item.quantity <= item.minStock
-                              ? "text-orange-600"
-                              : "text-gray-900"
+                              ? "text-orange-600 dark:text-orange-400"
+                              : "text-gray-900 dark:text-gray-100"
                         }`}
                       >
                         {item.quantity}
@@ -545,8 +553,8 @@ export default function InventoryPage() {
 
         {/* Footer: summary + pagination */}
         {!isLoading && (
-          <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
-            <span className="text-xs text-gray-500">
+          <div className="border-t border-gray-100/50 dark:border-gray-700/30 px-6 py-4 flex items-center justify-between">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               Menampilkan {Math.min(paginated.length, PAGE_SIZE)} dari{" "}
               {sorted.length} produk
             </span>
@@ -556,9 +564,9 @@ export default function InventoryPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                  className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
                 >
-                  <ChevronLeft className="w-4 h-4 text-gray-500" />
+                  <ChevronLeft className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
                 <div className="flex items-center gap-1">
                   {buildPageNumbers().map((n, i) =>
@@ -589,9 +597,9 @@ export default function InventoryPage() {
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                  className="p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                  <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             )}
@@ -604,7 +612,7 @@ export default function InventoryPage() {
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Stock Opname</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Masukkan jumlah fisik produk. Kosongkan jika tidak berubah.
             </p>
           </DialogHeader>
@@ -677,7 +685,7 @@ export default function InventoryPage() {
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Edit Inventaris</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {editItem?.productName} — {editItem?.sku}
             </p>
           </DialogHeader>
@@ -736,7 +744,7 @@ export default function InventoryPage() {
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle>Hapus dari Inventaris</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Apakah kamu yakin ingin menghapus <strong>{deleteItem?.productName}</strong> dari inventaris?<br />
               Stok akan diatur ke 0.
             </p>

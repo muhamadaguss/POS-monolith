@@ -240,7 +240,7 @@ export function ProductFormDialog({
                   id="p-cat"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm"
+                  className="h-10 w-full appearance-none rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-3 pr-9 text-sm"
                 >
                   <option value="">Tanpa kategori</option>
                   {categories.map((c) => (
@@ -256,7 +256,7 @@ export function ProductFormDialog({
 
           <div>
             <Label className="mb-2">Gambar produk (opsional)</Label>
-            <div className="flex items-start gap-4 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 p-4">
+            <div className="flex items-start gap-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50/60 dark:bg-gray-800/60 p-4">
               {/* Preview */}
               <div className="size-24 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white flex items-center justify-center">
                 {imageUrl ? (
@@ -321,7 +321,7 @@ export function ProductFormDialog({
               placeholder="Tambahkan rincian produk…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:border-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/20 resize-y"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:border-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/20 resize-y"
             />
           </div>
 
@@ -336,7 +336,7 @@ export function ProductFormDialog({
                   id="p-status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ProductStatus)}
-                  className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm"
+                  className="h-10 w-full appearance-none rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-3 pr-9 text-sm"
                 >
                   <option value="ACTIVE">Aktif</option>
                   <option value="INACTIVE">Nonaktif</option>
@@ -371,7 +371,7 @@ export function ProductFormDialog({
                 {variants.map((v, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start rounded-lg border border-gray-100 bg-gray-50/40 p-3"
+                    className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50/40 dark:bg-gray-800/40 p-3"
                   >
                     <Input
                       placeholder="Nama varian"
@@ -414,7 +414,7 @@ export function ProductFormDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50/60 dark:bg-gray-800/60 px-6 py-4">
           <Button variant="outline" onClick={onClose} disabled={saving || uploading}>
             Batal
           </Button>

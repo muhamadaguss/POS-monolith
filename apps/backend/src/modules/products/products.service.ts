@@ -507,7 +507,7 @@ export class ProductsService {
                         data: {
                           productId: product.id,
                           tenantId,
-                          name: v.name,
+                          name: opt.trim(),
                           sku: `${product.sku}-${opt.trim()}`,
                           status: ProductStatus.ACTIVE,
                         },

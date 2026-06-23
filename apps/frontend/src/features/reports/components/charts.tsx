@@ -50,13 +50,13 @@ function SalesTooltip({
   const current = payload.find((p) => p.name === 'revenue') ?? payload[0];
   const previous = payload.find((p) => p.name === 'previous');
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-gray-900">{label}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
       <p className="mt-1 text-emerald-600 font-bold">{IDR.format(current.value)}</p>
       {previous && (
-        <p className="text-gray-400">Sebelumnya {IDR.format(previous.value)}</p>
+        <p className="text-gray-400 dark:text-gray-500">Sebelumnya {IDR.format(previous.value)}</p>
       )}
-      {!previous && <p className="text-gray-400">{current.payload.transactions} transaksi</p>}
+      {!previous && <p className="text-gray-400 dark:text-gray-500">{current.payload.transactions} transaksi</p>}
     </div>
   );
 }
@@ -153,10 +153,10 @@ function PaymentTooltip({
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-gray-900">{p.name}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">{p.name}</p>
       <p className="mt-1 text-emerald-600 font-bold">{IDR.format(p.value)}</p>
-      <p className="text-gray-400">{p.count} transaksi</p>
+      <p className="text-gray-400 dark:text-gray-500">{p.count} transaksi</p>
     </div>
   );
 }
@@ -205,7 +205,7 @@ export function PaymentBreakdown({
         {/* Label tengah donut */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-[10px] uppercase tracking-wide text-gray-400">Total</span>
-          <span className="text-sm font-bold text-gray-900">{shortIDR(total)}</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{shortIDR(total)}</span>
         </div>
       </div>
       <div className="space-y-2">
@@ -218,8 +218,8 @@ export function PaymentBreakdown({
                 style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
               />
               <span className="flex-1 font-medium text-gray-700">{p.name}</span>
-              <span className="text-gray-400">{p.count}x</span>
-              <span className="w-10 text-right font-semibold text-gray-900">{pct.toFixed(0)}%</span>
+              <span className="text-gray-400 dark:text-gray-500">{p.count}x</span>
+              <span className="w-10 text-right font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">{pct.toFixed(0)}%</span>
             </div>
           );
         })}
@@ -242,10 +242,10 @@ function HourlyTooltip({
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-gray-900">Jam {label}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">Jam {label}</p>
       <p className="mt-1 text-emerald-600 font-bold">{IDR.format(p.value)}</p>
-      <p className="text-gray-400">{p.payload.count} transaksi</p>
+      <p className="text-gray-400 dark:text-gray-500">{p.payload.count} transaksi</p>
     </div>
   );
 }
@@ -312,10 +312,10 @@ function CategoryTooltip({
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-gray-900">{p.name}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">{p.name}</p>
       <p className="mt-1 text-emerald-600 font-bold">{IDR.format(p.value)}</p>
-      <p className="text-gray-400">{p.quantity} item terjual</p>
+      <p className="text-gray-400 dark:text-gray-500">{p.quantity} item terjual</p>
     </div>
   );
 }
@@ -363,7 +363,7 @@ export function CategoryBreakdown({
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-[10px] uppercase tracking-wide text-gray-400">Total</span>
-          <span className="text-sm font-bold text-gray-900">{shortIDR(total)}</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{shortIDR(total)}</span>
         </div>
       </div>
       <div className="space-y-2">
@@ -375,9 +375,9 @@ export function CategoryBreakdown({
                 className="size-2.5 shrink-0 rounded-sm"
                 style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
               />
-              <span className="flex-1 font-medium text-gray-700 truncate">{c.name}</span>
-              <span className="text-gray-400">{c.quantity}x</span>
-              <span className="w-10 text-right font-semibold text-gray-900">{pct.toFixed(0)}%</span>
+              <span className="flex-1 font-medium text-gray-700 dark:text-gray-300 truncate">{c.name}</span>
+              <span className="text-gray-400 dark:text-gray-500">{c.quantity}x</span>
+              <span className="w-10 text-right font-semibold text-gray-900 dark:text-gray-100 dark:text-gray-100">{pct.toFixed(0)}%</span>
             </div>
           );
         })}
@@ -401,11 +401,11 @@ function OutletTooltip({
   const rev = payload.find((p) => p.dataKey === 'revenue');
   const profit = payload.find((p) => p.dataKey === 'profit');
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-gray-900">{label}</p>
+    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
       {rev && <p className="mt-1 text-emerald-600 font-bold">Omzet {IDR.format(rev.value)}</p>}
       {profit && <p className="text-blue-600 font-semibold">Profit {IDR.format(profit.value)}</p>}
-      <p className="text-gray-400">{payload[0].payload.transactions} transaksi</p>
+      <p className="text-gray-400 dark:text-gray-500">{payload[0].payload.transactions} transaksi</p>
     </div>
   );
 }

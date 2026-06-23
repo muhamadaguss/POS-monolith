@@ -203,7 +203,7 @@ export default function PosTransactionsPage() {
   for (let i = start; i <= end; i++) pageNumbers.push(i);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans">
       {/* Sidebar statis — desktop ≥lg */}
       <aside className="hidden lg:flex w-55 shrink-0 h-full">
         <PosSidebar />
@@ -226,11 +226,11 @@ export default function PosTransactionsPage() {
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header mobile — hamburger (lg: disembunyikan) */}
-        <header className="lg:hidden flex items-center gap-3 h-14 px-4 bg-white border-b border-gray-200 shrink-0">
+        <header className="lg:hidden flex items-center gap-3 h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label="Buka menu"
           >
             <Menu className="w-5 h-5" />
@@ -259,7 +259,7 @@ export default function PosTransactionsPage() {
                   <button
                     type="button"
                     onClick={() => setShowStatusDropdown((v) => !v)}
-                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 shadow-sm flex items-center gap-2 hover:bg-gray-50"
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 shadow-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900"
                   >
                     <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2" />
@@ -279,7 +279,7 @@ export default function PosTransactionsPage() {
                           className={`w-full text-left px-4 py-2 text-sm transition-colors
                             ${statusFilter === opt.value
                               ? 'bg-emerald-50 text-emerald-700 font-semibold'
-                              : 'text-gray-700 hover:bg-gray-50'
+                              : 'text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
                             }`}
                         >
                           {opt.label}
@@ -292,7 +292,7 @@ export default function PosTransactionsPage() {
                 <button
                   type="button"
                   onClick={() => load(page, statusFilter)}
-                  className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 shadow-sm"
+                  className="p-2 bg-white border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 shadow-sm"
                   title="Muat ulang"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -313,7 +313,7 @@ export default function PosTransactionsPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Penjualan</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Total Penjualan</p>
                   <p className="text-xl font-bold text-gray-900 mt-1">{IDR.format(totalSales)}</p>
                 </div>
               </div>
@@ -329,7 +329,7 @@ export default function PosTransactionsPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Transaksi Selesai</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Transaksi Selesai</p>
                   <p className="text-xl font-bold text-gray-900 mt-1">{totalCompleted.toLocaleString('id-ID')}</p>
                 </div>
               </div>
@@ -355,7 +355,7 @@ export default function PosTransactionsPage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-100">
+                  <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
                     <tr>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID Transaksi</th>
                       <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Waktu</th>
@@ -380,7 +380,7 @@ export default function PosTransactionsPage() {
                       <tr>
                         <td colSpan={6} className="px-6 py-16 text-center">
                           <Receipt className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-400">Belum ada transaksi hari ini</p>
+                          <p className="text-sm font-medium text-gray-400 dark:text-gray-500">Belum ada transaksi hari ini</p>
                         </td>
                       </tr>
                     ) : (
@@ -398,7 +398,7 @@ export default function PosTransactionsPage() {
                                   ? 'bg-red-50/40'
                                   : isRefunded
                                     ? 'bg-amber-50/40'
-                                    : 'hover:bg-gray-50'
+                                    : 'hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900'
                               }`}
                             >
                               <td className="px-6 py-4 text-sm font-bold text-gray-900">{trx.receiptNumber}</td>
@@ -495,7 +495,7 @@ export default function PosTransactionsPage() {
                               </td>
                             </tr>
                             {isExpanded && (
-                              <tr key={`${trx.id}-detail`} className="bg-gray-50">
+                              <tr key={`${trx.id}-detail`} className="bg-gray-50 dark:bg-gray-900">
                                 <td colSpan={6} className="px-8 py-4">
                                   <div className="space-y-1.5 max-w-md">
                                     {isVoided && trx.voidReason && (
@@ -542,7 +542,7 @@ export default function PosTransactionsPage() {
 
               {/* Pagination */}
               {!isLoading && meta.total > 0 && (
-                <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 flex items-center justify-between">
                   <p className="text-xs text-gray-500">
                     Menampilkan {startRow}–{endRow} dari {meta.total.toLocaleString('id-ID')} transaksi
                   </p>

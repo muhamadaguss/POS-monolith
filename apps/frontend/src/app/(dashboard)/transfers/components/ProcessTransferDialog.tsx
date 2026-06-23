@@ -75,21 +75,21 @@ export function ProcessTransferDialog({
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>{meta.title}</DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">{meta.desc}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{meta.desc}</p>
         </DialogHeader>
 
         <div className="space-y-3 mt-2">
-          <div className="rounded-xl bg-gray-50 p-3 text-sm">
-            <p className="font-medium text-gray-900">
+          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 text-sm">
+            <p className="font-medium text-gray-900 dark:text-gray-100">
               {transfer.fromOutlet.name} → {transfer.toOutlet.name}
             </p>
-            <p className="text-gray-500 mt-0.5">
+            <p className="text-gray-500 dark:text-gray-400 mt-0.5">
               {transfer.items.length} produk ·{' '}
               {transfer.items.reduce((s, i) => s + i.quantity, 0)} unit
             </p>
           </div>
           <div>
-            <Label htmlFor="pnote" className="mb-1 text-xs text-gray-500">
+            <Label htmlFor="pnote" className="mb-1 text-xs text-gray-500 dark:text-gray-400">
               Catatan (opsional)
             </Label>
             <Input

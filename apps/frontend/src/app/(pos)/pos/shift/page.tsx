@@ -71,7 +71,7 @@ function CloseShiftModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -125,7 +125,7 @@ function CloseShiftModal({
           <button
             onClick={onCancel}
             disabled={isPending}
-            className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
+            className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors"
           >
             Batal
           </button>
@@ -156,7 +156,7 @@ function PrintModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -230,7 +230,7 @@ function CloseRekapModal({
   const diff = Number(summary?.cashDifference ?? shift.cashDifference ?? 0);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -279,7 +279,7 @@ function CloseRekapModal({
         <div className="px-6 pb-6 flex gap-3">
           <button
             onClick={() => window.print()}
-            className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 h-11 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 transition-colors flex items-center justify-center gap-2"
           >
             <Printer className="w-4 h-4" /> Cetak
           </button>
@@ -399,11 +399,11 @@ export default function PosShiftPage() {
 
   // Header mobile dengan hamburger — dipakai di tiap cabang tampilan (<lg).
   const MobileHeader = (
-    <header className="lg:hidden flex items-center gap-3 h-14 px-4 bg-white border-b border-gray-200 shrink-0">
+    <header className="lg:hidden flex items-center gap-3 h-14 px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
       <button
         type="button"
         onClick={() => setDrawerOpen(true)}
-        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+        className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         aria-label="Buka menu"
       >
         <Menu className="w-5 h-5" />
@@ -415,7 +415,7 @@ export default function PosShiftPage() {
   // ── Loading ──
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans">
         {Sidebar}
         <div className="flex-1 flex items-center justify-center">
           <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
@@ -431,7 +431,7 @@ export default function PosShiftPage() {
   // "langsung ke form buka shift, rekap (dan tombol Cetak) tak muncul".
   if (showRekapModal && closedShift) {
     return (
-      <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans">
         {Sidebar}
         <div className="flex-1 flex flex-col min-w-0">
           {MobileHeader}
@@ -471,9 +471,9 @@ export default function PosShiftPage() {
             </div>
 
             {/* Main card */}
-            <div className="w-full bg-white border border-gray-200 rounded-3xl shadow-sm p-8 flex flex-col gap-6">
+            <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-3xl shadow-sm p-8 flex flex-col gap-6">
               {/* Status header */}
-              <div className="flex items-start gap-4 p-5 bg-gray-50 rounded-2xl">
+              <div className="flex items-start gap-4 p-5 bg-gray-50 dark:bg-gray-900 rounded-2xl">
                 <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center shrink-0">
                   <Clock className="w-6 h-6 text-emerald-600" />
                 </div>
@@ -507,7 +507,7 @@ export default function PosShiftPage() {
                       placeholder="Contoh: 500.000"
                       value={openingCash ? NUM.format(parseInt(openingCash.replace(/\D/g, ''), 10) || 0) : ''}
                       onChange={(e) => setOpeningCash(e.target.value.replace(/\D/g, ''))}
-                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-emerald-600 focus:outline-none text-base font-semibold transition-all placeholder:text-gray-400 placeholder:font-normal"
+                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-900 border-2 border-transparent rounded-2xl focus:bg-white focus:border-emerald-600 focus:outline-none text-base font-semibold transition-all placeholder:text-gray-400 placeholder:font-normal"
                     />
                   </div>
                 </div>
@@ -520,7 +520,7 @@ export default function PosShiftPage() {
                     placeholder="Misal: Shift pagi, kasir Budi"
                     value={openNotes}
                     onChange={(e) => setOpenNotes(e.target.value)}
-                    className="block w-full px-4 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-emerald-600 focus:outline-none text-sm transition-all placeholder:text-gray-400 resize-none"
+                    className="block w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border-2 border-transparent rounded-2xl focus:bg-white focus:border-emerald-600 focus:outline-none text-sm transition-all placeholder:text-gray-400 resize-none"
                   />
                 </div>
 
@@ -557,7 +557,7 @@ export default function PosShiftPage() {
   const canClose = !isCashier || shift.openedById === user?.id;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden font-sans">
       {Sidebar}
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -581,14 +581,14 @@ export default function PosShiftPage() {
             <div className="xl:col-span-2 space-y-6">
 
               {/* Card utama */}
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 relative overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
                 {/* dekor */}
                 <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Kasir & waktu */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-10">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-500">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-gray-500">
                       <span className="text-2xl">👤</span>
                     </div>
                     <div>
@@ -608,7 +608,7 @@ export default function PosShiftPage() {
                 </div>
 
                 {/* Total Penjualan */}
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+                <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Total Penjualan</p>
                     <div className="flex items-baseline gap-2">
@@ -650,7 +650,7 @@ export default function PosShiftPage() {
                     { label: 'Non-Tunai', value: fmt(activeSummary?.totalNonCash), color: 'text-gray-900' },
                     { label: 'Selisih Kas', value: '—', color: 'text-gray-400' },
                   ].map(({ label, value, color }) => (
-                    <div key={label} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
+                    <div key={label} className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-sm">
                       <p className="text-xs font-medium text-gray-400 mb-2">{label}</p>
                       <p className={`text-base font-semibold ${color}`}>{value}</p>
                     </div>
@@ -678,7 +678,7 @@ export default function PosShiftPage() {
               <div className="bg-linear-to-b from-emerald-50 to-white rounded-2xl p-8 shadow-sm border border-emerald-100 flex flex-col h-full relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-100 rounded-bl-full pointer-events-none opacity-60" />
 
-                <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-200 flex items-center justify-center mb-6 relative z-10">
+                <div className="w-16 h-16 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-600 flex items-center justify-center mb-6 relative z-10">
                   <Shield className="w-8 h-8 text-emerald-600" />
                 </div>
 
@@ -698,7 +698,7 @@ export default function PosShiftPage() {
                   </button>
                   <button
                     onClick={() => setShowPrintModal(true)}
-                    className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-emerald-700 py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full bg-white hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-900 border border-gray-200 text-emerald-700 py-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     <Printer className="w-4 h-4" />
                     Cetak Ringkasan

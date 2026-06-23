@@ -110,7 +110,10 @@ export function UsersView({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Karyawan</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Karyawan
+          </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Kelola akun dan peran staf di semua outlet cabang Anda secara terpusat.
           </p>
@@ -118,7 +121,7 @@ export function UsersView({
         {canManageGlobal && (
           <Button
             onClick={() => setShowCreate(true)}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-600/20"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-600/20 dark:shadow-emerald-900/40"
           >
             <Plus className="w-4 h-4" />
             Tambah Karyawan
@@ -128,14 +131,14 @@ export function UsersView({
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 px-2 py-2 rounded-xl shadow-sm w-full max-w-md focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all">
+        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 px-2 py-2 rounded-xl shadow-sm w-full max-w-md focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/5 dark:focus-within:ring-emerald-500/20 transition-all">
           <Search className="w-4 h-4 text-gray-400 ml-1 shrink-0" />
           <input
             type="text"
             placeholder="Cari nama atau email staf..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="bg-transparent border-none focus:outline-none w-full text-sm placeholder:text-gray-400"
+            className="bg-transparent border-none focus:outline-none w-full text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -147,7 +150,7 @@ export function UsersView({
               className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${
                 roleFilter === f
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {f}
@@ -157,7 +160,7 @@ export function UsersView({
           <button
             type="button"
             onClick={refresh}
-            className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-all"
+            className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
             title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
@@ -166,10 +169,11 @@ export function UsersView({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
-            <thead className="border-b border-gray-100 bg-gray-50">
+            <thead className="border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50">
               <tr>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-400">Nama</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-400">Email</th>
@@ -191,7 +195,7 @@ export function UsersView({
                 </tr>
               ) : (
                 paginated.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50/80 transition-colors group">
+                  <tr key={s.id} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors group border-t border-gray-100/50 dark:border-gray-700/30">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div
@@ -199,7 +203,7 @@ export function UsersView({
                         >
                           {getInitials(s.name)}
                         </div>
-                        <span className="font-medium text-gray-900">{s.name}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{s.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-500">{s.email}</td>
@@ -222,7 +226,7 @@ export function UsersView({
                             type="button"
                             title="Edit"
                             onClick={() => setEditTarget(s)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -232,7 +236,7 @@ export function UsersView({
                             type="button"
                             title="Reset Password"
                             onClick={() => setResetPwTarget(s)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
@@ -242,7 +246,7 @@ export function UsersView({
                             type="button"
                             title="Reset PIN"
                             onClick={() => setResetPinTarget(s)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
                           >
                             <Hash className="w-4 h-4" />
                           </button>
@@ -253,7 +257,7 @@ export function UsersView({
                               type="button"
                               title="Assign Role Outlet"
                               onClick={() => setAssignTarget(s)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+                              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             >
                               <ShieldCheck className="w-4 h-4" />
                             </button>
@@ -263,8 +267,8 @@ export function UsersView({
                               onClick={() => setDeactivateTarget(s)}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 s.status === 'ACTIVE'
-                                  ? 'text-gray-400 hover:bg-red-50 hover:text-red-600'
-                                  : 'text-gray-400 hover:bg-emerald-50 hover:text-emerald-600'
+                                  ? 'text-gray-400 dark:text-gray-500 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400'
+                                  : 'text-gray-400 dark:text-gray-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400'
                               }`}
                             >
                               {s.status === 'ACTIVE' ? (
@@ -285,7 +289,7 @@ export function UsersView({
         </div>
 
         {/* Pagination footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 bg-gray-50/80 dark:bg-gray-800/50 border-t border-gray-100/50 dark:border-gray-700/30 flex items-center justify-between">
           <p className="text-sm text-gray-500">
             Menampilkan{' '}
             <span className="font-semibold text-gray-900">{paginated.length}</span> dari{' '}
@@ -297,7 +301,7 @@ export function UsersView({
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors"
               >
                 ‹
               </button>
@@ -309,7 +313,7 @@ export function UsersView({
                   className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
                     p === page
                       ? 'bg-emerald-600 text-white'
-                      : 'border border-gray-200 text-gray-500 hover:bg-gray-100'
+                      : 'border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
                   {p}
@@ -319,7 +323,7 @@ export function UsersView({
                 type="button"
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors"
               >
                 ›
               </button>
@@ -330,8 +334,8 @@ export function UsersView({
 
       {/* Insight cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm p-5 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:shadow-md transition-shadow">
             <Users className="w-6 h-6" />
           </div>
           <div>
@@ -339,17 +343,17 @@ export function UsersView({
             <p className="text-xl font-bold text-gray-900">{filtered.length} Orang</p>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm p-5 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm group-hover:shadow-md transition-shadow">
             <Store className="w-6 h-6" />
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Outlet Terdaftar</p>
-            <p className="text-xl font-bold text-gray-900">{outlets.length} Outlet</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{outlets.length} Outlet</p>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+        <div className="bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm p-5 rounded-2xl border border-gray-100/80 dark:border-gray-700/50 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm group-hover:shadow-md transition-shadow">
             <Zap className="w-6 h-6" />
           </div>
           <div>

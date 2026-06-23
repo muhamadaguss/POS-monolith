@@ -66,7 +66,7 @@ export function EditDialog({ staff, onClose, onSaved }: EditDialogProps) {
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>Edit Karyawan</DialogTitle>
-          <p className="text-sm text-gray-500 mt-1">{staff?.email}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{staff?.email}</p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-1.5">
@@ -97,7 +97,7 @@ export function EditDialog({ staff, onClose, onSaved }: EditDialogProps) {
                   status: e.target.value as "ACTIVE" | "INACTIVE",
                 }))
               }
-              className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full h-10 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="ACTIVE">Aktif</option>
               <option value="INACTIVE">Nonaktif</option>

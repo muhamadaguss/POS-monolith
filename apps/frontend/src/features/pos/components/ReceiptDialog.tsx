@@ -94,7 +94,7 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
 
           {/* Pratinjau struk di layar (tanpa id cetak; hanya tampilan).
            * previewRef pada pembungkus <Receipt> dipakai mengukur tinggi cetak. */}
-          <div className="max-h-[55vh] overflow-y-auto bg-gray-100 px-4 py-4 print:hidden">
+          <div className="max-h-[55vh] overflow-y-auto bg-gray-100 dark:bg-gray-700 px-4 py-4 print:hidden">
             <div ref={previewRef} className="shadow-sm">
               <Receipt data={data} />
             </div>
@@ -127,7 +127,7 @@ export function ReceiptDialog({ open, onOpenChange, data }: ReceiptDialogProps) 
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="h-10 rounded-xl text-gray-500"
+              className="h-10 rounded-xl text-gray-500 dark:text-gray-400"
             >
               Tutup
             </Button>

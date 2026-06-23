@@ -38,7 +38,7 @@ export function VariantSelector({
         {!hasVariants ? (
           // Produk tanpa varian
           <div className="space-y-3 py-2">
-            <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+            <div className="rounded-lg border border-emerald-100 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-900/20 p-3">
               <p className="font-medium text-emerald-900">{product.name}</p>
               <p className="text-emerald-700 font-bold text-lg mt-1">
                 {IDR.format(product.price)}
@@ -73,12 +73,12 @@ export function VariantSelector({
                 key={v.id}
                 type="button"
                 onClick={() => handleSelect(v.id, v.name, v.price, v.stock)}
-                className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-colors active:scale-[0.99]"
+                className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 transition-colors active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{v.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Stok: {v.stock}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{v.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Stok: {v.stock}</p>
                   </div>
                   <p className="font-bold text-emerald-700">
                     {IDR.format(v.price)}

@@ -153,14 +153,17 @@ export default function BillingPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Billing &amp; Paket</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Kelola langganan Kasirku Anda.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Billing &amp; Paket
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 ml-4">Kelola langganan Kasirku Anda.</p>
         </div>
         <button
           type="button"
           onClick={load}
           disabled={isLoading}
-          className="p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="p-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -170,9 +173,10 @@ export default function BillingPage() {
 
       {/* Paket saat ini */}
       {isLoading || !sub ? (
-        <div className="h-36 rounded-2xl bg-gray-100 animate-pulse" />
+        <div className="h-36 rounded-2xl bg-gray-100 dark:bg-gray-700 animate-pulse" />
       ) : (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm p-6 shadow-sm">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-400">Paket Saat Ini</p>
@@ -186,13 +190,13 @@ export default function BillingPage() {
                   {STATUS_LABEL[sub.status]?.label ?? sub.status}
                 </span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {sub.price > 0 ? `${IDR.format(sub.price)} / bulan` : 'Gratis'}
                 {sub.trialEndsAt && ` · Trial s/d ${fmtDate(sub.trialEndsAt)}`}
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
             <UsageBar label="Outlet terpakai" used={sub.usage.outlets} max={sub.limits.maxOutlets} />
             <UsageBar label="Staf terpakai" used={sub.usage.staff} max={sub.limits.maxStaff} />
           </div>
@@ -211,14 +215,14 @@ export default function BillingPage() {
               <div
                 key={p.plan}
                 className={`relative rounded-2xl border p-5 flex flex-col ${
-                  isCurrent ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-200'
-                } bg-white`}
+                  isCurrent ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-200 dark:border-gray-600'
+                } bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}
               >
                 {p.plan === 'ENTERPRISE' && (
                   <Crown className="absolute top-4 right-4 w-5 h-5 text-amber-400" />
                 )}
-                <p className="text-sm font-bold text-gray-900">{p.name}</p>
-                <p className="text-2xl font-black text-gray-900 mt-1">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{p.name}</p>
+                <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1">
                   {p.price > 0 ? IDR.format(p.price) : 'Gratis'}
                   {p.price > 0 && <span className="text-xs font-normal text-gray-400">/bln</span>}
                 </p>
@@ -246,14 +250,15 @@ export default function BillingPage() {
       </div>
 
       {/* Riwayat tagihan */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-        <p className="text-sm font-semibold text-gray-900 px-5 py-4 border-b border-gray-100">
+      <div className="relative rounded-2xl border border-gray-100/80 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400/60 to-emerald-500/20" />
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 px-5 py-4 border-b border-gray-100/50 dark:border-gray-700/30">
           Riwayat Tagihan
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
+              <tr className="text-left border-b border-gray-100/50 dark:border-gray-700/30 bg-gray-50/80 dark:bg-gray-800/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                 <th className="px-5 py-3 font-medium">Tanggal</th>
                 <th className="px-5 py-3 font-medium">Paket</th>
                 <th className="px-5 py-3 font-medium text-right">Jumlah</th>
@@ -277,10 +282,10 @@ export default function BillingPage() {
                 </tr>
               ) : (
                 invoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-gray-50">
-                    <td className="px-5 py-3 text-gray-600">{fmtDate(inv.createdAt)}</td>
-                    <td className="px-5 py-3 font-medium text-gray-900">{inv.planName}</td>
-                    <td className="px-5 py-3 text-right tabular-nums text-gray-700">
+                  <tr key={inv.id} className="border-b border-gray-100/50 dark:border-gray-700/30 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-colors">
+                    <td className="px-5 py-3 text-gray-600 dark:text-gray-400">{fmtDate(inv.createdAt)}</td>
+                    <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">{inv.planName}</td>
+                    <td className="px-5 py-3 text-right tabular-nums text-gray-700 dark:text-gray-300">
                       {IDR.format(inv.amount)}
                     </td>
                     <td className="px-5 py-3 font-mono text-xs text-gray-400">
@@ -319,14 +324,14 @@ export default function BillingPage() {
           </DialogHeader>
           {payTarget && (
             <div className="space-y-4 mt-2">
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-4 py-3">
                 <TriangleAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-amber-800 dark:text-amber-400">
                   Ini adalah <strong>simulasi pembayaran</strong>. Tidak ada transaksi uang sungguhan
                   yang diproses.
                 </p>
               </div>
-              <div className="rounded-xl border border-gray-200 px-4 py-3 space-y-1 text-sm">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Paket</span>
                   <span className="font-medium text-gray-900">{payTarget.planName}</span>
