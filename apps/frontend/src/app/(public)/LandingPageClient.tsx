@@ -147,7 +147,16 @@ function Hero() {
   ];
 
   return (
-    <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden" style={{ background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 30%, #F0FDF4 60%, #ECFDF5 80%, ${COLORS.warmBg} 100%)`, backgroundSize: '200% 200%', animation: 'gradient-shift 15s ease infinite' }}>
+    <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden" style={{ background: `linear-gradient(160deg, ${COLORS.warmBg} 0%, #FFFAF2 30%, #F0FDF4 60%, #ECFDF5 80%, ${COLORS.warmBg} 100%)` }}>
+      {/* Composited gradient shift overlay (GPU) */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${COLORS.primary}00, ${COLORS.primary}15, transparent)`,
+          backgroundSize: '200% 100%',
+          animation: 'gradient-shift 15s ease-in-out infinite',
+        }}
+      />
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.primary} 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
       <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.08] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
       <div className="absolute -bottom-32 -left-32 w-[400px] h-[400px] rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ backgroundColor: COLORS.primary }} />
