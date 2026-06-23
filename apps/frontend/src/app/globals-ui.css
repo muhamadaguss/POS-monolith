@@ -1,14 +1,12 @@
+/* ================================================================
+ * shadcn/ui + tw-animate — UI layer for dashboard / POS / auth.
+ *
+ * Loads globals.css first so @theme inline tokens (--color-border,
+ * --color-background, etc.) are available to shadcn's @apply rules.
+ *
+ * Next.js / Turbopack deduplicates CSS imports, so globals.css
+ * processed here won't double-emit when root layout also imports it.
+ * ================================================================ */
+@import "./globals.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}
