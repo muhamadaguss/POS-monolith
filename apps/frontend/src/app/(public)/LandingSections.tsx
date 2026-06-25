@@ -317,7 +317,7 @@ function Footer() {
             </div>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Produk</h4>
+            <h3 className="font-semibold mb-4 text-white text-base">Produk</h3>
             <ul className="space-y-2 text-sm text-gray-300">
               <li><Link href="/" className="hover:text-white transition-colors">Beranda</Link></li>
               <li><Link href="/fitur" className="hover:text-white transition-colors">Fitur</Link></li>
@@ -327,7 +327,7 @@ function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Perusahaan</h4>
+            <h3 className="font-semibold mb-4 text-white text-base">Perusahaan</h3>
             <ul className="space-y-2 text-sm text-gray-300">
               <li><a href="#" className="hover:text-white transition-colors">Tentang</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
@@ -336,7 +336,7 @@ function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Kontak</h4>
+            <h3 className="font-semibold mb-4 text-white text-base">Kontak</h3>
             <ul className="space-y-3 text-sm text-gray-300">
               <li className="flex items-center gap-2"><Mail size={14} /><a href="mailto:support@kasirku.id" className="hover:text-white transition-colors">support@kasirku.id</a></li>
               <li className="flex items-center gap-2"><Phone size={14} /><span>021-1234-5678</span></li>
