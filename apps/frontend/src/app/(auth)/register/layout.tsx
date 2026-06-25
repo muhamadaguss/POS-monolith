@@ -16,5 +16,22 @@ export default function RegisterLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://kasirku.jobmarket.my.id/' },
+              { '@type': 'ListItem', position: 2, name: 'Daftar Gratis', item: 'https://kasirku.jobmarket.my.id/register' },
+            ],
+          }),
+        }}
+      />
+      {children}
+    </>
+  );
 }

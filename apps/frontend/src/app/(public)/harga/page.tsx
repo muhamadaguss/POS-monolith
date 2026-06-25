@@ -16,5 +16,22 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HargaPage />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://kasirku.jobmarket.my.id/' },
+              { '@type': 'ListItem', position: 2, name: 'Harga', item: 'https://kasirku.jobmarket.my.id/harga' },
+            ],
+          }),
+        }}
+      />
+      <HargaPage />
+    </>
+  );
 }
