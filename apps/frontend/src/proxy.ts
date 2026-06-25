@@ -97,6 +97,6 @@ export const config = {
   // manifest, ikon, halaman offline) — kalau ikut digerbang auth, SW gagal
   // register / tunnel ke-redirect ke /login & app tak installable.
   matcher: [
-    '/((?!api|monitoring|_next/static|_next/image|favicon.ico|sw.js|swe-worker-.*|manifest.webmanifest|icons/|offline).*)',
+    '/((?!api|monitoring|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|sw.js|swe-worker-.*|manifest.webmanifest|icons/|offline).*)',
   ],
 };
