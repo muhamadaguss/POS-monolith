@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   },
   description:
     'Sistem POS all-in-one: kelola kasir, stok multi-outlet, laporan real-time, dan karyawan dari satu platform. Gratis selamanya untuk bisnis kecil.',
+  metadataBase: new URL('https://kasirku.jobmarket.my.id'),
+  alternates: {
+    canonical: '/',
+    languages: {
+      'id-ID': '/',
+    },
+  },
   openGraph: {
     title: 'Kasirku — Platform POS Digital untuk UMKM Indonesia',
     description:

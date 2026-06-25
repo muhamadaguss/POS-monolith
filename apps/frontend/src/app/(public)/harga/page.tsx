@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'Harga Kasirku — Gratis Selamanya untuk UMKM',
   description:
     'Paket harga Kasirku: Gratis selamanya untuk bisnis kecil. Tanpa batas waktu, tanpa kartu kredit. Pro & Enterprise tersedia.',
+  alternates: {
+    canonical: '/harga',
+  },
   openGraph: {
     title: 'Harga Kasirku — POS Gratis untuk UMKM Indonesia',
     description:
