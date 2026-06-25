@@ -26,6 +26,11 @@ export async function payInvoice(invoiceId: string): Promise<{ message: string }
   return data;
 }
 
+export async function getSubscriptionSnapToken(subscriptionId: string): Promise<{ token: string; redirectUrl: string }> {
+  const { data } = await api.post<{ token: string; redirectUrl: string }>(`/payment/subscription/${subscriptionId}/snap-token`);
+  return data;
+}
+
 /** Ekstrak pesan error API yang ramah (mis. guardrail downgrade). */
 export function apiErrorMessage(err: unknown, fallback = 'Terjadi kesalahan. Coba lagi.'): string {
   const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data

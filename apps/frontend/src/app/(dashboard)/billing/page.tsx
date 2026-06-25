@@ -20,11 +20,28 @@ import {
   getInvoices,
   subscribePlan,
   payInvoice,
+  getSubscriptionSnapToken,
   apiErrorMessage,
 } from '@/features/billing/api';
 import { toastSuccess, successAlert, errorAlert } from '@/lib/swal';
 import { IDR } from '@/lib/format';
 import type { Plan, Subscription, Invoice, PlanCode } from '@/features/billing/types';
+
+declare global {
+  interface Window {
+    snap: {
+      pay: (
+        token: string,
+        options: {
+          onSuccess?: (result: any) => void;
+          onPending?: (result: any) => void;
+          onError?: (result: any) => void;
+          onClose?: () => void;
+        },
+      ) => void;
+    };
+  }
+}
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700' },
@@ -94,6 +111,21 @@ export default function BillingPage() {
     if (isOwner) load();
     else setIsLoading(false);
   }, [isOwner, load]);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    const clientKey = 'SB-Mid-client-Xi3R_g_zGYnkpD7z';
+    
+    let script = document.querySelector(`script[src="${midtransScriptUrl}"]`) as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = midtransScriptUrl;
+      script.setAttribute('data-client-key', clientKey);
+      document.body.appendChild(script);
+    }
+  }, [isOwner]);
+
   usePageFocus(() => {
     if (isOwner) load();
   });
@@ -125,13 +157,34 @@ export default function BillingPage() {
     setError(null);
     setBusyId(payTarget.id);
     try {
-      await payInvoice(payTarget.id);
+      // 1. Dapatkan snap token dari backend
+      const { token } = await getSubscriptionSnapToken(payTarget.id);
+      
       setPayTarget(null);
-      await load();
-      successAlert('Pembayaran (simulasi) berhasil. Paket Anda telah aktif.', 'Pembayaran Berhasil');
+      setBusyId(null);
+
+      // 2. Trigger Midtrans Snap pop-up
+      if (window.snap) {
+        window.snap.pay(token, {
+          onSuccess: async () => {
+            successAlert('Pembayaran sukses! Paket Anda sedang diaktifkan.', 'Pembayaran Berhasil');
+            await load();
+          },
+          onPending: () => {
+            successAlert('Menunggu pembayaran Anda diselesaikan.', 'Pembayaran Pending');
+          },
+          onError: () => {
+            errorAlert('Gagal memproses pembayaran dengan Midtrans.');
+          },
+          onClose: () => {
+            // Pengguna menutup pop-up tanpa membayar
+          }
+        });
+      } else {
+        errorAlert('Gagal memuat sistem pembayaran Midtrans. Coba segarkan halaman.');
+      }
     } catch (err) {
       errorAlert(apiErrorMessage(err, 'Gagal memproses pembayaran.'));
-    } finally {
       setBusyId(null);
     }
   }
@@ -324,11 +377,10 @@ export default function BillingPage() {
           </DialogHeader>
           {payTarget && (
             <div className="space-y-4 mt-2">
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 px-4 py-3">
-                <TriangleAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 dark:text-amber-400">
-                  Ini adalah <strong>simulasi pembayaran</strong>. Tidak ada transaksi uang sungguhan
-                  yang diproses.
+              <div className="flex items-start gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 px-4 py-3">
+                <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-emerald-800 dark:text-emerald-400">
+                  Pembayaran aman diproses melalui <strong>Midtrans Payment Gateway</strong> (mendukung QRIS, GoPay, ShopeePay, Virtual Account, &amp; Kartu Kredit).
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 space-y-1 text-sm">

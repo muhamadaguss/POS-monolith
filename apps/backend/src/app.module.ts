@@ -20,6 +20,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { AdminTenantsModule } from './modules/admin-tenants/admin-tenants.module';
 import { AdminUsersModule } from './modules/admin-users/admin-users.module';
 import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
@@ -121,6 +122,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     ReportsModule,
     AuditLogsModule,
     BillingModule,
+    PaymentModule,
     AdminTenantsModule,
     AdminUsersModule,
     AdminReportsModule,
