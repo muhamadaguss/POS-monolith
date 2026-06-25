@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import {
   ShoppingCart, Package, BarChart3,
   TrendingUp, Shield, Clock, Zap,
-} from 'lucide-react';
+} from './hero-icons';
 import {
   COLORS, RevealSection, AnimatedCounter,
 } from './landing-shared';
@@ -199,7 +199,7 @@ function Hero() {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:shadow-md" style={{ backgroundColor: COLORS.lightBg }}>
                     <item.icon size={16} style={{ color: COLORS.primary }} />
                   </div>
-                  <span className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>{item.text}</span>
+                  <span className="text-sm font-medium" style={{ color: COLORS.primary }}>{item.text}</span>
                 </div>
               ))}
             </div>
@@ -281,12 +281,12 @@ function Stats() {
 // ─────────────────────────────────────────────────────────────
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white">
       <Header />
       <Hero />
       <Stats />
       <LandingSections />
-    </div>
+    </main>
   );
 }
 

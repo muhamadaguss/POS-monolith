@@ -40,6 +40,7 @@ function Features() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <RevealSection>
           <div className="text-center mb-12">
+            <h2 className="sr-only">Fitur Unggulan</h2>
             <SectionBadge>Fitur Unggulan</SectionBadge>
             <SectionTitle title="Semua yang Kamu Butuhkan" subtitle="Fitur lengkap untuk mengelola bisnis dalam satu aplikasi" />
           </div>
