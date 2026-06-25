@@ -307,10 +307,10 @@ function Footer() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: COLORS.primary }}><span className="text-white font-bold text-sm">K</span></div>
               <span className="font-bold text-xl">Kasirku</span>
             </div>
-            <p className="text-gray-400 text-sm mb-4 leading-relaxed">Sistem POS all-in-one untuk UMKM Indonesia. Kelola bisnis lebih cerdas dengan Kasirku.</p>
+            <p className="text-gray-300 text-sm mb-4 leading-relaxed">Sistem POS all-in-one untuk UMKM Indonesia. Kelola bisnis lebih cerdas dengan Kasirku.</p>
             <div className="flex items-center gap-3">
               {['Twitter', 'Instagram', 'LinkedIn', 'YouTube'].map((social) => (
-                <a key={social} href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-emerald-600 transition-all duration-300 hover:scale-110" aria-label={social}>
+                <a key={social} href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-emerald-600 transition-all duration-300 hover:scale-110" aria-label={`Kunjungi halaman ${social} Kasirku`}>
                   <span className="text-xs font-medium">{social[0]}</span>
                 </a>
               ))}
@@ -318,7 +318,7 @@ function Footer() {
           </div>
           <div>
             <h4 className="font-semibold mb-4">Produk</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-gray-300">
               <li><Link href="/" className="hover:text-white transition-colors">Beranda</Link></li>
               <li><Link href="/fitur" className="hover:text-white transition-colors">Fitur</Link></li>
               <li><Link href="/harga" className="hover:text-white transition-colors">Harga</Link></li>
@@ -328,7 +328,7 @@ function Footer() {
           </div>
           <div>
             <h4 className="font-semibold mb-4">Perusahaan</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-gray-300">
               <li><a href="#" className="hover:text-white transition-colors">Tentang</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Karir</a></li>
@@ -337,7 +337,7 @@ function Footer() {
           </div>
           <div>
             <h4 className="font-semibold mb-4">Kontak</h4>
-            <ul className="space-y-3 text-sm text-gray-400">
+            <ul className="space-y-3 text-sm text-gray-300">
               <li className="flex items-center gap-2"><Mail size={14} /><a href="mailto:support@kasirku.id" className="hover:text-white transition-colors">support@kasirku.id</a></li>
               <li className="flex items-center gap-2"><Phone size={14} /><span>021-1234-5678</span></li>
               <li className="flex items-center gap-2"><MapPin size={14} /><span>Jakarta, Indonesia</span></li>
@@ -345,11 +345,11 @@ function Footer() {
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-400">© 2025 Kasirku. All rights reserved.</p>
-          <div className="flex items-center gap-6 text-sm text-gray-400">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Cookies</a>
+          <p className="text-sm text-gray-300">© 2025 Kasirku. All rights reserved.</p>
+          <div className="flex items-center gap-6 text-sm text-gray-300">
+            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-white transition-colors">Cookies Policy</a>
           </div>
         </div>
       </div>

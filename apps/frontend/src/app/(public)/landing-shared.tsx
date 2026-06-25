@@ -13,7 +13,7 @@ export const COLORS = {
   lightBg: '#ECFDF5',
   warmBg: '#FFFBF5',
   text: '#1F2937',
-  textSecondary: '#6B7280',
+  textSecondary: '#4B5563',
 };
 
 // ── Custom Hook: useScrollReveal ──
