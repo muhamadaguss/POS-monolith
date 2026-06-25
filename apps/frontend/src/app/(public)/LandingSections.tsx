@@ -188,22 +188,22 @@ function Pricing() {
             <RevealSection key={plan.name} delay={index * 100}>
               <div className={`relative p-6 rounded-2xl transition-all duration-300 hover:-translate-y-2 ${plan.popular ? 'bg-white shadow-xl border-2 border-emerald-500 scale-105 md:scale-110' : 'bg-white border border-gray-200 hover:shadow-xl hover:border-emerald-200'}`}>
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-lg whitespace-nowrap">⭐ PALING POPULER</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-bold rounded-full shadow-lg whitespace-nowrap">⭐ PALING POPULER</div>
                 )}
                 <h3 className="text-lg font-semibold" style={{ color: COLORS.text }}>{plan.name}</h3>
                 <div className="mt-2 mb-1">
-                  <span className="text-3xl font-bold" style={{ color: plan.popular ? COLORS.primary : COLORS.text }}>{plan.price}</span>
+                  <span className="text-3xl font-bold" style={{ color: plan.popular ? COLORS.primaryDark : COLORS.text }}>{plan.price}</span>
                   {plan.period && <span className="text-sm" style={{ color: COLORS.textSecondary }}>{plan.period}</span>}
                 </div>
                 <p className="text-sm mb-4" style={{ color: COLORS.textSecondary }}>{plan.description}</p>
                 <ul className="space-y-2 mb-6">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-2 text-sm" style={{ color: COLORS.text }}>
-                      <Check size={16} style={{ color: COLORS.primary }} />{feature}
+                      <Check size={16} style={{ color: COLORS.primaryDark }} />{feature}
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" className={`block w-full py-3 text-center font-medium rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:scale-95 ${plan.popular ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:shadow-lg hover:opacity-90' : 'text-white hover:opacity-90 hover:shadow-lg'}`} style={plan.popular ? {} : { backgroundColor: COLORS.primary }}>
+                <Link href="/register" className={`block w-full py-3 text-center font-medium rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:scale-95 ${plan.popular ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:shadow-lg hover:opacity-90' : 'text-white hover:opacity-90 hover:shadow-lg'}`} style={plan.popular ? {} : { backgroundColor: COLORS.primaryDark }}>
                   {plan.cta}
                 </Link>
               </div>
@@ -241,7 +241,7 @@ function FAQ() {
               <div className="border border-gray-200 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md hover:border-emerald-200">
                 <button onClick={() => setOpenIndex(openIndex === index ? null : index)} className="w-full flex items-center justify-between p-5 text-left transition-colors hover:bg-gray-50/50">
                   <span className="text-base font-semibold pr-4" style={{ color: COLORS.text }}>{item.question}</span>
-                  <ChevronRight size={20} className={`transition-all duration-300 flex-shrink-0 ${openIndex === index ? 'rotate-90' : ''}`} style={{ color: COLORS.primary }} />
+                  <ChevronRight size={20} className={`transition-all duration-300 flex-shrink-0 ${openIndex === index ? 'rotate-90' : ''}`} style={{ color: COLORS.primaryDark }} />
                 </button>
                 <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: openIndex === index ? '300px' : '0px', opacity: openIndex === index ? 1 : 0 }}>
                   <div className="px-5 pb-5"><p className="text-sm leading-relaxed" style={{ color: COLORS.textSecondary }}>{item.answer}</p></div>
@@ -254,7 +254,7 @@ function FAQ() {
           <div className="text-center mt-8">
             <p className="text-sm" style={{ color: COLORS.textSecondary }}>
               Masih punya pertanyaan?{' '}
-              <a href="mailto:support@kasirku.id" className="font-medium underline hover:no-underline transition-colors" style={{ color: COLORS.primary }}>Hubungi tim support kami</a>
+              <a href="mailto:support@kasirku.id" className="font-medium underline hover:no-underline transition-colors" style={{ color: COLORS.primaryDark }}>Hubungi tim support kami</a>
             </p>
           </div>
         </RevealSection>
@@ -268,27 +268,27 @@ function CTA() {
   return (
     <section className="py-16 md:py-24 overflow-hidden relative" style={{ backgroundColor: COLORS.warmBg }}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-5 translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: COLORS.primary }} />
-        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-5 -translate-x-1/2 translate-y-1/2" style={{ backgroundColor: COLORS.primary }} />
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-5 translate-x-1/2 -translate-y-1/2" style={{ backgroundColor: COLORS.primaryDark }} />
+        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-5 -translate-x-1/2 translate-y-1/2" style={{ backgroundColor: COLORS.primaryDark }} />
       </div>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <RevealSection>
           <div className="relative inline-block mb-6">
             <span className="text-6xl">🚀</span>
-            <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full animate-ping" style={{ backgroundColor: COLORS.primary }} />
+            <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full animate-ping" style={{ backgroundColor: COLORS.primaryDark }} />
           </div>
           <h2 className="text-3xl md:text-4xl font-bold" style={{ color: COLORS.text }}>Siap Tingkatkan Bisnis Anda?</h2>
           <p className="mt-4 text-lg" style={{ color: COLORS.textSecondary }}>Bergabung dengan 500+ bisnis yang sudah menggunakan Kasirku</p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register" className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium text-white rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95" style={{ backgroundColor: COLORS.primary }}>
+            <Link href="/register" className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-lg font-medium text-white rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95" style={{ backgroundColor: COLORS.primaryDark }}>
               Mulai Gratis Sekarang
               <ArrowRight size={24} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
           <div className="mt-8 flex items-center justify-center gap-6 text-sm flex-wrap" style={{ color: COLORS.textSecondary }}>
-            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primary }} /> Tanpa kartu kredit</span>
-            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primary }} /> Setup 30 detik</span>
-            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primary }} /> Cancel anytime</span>
+            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primaryDark }} /> Tanpa kartu kredit</span>
+            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primaryDark }} /> Setup 30 detik</span>
+            <span className="flex items-center gap-2"><Check size={16} style={{ color: COLORS.primaryDark }} /> Cancel anytime</span>
           </div>
         </RevealSection>
       </div>

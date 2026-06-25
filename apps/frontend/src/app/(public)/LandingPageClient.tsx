@@ -101,7 +101,7 @@ function Header() {
           <div className="flex-1 flex justify-end items-center gap-3">
             <div className="hidden md:flex items-center gap-3">
               <Link href="/login" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: COLORS.text }}>Login</Link>
-              <Link href="/register" className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95" style={{ backgroundColor: COLORS.primary }}>Mulai Gratis</Link>
+              <Link href="/register" className="px-4 py-2 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 active:scale-95" style={{ backgroundColor: COLORS.primaryDark }}>Mulai Gratis</Link>
             </div>
             <button className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle menu">
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -121,7 +121,7 @@ function Header() {
           ))}
           <hr className="border-gray-100" />
           <Link href="/login" className="block text-sm font-medium py-2 px-3" style={{ color: COLORS.text }} onClick={() => setMobileMenuOpen(false)}>Login</Link>
-          <Link href="/register" className="block w-full text-center px-4 py-3 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:shadow-lg active:scale-95" style={{ backgroundColor: COLORS.primary }} onClick={() => setMobileMenuOpen(false)}>Mulai Gratis</Link>
+          <Link href="/register" className="block w-full text-center px-4 py-3 text-sm font-medium text-white rounded-xl transition-all duration-300 hover:shadow-lg active:scale-95" style={{ backgroundColor: COLORS.primaryDark }} onClick={() => setMobileMenuOpen(false)}>Mulai Gratis</Link>
         </div>
       </div>
     </header>
@@ -172,7 +172,7 @@ function Hero() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: COLORS.primary }} />
                 <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: COLORS.primary }} />
               </span>
-              <span className="text-sm font-medium" style={{ color: COLORS.primary }}>Baru: Fitur Multi-Outlet kini tersedia!</span>
+              <span className="text-sm font-medium" style={{ color: COLORS.primaryAccent }}>Baru: Fitur Multi-Outlet kini tersedia!</span>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight" style={{ color: COLORS.text }}>
               Kelola Bisnis Lebih{' '}
@@ -185,7 +185,7 @@ function Hero() {
               Sistem POS all-in-one untuk mengelola kasir, inventaris, dan laporan dengan mudah. <strong>Cocok untuk bisnis retail dan kuliner.</strong>
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link href="/register" className="group inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-medium text-white rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95" style={{ backgroundColor: COLORS.primary }}>
+              <Link href="/register" className="group inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-medium text-white rounded-xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95" style={{ backgroundColor: COLORS.primaryDark }}>
                 Mulai Gratis <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
               </Link>
               <button onClick={() => document.getElementById('fitur')?.scrollIntoView({ behavior: 'smooth' })} className="group inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-medium rounded-xl transition-all duration-300 border-2 hover:bg-white/50 active:scale-95" style={{ borderColor: COLORS.primary, color: COLORS.primary }}>
