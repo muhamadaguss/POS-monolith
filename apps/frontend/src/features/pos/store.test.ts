@@ -59,11 +59,38 @@ describe('cart store', () => {
     expect(useCartStore.getState().items[0].quantity).toBe(3); // = stock
   });
 
-  it('updateQuantity menurunkan ke 0 → item terhapus (lantai 1 lalu filter)', () => {
+  it('updateQuantity -1 pada qty=1 → item TERHAPUS dari keranjang', () => {
     const s = useCartStore.getState();
     s.addItem(baseItem); // qty 1
-    s.updateQuantity('p1', null, -1); // floor jaga di 1, filter qty>0 tak menghapus
-    // qty di-clamp minimal 1, jadi item TETAP ada
+    s.updateQuantity('p1', null, -1); // qty turun ke 0 → hapus item
+    expect(useCartStore.getState().items).toHaveLength(0);
+  });
+
+  it('updateQuantity -1 pada qty=2 → qty jadi 1, item TETAP ada', () => {
+    const s = useCartStore.getState();
+    s.addItem(baseItem); // qty 1
+    s.addItem(baseItem); // qty 2
+    s.updateQuantity('p1', null, -1); // qty 1
+    const { items } = useCartStore.getState();
+    expect(items).toHaveLength(1);
+    expect(items[0].quantity).toBe(1);
+  });
+
+  it('[BUG #1] addItem dengan stock=0 tidak merusak state (return {} bukan return state)', () => {
+    const s = useCartStore.getState();
+    s.addItem(baseItem); // qty 1
+    s.addItem({ ...baseItem, stock: 0 }); // stock habis → tidak boleh nambah
+    expect(useCartStore.getState().items[0].quantity).toBe(1); // tetap 1
+  });
+
+  it('[BUG #3] updateQuantity +1 tidak terhapus walaupun stock stale=0 di cart', () => {
+    // Simulasi stok stale di localStorage: force stock=0 di item
+    useCartStore.setState({
+      items: [{ productId: 'p1', variantId: null, name: 'Es Teh', price: 5000, quantity: 2, stock: 0 }],
+    });
+    useCartStore.getState().updateQuantity('p1', null, -1);
+    // qty turun dari 2→1, item TETAP ada (tidak terhapus gara-gara stock stale=0)
+    expect(useCartStore.getState().items).toHaveLength(1);
     expect(useCartStore.getState().items[0].quantity).toBe(1);
   });
 

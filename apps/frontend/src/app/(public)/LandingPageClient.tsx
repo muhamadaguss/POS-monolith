@@ -11,7 +11,7 @@ import {
 import {
   COLORS, RevealSection, AnimatedCounter,
 } from './landing-shared';
-import { ArrowRight, Check, ChevronDown, Menu, X } from './Icons';
+import { ArrowRight, Check, ChevronDown, Menu, X } from './icons';
 
 // ⬇️ Lazy-load below-fold sections (Features → Footer)
 const LandingSections = dynamic(() => import('./LandingSections'), {
