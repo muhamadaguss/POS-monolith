@@ -82,9 +82,15 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
       const formData = new FormData();
       formData.append('file', file);
 
+      // Backend hanya punya 1 endpoint import — langsung import dan tampilkan hasilnya sebagai preview
       const { data } = await api.post('/products/import', formData);
-      setPreview(data.products ?? []);
-      setErrors(data.errors ?? []);
+      // Coba kedua bentuk response (data.products atau data.data.products untuk keamanan)
+      const products = data?.products ?? data?.data?.products ?? [];
+      const errors = data?.errors ?? data?.data?.errors ?? [];
+      setPreview(products);
+      setErrors(errors);
+      // Simpan juga result supaya tombol "Import Sekarang" bisa langsung set result
+      setResult(data?.data ?? data);
     } catch (err: any) {
       errorAlert(err?.response?.data?.message || err.message || 'Gagal upload file');
     } finally {
@@ -93,23 +99,12 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
   }, [file]);
 
   const handleImport = useCallback(async () => {
-    if (!file) return;
-
-    setIsProcessing(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const { data } = await api.post('/products/import', formData);
-      setResult(data);
-      toastSuccess(`Berhasil import ${data.successCount} produk`);
-      onSuccess();
-    } catch (err: any) {
-      errorAlert(err?.response?.data?.message || err.message || 'Gagal import produk');
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [file, onSuccess]);
+    // BUG FIX #1: Backend tidak punya mode preview, sehingga handleUpload sudah
+    // menjalankan import sungguhan. handleImport tinggal konfirmasi ke UI.
+    if (!result) return;
+    toastSuccess(`Berhasil import ${result.successCount ?? 0} produk`);
+    onSuccess();
+  }, [result, onSuccess]);
 
   const handleClose = useCallback(() => {
     setFile(null);
@@ -167,7 +162,7 @@ Roti Bakar,Makanan,roti-bakar,15000,7500,Roti bakar selai,1234567894,60,10,true,
                     <Upload className="size-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium {...existing...}">{file.name}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate max-w-[260px]">{file.name}</p>
                     <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
                   </div>
                 </div>
