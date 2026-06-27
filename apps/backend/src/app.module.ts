@@ -41,6 +41,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
       isGlobal: true,
       load: [appConfig, jwtConfig, sentryConfig],
       envFilePath: '.env',
+      ignoreEnvVars: true, // Paksa baca dari file .env, abaikan env shell
     }),
 
     // Structured logging (pino) — log JSON 1-baris di production (siap dikonsumsi

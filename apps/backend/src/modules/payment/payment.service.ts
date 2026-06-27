@@ -16,11 +16,14 @@ export class PaymentService {
     private configService: ConfigService,
     private billingService: BillingService,
   ) {
-    this.serverKey = this.configService.get<string>('MIDTRANS_SERVER_KEY') || '';
-    this.isProd = this.configService.get<boolean>('MIDTRANS_IS_PRODUCTION', false);
+    const rawKey = this.configService.get<string>('MIDTRANS_SERVER_KEY') || '';
+    this.serverKey = rawKey.trim();
+    this.isProd = this.configService.get<string>('MIDTRANS_IS_PRODUCTION', 'false') === 'true';
     this.snapUrl = this.isProd
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+    this.logger.log(`Midtrans mode: ${this.isProd ? 'PRODUCTION' : 'SANDBOX'}, URL: ${this.snapUrl}`);
+    this.logger.log(`Midtrans ServerKey length: ${this.serverKey.length}, first: ${this.serverKey.substring(0, 3)}, last: ${this.serverKey.slice(-2)}`);
   }
 
   /**
@@ -75,8 +78,8 @@ export class PaymentService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Midtrans API Error: ${errorText}`);
-        throw new BadRequestException('Gagal menghubungi payment gateway');
+        this.logger.error(`Midtrans API Error Payload: ${errorText}`);
+        throw new BadRequestException(`Midtrans: ${errorText}`);
       }
 
       const data = await response.json();
@@ -86,7 +89,7 @@ export class PaymentService {
       };
     } catch (error) {
       this.logger.error(`Error requesting Midtrans Snap Token: ${error.message}`);
-      throw new BadRequestException('Terjadi kesalahan saat memproses pembayaran');
+      throw new BadRequestException(error.message || 'Terjadi kesalahan saat memproses pembayaran');
     }
   }
 
