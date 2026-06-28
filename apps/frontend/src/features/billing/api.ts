@@ -26,9 +26,17 @@ export async function payInvoice(invoiceId: string): Promise<{ message: string }
   return data;
 }
 
-export async function getSubscriptionSnapToken(subscriptionId: string): Promise<{ token: string; redirectUrl: string }> {
-  const { data } = await api.post<{ token: string; redirectUrl: string }>(`/payment/subscription/${subscriptionId}/snap-token`);
+export async function createIpaymuPayment(subscriptionId: string): Promise<{ redirectUrl: string; sessionId: string; transactionId: string }> {
+  const { data } = await api.post<{ redirectUrl: string; sessionId: string; transactionId: string }>(`/payment/subscription/${subscriptionId}/pay`);
   return data;
+}
+
+/** Verifikasi pembayaran via SessionId (sid) dari iPaymu return URL — client-side call. */
+export async function verifyReturnBySid(params: { sid: string; trx_id?: string; status?: string }): Promise<{ success: boolean; isPaid?: boolean; message?: string }> {
+  const { data } = await api.post<{ success: boolean; isPaid?: boolean; message?: string }>('/payment/return-verify-by-sid', params);
+  // Handle response wrapper: data.data or data itself
+  const result = (data as any).data ?? data;
+  return result;
 }
 
 /** Ekstrak pesan error API yang ramah (mis. guardrail downgrade). */

@@ -20,28 +20,13 @@ import {
   getInvoices,
   subscribePlan,
   payInvoice,
-  getSubscriptionSnapToken,
+  createIpaymuPayment,
+  verifyReturnBySid,
   apiErrorMessage,
 } from '@/features/billing/api';
 import { toastSuccess, successAlert, errorAlert } from '@/lib/swal';
 import { IDR } from '@/lib/format';
 import type { Plan, Subscription, Invoice, PlanCode } from '@/features/billing/types';
-
-declare global {
-  interface Window {
-    snap: {
-      pay: (
-        token: string,
-        options: {
-          onSuccess?: (result: any) => void;
-          onPending?: (result: any) => void;
-          onError?: (result: any) => void;
-          onClose?: () => void;
-        },
-      ) => void;
-    };
-  }
-}
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: 'Aktif', cls: 'bg-emerald-100 text-emerald-700' },
@@ -112,19 +97,65 @@ export default function BillingPage() {
     else setIsLoading(false);
   }, [isOwner, load]);
 
+  // Deteksi return URL dari iPaymu (via /payment-return relay)
   useEffect(() => {
-    if (!isOwner) return;
-    const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
-    const clientKey = 'SB-Mid-client-Xi3R_g_zGYnkpD7z';
-    
-    let script = document.querySelector(`script[src="${midtransScriptUrl}"]`) as HTMLScriptElement;
-    if (!script) {
-      script = document.createElement('script');
-      script.src = midtransScriptUrl;
-      script.setAttribute('data-client-key', clientKey);
-      document.body.appendChild(script);
+    const url = new URL(window.location.href);
+    const paymentStatus = url.searchParams.get('payment_status');
+    const trxId = url.searchParams.get('trx_id');
+    const sid = url.searchParams.get('sid');
+    const status = url.searchParams.get('status');
+
+    // Clean URL params
+    const cleanup = () => {
+      ['payment_status', 'trx_id', 'message', 'sid', 'status'].forEach((p) => url.searchParams.delete(p));
+      window.history.replaceState({}, '', url.toString());
+    };
+
+    if (paymentStatus === 'return' && sid) {
+      // Client-side verification via backend (tidak ada race condition server fetch)
+      verifyReturnBySid({ sid, trx_id: trxId || undefined, status: status || undefined })
+        .then((result) => {
+          if (result.success && result.isPaid) {
+            successAlert(
+              `Pembayaran berhasil! Paket Anda telah diaktifkan.${trxId ? ` (TRX: ${trxId})` : ''}`,
+              'Pembayaran Berhasil',
+            );
+          } else if (result.success) {
+            successAlert(
+              'Pembayaran Anda sedang diproses. Status akan diperbarui setelah terverifikasi.',
+              'Pembayaran Diproses',
+            );
+          } else {
+            errorAlert(result.message || 'Verifikasi pembayaran gagal.');
+          }
+          cleanup();
+          load();
+        })
+        .catch(() => {
+          errorAlert('Gagal menghubungi server untuk verifikasi. Silakan refresh halaman.');
+          cleanup();
+          load();
+        });
+    } else if (paymentStatus === 'success') {
+      successAlert(
+        `Pembayaran berhasil! Paket Anda sedang diaktifkan.${trxId ? ` (TRX: ${trxId})` : ''}`,
+        'Pembayaran Berhasil',
+      );
+      cleanup();
+      load();
+    } else if (paymentStatus === 'pending') {
+      successAlert(
+        'Pembayaran Anda sedang diproses. Status akan diperbarui setelah terverifikasi.',
+        'Pembayaran Diproses',
+      );
+      cleanup();
+    } else if (paymentStatus === 'failed' || paymentStatus === 'error') {
+      const msg = url.searchParams.get('message') || 'Terjadi kesalahan saat memproses pembayaran.';
+      errorAlert(decodeURIComponent(msg));
+      cleanup();
+      load();
     }
-  }, [isOwner]);
+  }, [load, isOwner]);
 
   usePageFocus(() => {
     if (isOwner) load();
@@ -157,32 +188,18 @@ export default function BillingPage() {
     setError(null);
     setBusyId(payTarget.id);
     try {
-      // 1. Dapatkan snap token dari backend
-      const { token } = await getSubscriptionSnapToken(payTarget.id);
-      
+      // 1. Create iPaymu payment via backend → get redirect URL
+      const { redirectUrl } = await createIpaymuPayment(payTarget.id);
+
       setPayTarget(null);
       setBusyId(null);
 
-      // 2. Trigger Midtrans Snap pop-up
-      if (window.snap) {
-        window.snap.pay(token, {
-          onSuccess: async () => {
-            successAlert('Pembayaran sukses! Paket Anda sedang diaktifkan.', 'Pembayaran Berhasil');
-            await load();
-          },
-          onPending: () => {
-            successAlert('Menunggu pembayaran Anda diselesaikan.', 'Pembayaran Pending');
-          },
-          onError: () => {
-            errorAlert('Gagal memproses pembayaran dengan Midtrans.');
-          },
-          onClose: () => {
-            // Pengguna menutup pop-up tanpa membayar
-          }
-        });
-      } else {
-        errorAlert('Gagal memuat sistem pembayaran Midtrans. Coba segarkan halaman.');
-      }
+      // 2. Redirect ke halaman pembayaran iPaymu
+      successAlert('Anda akan diarahkan ke halaman pembayaran iPaymu.', 'Memproses Pembayaran');
+      // Short delay so the alert is visible, then redirect
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 1500);
     } catch (err) {
       errorAlert(apiErrorMessage(err, 'Gagal memproses pembayaran.'));
       setBusyId(null);
@@ -380,7 +397,7 @@ export default function BillingPage() {
               <div className="flex items-start gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 px-4 py-3">
                 <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-emerald-800 dark:text-emerald-400">
-                  Pembayaran aman diproses melalui <strong>Midtrans Payment Gateway</strong> (mendukung QRIS, GoPay, ShopeePay, Virtual Account, &amp; Kartu Kredit).
+                  Pembayaran aman diproses melalui <strong>iPaymu Payment Gateway</strong> (mendukung Transfer Bank, Virtual Account, QRIS, Convenience Store, dan lainnya).
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 space-y-1 text-sm">

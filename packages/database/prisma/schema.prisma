@@ -135,6 +135,7 @@ model Subscription {
   isPaid      Boolean          @default(false)
   paidAt      DateTime?
   invoiceRef  String?
+  ipaymuSessionId String?       // iPaymu session ID untuk tracking return URL
   createdAt   DateTime         @default(now())
 
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -19,19 +19,33 @@ export class PaymentController {
   @ApiBearerAuth('access-token')
   @Roles(Role.TENANT_OWNER)
   @RequirePermissions(PERMISSIONS.BILLING_MANAGE)
-  @Post('subscription/:id/snap-token')
-  @ApiOperation({ summary: 'Mendapatkan Snap Token Midtrans untuk pembayaran subscription' })
-  async getSubscriptionSnapToken(
+  @Post('subscription/:id/pay')
+  @ApiOperation({ summary: 'Membuat pembayaran iPaymu dan mendapatkan redirect URL' })
+  async createPayment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ) {
-    return this.paymentService.getSubscriptionSnapToken(this.tenantId(user), id);
+    return this.paymentService.createPayment(this.tenantId(user), id);
   }
 
   @Public()
   @Post('notification')
-  @ApiOperation({ summary: 'Webhook notifikasi status pembayaran dari Midtrans' })
+  @ApiOperation({ summary: 'Callback notifikasi status pembayaran dari iPaymu' })
   async handleNotification(@Body() body: any) {
     return this.paymentService.handleNotification(body);
+  }
+
+  @Public()
+  @Post('return-verify')
+  @ApiOperation({ summary: 'Verifikasi pembayaran via return URL iPaymu dan aktivasi subscription' })
+  async returnVerify(@Body() body: { sub_id: string; trx_id?: string; status?: string }) {
+    return this.paymentService.returnVerify(body);
+  }
+
+  @Public()
+  @Post('return-verify-by-sid')
+  @ApiOperation({ summary: 'Verifikasi pembayaran via SessionId (sid) dari iPaymu' })
+  async returnVerifyBySid(@Body() body: { sid: string; trx_id?: string; status?: string }) {
+    return this.paymentService.returnVerifyBySid(body);
   }
 }
