@@ -322,8 +322,7 @@ function Footer() {
               <li><Link href="/" className="hover:text-white transition-colors">Beranda</Link></li>
               <li><Link href="/fitur" className="hover:text-white transition-colors">Fitur</Link></li>
               <li><Link href="/harga" className="hover:text-white transition-colors">Harga</Link></li>
-              <li><button onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })} className="hover:text-white transition-colors">FAQ</button></li>
-              <li><a href="#" className="hover:text-white transition-colors">API Docs</a></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
             </ul>
           </div>
           <div>
@@ -332,24 +331,25 @@ function Footer() {
               <li><a href="#" className="hover:text-white transition-colors">Tentang</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Karir</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Kontak</a></li>
+              <li><Link href="/refund" className="hover:text-white transition-colors">Kebijakan Refund</Link></li>
+              <li><Link href="/kontak" className="hover:text-white transition-colors">Kontak</Link></li>
             </ul>
           </div>
           <div>
             <h3 className="font-semibold mb-4 text-white text-base">Kontak</h3>
             <ul className="space-y-3 text-sm text-gray-300">
-              <li className="flex items-center gap-2"><Mail size={14} /><a href="mailto:support@kasirku.id" className="hover:text-white transition-colors">support@kasirku.id</a></li>
-              <li className="flex items-center gap-2"><Phone size={14} /><span>021-1234-5678</span></li>
-              <li className="flex items-center gap-2"><MapPin size={14} /><span>Jakarta, Indonesia</span></li>
+              <li className="flex items-center gap-2"><Mail size={14} /><a href="mailto:muhamadagus3197@gmail.com" className="hover:text-white transition-colors">muhamadagus3197@gmail.com</a></li>
+              <li className="flex items-center gap-2"><Phone size={14} /><span>0813-8474-2399</span></li>
+              <li className="flex items-center gap-2"><MapPin size={14} /><span>Bekasi, Indonesia</span></li>
             </ul>
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-300">© 2025 Kasirku. All rights reserved.</p>
           <div className="flex items-center gap-6 text-sm text-gray-300">
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors">Cookies Policy</a>
+            <Link href="/refund" className="hover:text-white transition-colors">Kebijakan Refund</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>
+            <Link href="/kontak" className="hover:text-white transition-colors">Kontak</Link>
           </div>
         </div>
       </div>
