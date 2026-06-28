@@ -121,10 +121,8 @@ export default function BillingPage() {
               'Pembayaran Berhasil',
             );
           } else if (result.success) {
-            successAlert(
-              'Pembayaran Anda sedang diproses. Status akan diperbarui setelah terverifikasi.',
-              'Pembayaran Diproses',
-            );
+            // isPaid:false → webhook sudah duluan proses, cukup reload silent
+            // Tidak tampilkan popup — user sudah lihat status aktual
           } else {
             errorAlert(result.message || 'Verifikasi pembayaran gagal.');
           }

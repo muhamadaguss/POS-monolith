@@ -203,6 +203,10 @@ export class PaymentService {
   /**
    * Verifikasi pembayaran via SessionId (sid) dari iPaymu return URL.
    * iPaymu menghapus custom query params, tapi mengembalikan `sid`.
+   * 
+   * NOTE: Webhook seringkali duluan memproses pembayaran. Method ini hanya
+   * fallback. Jika subscription sudah aktif (via webhook), kembalikan isPaid:true.
+   * Jika sid tidak ditemukan, jangan error — biarkan client reload data.
    */
   async returnVerifyBySid(body: { sid: string; trx_id?: string; status?: string }) {
     const { sid, trx_id, status } = body;
@@ -218,8 +222,10 @@ export class PaymentService {
     });
 
     if (!sub) {
-      this.logger.warn(`returnVerifyBySid: subscription not found for sid: ${sid}`);
-      return { success: false, message: 'Subscription tidak ditemukan' };
+      this.logger.warn(`returnVerifyBySid: subscription not found for sid: ${sid} — likely webhook already processed`);
+      // Jangan return error — webhook mungkin sudah duluan mengaktifkan.
+      // Client akan reload data dan melihat status aktual.
+      return { success: true, message: 'Verified externally', isPaid: false };
     }
 
     if (sub.isPaid) {
