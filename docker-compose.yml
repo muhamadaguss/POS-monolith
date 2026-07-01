@@ -1,14 +1,11 @@
-version: "3.8"
-
 services:
   # Backend API (NestJS)
   backend:
     image: docker.io/muhamadaguss/kasirku-backend:latest
     container_name: kasirku-backend
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    # Database eksternal (bukan container) — konek via DATABASE_URL di .env.
+    # Tak ada `depends_on: db` karena Postgres tidak dijalankan di compose ini.
     ports:
       - "3005:3005"
     volumes:
@@ -92,8 +89,9 @@ networks:
     driver: bridge
 
 volumes:
-  pgdata:
-    name: kasirku-pgdata
+  # pgdata dihapus — Postgres eksternal, tak ada container db di compose ini.
+  # loki-data & grafana-data dipertahankan untuk service logging yang di-comment
+  # (aktifkan bila STB di-upgrade).
   loki-data:
     name: kasirku-loki-data
   grafana-data:
